@@ -1,0 +1,503 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+############
+Library import
+
+```{r}
+#install.packages("readxl")
+library("readxl")
+library(stringr)
+library(data.table)
+```
+
+
+####################
+# SRA metadata table
+
+The SRA metadata table was downloaded from the SRA with the accession number PRJEB31817.
+
+```{r sra-metadata}
+########
+# Import the metadata table downloaded from the SRA
+sraDF <- read.csv("../../SraRunTable.txt", header=TRUE, sep = ",")
+head(sraDF)
+
+########
+# Keep only the relevant columns
+col <- c("Run", "Collection_Date", "environment_.biome.", "host_body_product", "Host_Age", "host_body.mass_index", "host_subject_ID", "sample_storage_duration", "sequencing_run", "Extraction_Plate", "host_disease_status", "host_sex", "gastrointestinal_tract_disorder")
+metadata <- sraDF[col]
+
+# Do a few modifications for simplicity
+metadata <- metadata[metadata$environment_.biome. != "bioreactor",] # remove "bioreactor" samples
+metadata$environment_.biome. <- NULL
+
+metadata <- transform(metadata, host_body_product = as.character(host_body_product)) # host_body_product as character
+metadata <- transform(metadata, gastrointestinal_tract_disorder = as.character(gastrointestinal_tract_disorder))
+metadata[metadata$host_body_product == "Mucosal tissue","host_body_product"] <- "sigmoid"
+metadata[metadata$host_body_product == "Faeces","host_body_product"] <- "stool"
+
+colnames(metadata) <- c("Run", "collection_date", "sample_type", "host_age",
+                        "host_bmi", "host_ID", "sample_storage_duration",
+                        "sequencing_run", "extraction_plate", "host_psy",
+                        "host_sex", "host_disease")
+
+metadata <- transform(metadata, host_psy = as.character(host_psy))
+metadata <- transform(metadata, host_sex = as.character(host_sex))
+metadata <- transform(metadata, collection_date = as.character(collection_date))
+metadata$host_disease <- gsub("IBS.*", "IBS", metadata$host_disease)
+
+head(metadata)
+
+#######
+# Create a new dataframe with only ibs/hc samples
+mtDF_ibs_hc <- metadata[metadata$gastrointestinal_tract_disorder == "none" |
+                          metadata$gastrointestinal_tract_disorder == "IBS(irritable-bowel syndrome)" |
+                          metadata$gastrointestinal_tract_disorder == "IBS (irritable-bowel syndrome)",]
+mtDF_ibs_hc$gastrointestinal_tract_disorder <- gsub("none", "Healthy", mtDF_ibs_hc$gastrointestinal_tract_disorder)
+mtDF_ibs_hc$gastrointestinal_tract_disorder <- gsub("IBS.*", "IBS", mtDF_ibs_hc$gastrointestinal_tract_disorder)
+mtDF_ibs_hc <- mtDF_ibs_hc[complete.cases(mtDF_ibs_hc[,"gastrointestinal_tract_disorder"]),] # remove the NA row
+
+# Give better column names
+mtDF_ibs_hc$environment_.biome. <- NULL # remove column saying all samples are from human gut
+#colnames(mtDF_ibs_hc) # current column names
+colnames(mtDF_ibs_hc) <- c("Run", "collection_date", "sample_type", "host_age", "host_bmi", "host_ID",
+                           "sample_storage_duration", "sequencing_run", "extraction_plate",
+                           "host_psy", "host_sex", "host_disease")
+
+table(mtDF_ibs_hc$host_disease) # sanity check ok (hc 467 - ibs 140)
+
+
+```
+
+
+
+###################
+# Authors samples
+
+The supplementary material with the ASV table of the authors was downloaded directly from the paper's website https://gut.bmj.com/content/69/6/1076
+
+```{r paper-supplementary}
+################################
+# ASV TABLE SUPPLEMENTARY DATA #
+################################
+
+# Import the supplementary ASV table from the authors
+paper_supp <- read_excel("../Paper_Samples/ASV_table_PAPER.xlsx")
+head(paper_supp)
+
+# Create dataframe with the sample names (found as column names in the ASV table)
+paper_samples <- data.frame("raw_names" = colnames(paper_supp)[2:562])
+head(paper_samples)
+dim(paper_samples) # there are 561 rows (as there are 561 samples in the paper)
+
+# The sample names look like "X170429_27.547_0039_sigmoideum"
+# Which corresponds to "sequencing run _ extraction plate _ subject ID _ sample type"
+
+# We need to "split" the sample names
+paper_samples[,2:5] <- str_split_fixed(paper_samples$raw_names, "_", 4)
+colnames(paper_samples)[2:5] <- c("sequencing_run", "Extraction_Plate", "host_subject_ID", "host_body_product")
+head(paper_samples)
+
+# Modifications to fit this data to the SRA metadata table
+paper_samples$Extraction_Plate <- gsub("[.]", "-", paper_samples$Extraction_Plate) # replace "." by "-" on the extraction_plate
+paper_samples$sequencing_run <- gsub("X", "", paper_samples$sequencing_run) # remove the "X" on the sequencing_run
+paper_samples <- transform(paper_samples, host_subject_ID = as.numeric(host_subject_ID)) # subject_ID numeric
+paper_samples <- transform(paper_samples, host_body_product = as.character(host_body_product)) # host_body_product as.character
+paper_samples[paper_samples$host_body_product == "sigmoideum","host_body_product"] <- "sigmoid"
+#colnames(paper_samples) <- c("raw_names", "sequencing_run", "extraction_plate", "host_ID", "sample_type")
+
+#table(paper_samples$sample_type)
+#table(metadata$host_body_product)
+
+
+
+#####################################
+# CROSS-REFERENCE WITH SRA METADATA #
+#####################################
+
+ycol <- c("sequencing_run", "Extraction_Plate", "host_subject_ID", "host_body_product", "Run", "gastrointestinal_tract_disorder")
+shared_col <- c("sequencing_run", "Extraction_Plate", "host_subject_ID", "host_body_product")
+
+# Can all samples from paper be found on SRA metadata?
+dim(merge(x=paper_samples, y=metadata[,ycol], by=shared_col, all.x=FALSE)) # 558 samples (not 561)
+# There are 4 samples that are unassigned in the SRA metadata (not deposited on SRA database?...)
+```
+
+When merging the samples included in the paper with the metadata deposited on the SRA, there are 558 samples that have a match in the SRA database. Which samples are unassigned?
+
+```{r paper-supplementary-2}
+# Merge with the SRA metadata
+authors_merged <- merge(x=paper_samples, y=metadata[,ycol], by=shared_col,
+                        all.x=TRUE) # keep all samples from paper, even if there is no match in the SRA metadata
+
+# Sanity check we have 561 samples
+dim(authors_merged)
+
+# ______________
+# ONE SAMPLE WITH DOUBLE ENTRY IN THE SRA DATABASE
+# There is 562 samples when there should be only 561, so one sample from paper must have had 2 matches into the SRA metadata
+authors_merged[authors_merged$raw_names == authors_merged$raw_names[duplicated(authors_merged$raw_names)], ]
+# it's a healthy sample with 2 entries in the SRA
+
+# ______________
+# FOUR UNASSIGNED SAMPLES IN SRA DATABASE
+# Look at the samples that were "unassigned" in the SRA metadata table
+authors_merged[is.na(authors_merged$Run),]
+# host_subject_id of unassigned samples: 3967, 4149, 4206, 4339
+# They are all fecal samples from the sequencing_run 180316 and the extraction_plate 27-1881
+```
+
+Now, let's look at the disease phenotype of the samples included in the paper.
+```{r paper-supplementary-3}
+# DISEASE PHENOTYPE OF THE SAMPLES INCLUDED IN PAPER
+# What is the disease of the 561 samples?
+authors_merged <- transform(authors_merged, gastrointestinal_tract_disorder = as.character(gastrointestinal_tract_disorder))
+as.data.frame(table(authors_merged$gastrointestinal_tract_disorder))
+# take into account that one healthy sample got a double match into the SRA => there are 321 healthy samples (not 322)
+```
+
+There is a second way we can double-check which samples were included in the analysis of the paper.
+
+*The paper indicates to download samples ERS3379832-ERS3380418*. That's a total of 587 samples. Considering that there are 26 control samples, that would mean there are 561 IBS or healthy samples (which matches the number of samples analyzed in the paper).
+
+Now, we downloaded the _SraRunInfo.csv_ file for samples ERS3379832-ERS3380418 on the SRA database. Let's import it, and compare the Run numbers from that file, with the Run numbers we indirectly obtained from the supplementary ASV table.
+```{r paper-supplementary-4}
+# Import the "suggested" runs
+sraRunInfo <- read.csv("paper_suggested.csv", header=TRUE, sep = ",")
+head(sraRunInfo)
+
+# The first 26 samples in the table are the controls (the "bioreactor" samples)
+table(sraRunInfo$Run[1:587] %in% metadata$Run)
+table(sraRunInfo$Run[27:587] %in% metadata$Run)
+
+# Merge to get the gastro-intestinal disorder of these runs
+paper_merged <- merge(x=sraRunInfo[, c("Run","Sample")],
+                      y=metadata[,c("Run", "gastrointestinal_tract_disorder")], by=c("Run"),
+                      all.x=FALSE)
+dim(paper_merged)
+
+# For the "real" human fecal samples, do they correspond to the samples found in the supplementary ASV table?
+table(paper_merged$Run %in% authors_merged$Run)
+
+# What are those 6 Runs that don't match?
+unmatched_runs <- as.vector(factor(paper_merged$Run[which(!paper_merged$Run %in% authors_merged$Run)]))
+unmatched_IDs <- c()
+for(run in unmatched_runs){
+  unmatched_IDs <- append(unmatched_IDs, metadata[metadata$Run == run,]$host_subject_ID)
+}
+unmatched_IDs # we have the subject_id of these 6 runs that don't match
+
+# Here we can see that the individuals can be found in the supplementary ASV table, but probably the sequencing_run and extraction_plate don't match with the run numbers of the sraRunInfo table.
+paper_samples[paper_samples$host_subject_ID %in% unmatched_IDs,] # ASV table
+metadata[metadata$Run %in% unmatched_runs, c("Run", "sequencing_run", "Extraction_Plate", "host_subject_ID", "host_body_product")] # sraRunInfo
+```
+
+Overall, we have found the 561 samples included in the analysis by the paper. We found the sample names from (1) the supplementary ASV table and from (2) the samples ERS3379832-ERS3380418. They both correspond to the same samples ( _except for 6 samples, but we checked that they belong to the same individuals, just not the same sequencing_run or extraction_plate_ ).
+
+These 561 samples have the following gastrointestinal disorders:
+- 321 healthy
+- 96 IBS
+- 130 other diseases (C.difficile infection, polyps, hyperplastic polyps, etc.)
+- 14 unknown
+
+
+#########################################
+# Samples to quality filter through Dada2
+
+```{r get-run-refs}
+# Combine all relevant runs
+# 1 - included samples in the paper (some are not ibs/hc)
+authors_merged <- transform(authors_merged, Run = as.character(Run))
+paper_runs <- authors_merged$Run[!is.na(authors_merged$Run)] #558
+
+# 2 - ibs and hc samples from SRA database
+mtDF_ibs_hc <- transform(mtDF_ibs_hc, Run = as.character(Run))
+sra_runs <- mtDF_ibs_hc$Run #607
+
+# Check that all ibs/hc samples from the paper are in the sra
+table(na.omit(authors_merged[authors_merged$gastrointestinal_tract_disorder == "none", "Run"]) %in% sra_runs) # 321 hc (322 because one duplicate)
+table(na.omit(authors_merged[authors_merged$gastrointestinal_tract_disorder == "IBS(irritable-bowel syndrome)", "Run"]) %in% sra_runs) # 96 IBS
+
+# 3 - ibs and hc samples after modifying the contradicting infos in the SRA metadata
+modified_runs <- read.csv("modified_runs.csv", header=TRUE)$Modified #585
+modified_runs <- as.character(modified_runs)
+
+# COMBINE ALL 3
+all_runs <- unique(c(paper_runs, sra_runs, modified_runs))
+all_runs <- all_runs[!is.na(all_runs)]
+
+# Add "*" at the end and export
+#all_runs <- paste0(all_runs, "*")
+write.csv(all_runs, file = "../../list_files.csv", sep = "\t",
+            row.names = FALSE)
+
+# This file ERR3549141 could not be downloaded
+
+mtDF_ibs_hc[mtDF_ibs_hc$Run == "ERR3549141",] # IBS
+mtDF_ibs_hc[mtDF_ibs_hc$Run == "ERR3586005",] # healthy 
+mtDF_ibs_hc[mtDF_ibs_hc$Run == "ERR3586042",] # healthy
+mtDF_ibs_hc[mtDF_ibs_hc$Run == "ERR3586312",] # healthy
+#authors_merged[authors_merged$Run == "ERR3586004",]
+
+
+```
+
+
+Let's build the metadata table to use in the phyloseq object for the data analysis.
+```{r quick-metadata-to-delete}
+# Import the metadata table with only IBS/HC that has been modified to remove inconsistencies
+modif_sra <- read.csv("../../modif_metadata.csv", header=TRUE) #585
+modif_sra <- transform(modif_sra, Run = as.character(Run))
+modif_sra <- transform(modif_sra, host_disease = as.character(host_disease))
+levels(modif_sra$sample_type) <- sub("^intestinal mucosa$", "sigmoid", levels(modif_sra$sample_type))
+head(modif_sra)
+
+# Get the samples that went through Dada2
+seqtable.nochim <- readRDS("/Users/scarcy/Desktop/Praktikum/Data/Hugherth_2020/ASVtable_final.rds")
+rownames(seqtable.nochim) <- gsub("_1_filt.fastq.gz","", rownames(seqtable.nochim)) # remove the .fastq.gz extension in sample names
+samples_needed <- rownames(seqtable.nochim)
+#samples_needed[1:10]
+table(modif_sra$Run %in% samples_needed)
+
+# Subset the ibs/hc samples
+metadata_final <- modif_sra[modif_sra$Run %in% samples_needed,]
+dim(metadata_final) # 582 samples
+
+# Which samples are missing now?
+table(samples_needed %in% metadata_final$Run) # 162 samples missing
+samples_needed2 <- samples_needed[which(!samples_needed %in% metadata_final$Run)]
+length(samples_needed2) # 162 samples missing
+
+#######
+# ADD SAMPLES NON-IBS/HC
+#######
+# We need to remove non-ibs/hc samples from the data analysis (we processed all paper included samples through dada2)
+
+# 1 - For these "extra-samples", get the relevant info from SRA table
+columns <- c("host_subject_ID", "Run", "host_body_product", "gastrointestinal_tract_disorder",
+             "Host_Age", "host_body.mass_index", "host_sex", "host_disease_status")
+DF_to_add <- sraDF[sraDF$Run %in% samples_needed2, columns]
+#dim(DF_to_add) # sanity check 162 samples
+
+# 2 - Rename columns to match our other metadata table
+colnames(DF_to_add) <- c("individual", "Run", "sample_type", "host_disease",
+                         "host_age", "host_bmi", "host_sex", "host_psy")
+head(DF_to_add)
+
+# 3 - Little re-formatting
+DF_to_add <- transform(DF_to_add, Run = as.character(Run))
+levels(DF_to_add$sample_type) <- sub("^Mucosal tissue$", "sigmoid", levels(DF_to_add$sample_type))
+levels(DF_to_add$sample_type) <- sub("^Faeces$", "stool", levels(DF_to_add$sample_type))
+DF_to_add$sample_type <- factor(DF_to_add$sample_type)
+
+DF_to_add <- transform(DF_to_add, host_disease = as.character(host_disease))
+DF_to_add[DF_to_add$host_disease == "none","host_disease"] <- "Healthy"
+DF_to_add[DF_to_add$host_disease == "IBS (irritable-bowel syndrome)", "host_disease"] <- "IBS"
+table(DF_to_add$host_disease)
+
+head(modif_sra)
+head(DF_to_add)
+
+####### VERIFY #########
+# 5 - Check that the host_ID in the "extra-samples" doesn't match any host_ID in the other metadata table
+table(DF_to_add$individual %in% metadata_final$individual) # There are 62 host_IDs that can be found in the metadata table (that is only ibs/hc)
+merge(x=metadata_final, y=DF_to_add, by=c("individual", "host_bmi"), all.x=FALSE) # but if we merge samples with same host_ID and same BMI, there is only 1 sample
+DF_to_add[DF_to_add$individual == 5806, 'host_disease'] <- "Healthy"
+
+# 6 - Replace host_ID in the "extra-samples"
+max(modif_sra$individual)
+max(DF_to_add$individual)
+nbID = 6116
+
+for (id in DF_to_add$individual){
+  # If this ID exists in the ibs/hc metadata, change it
+  if (id != 5806 & id %in% modif_sra$individual){
+    # Give a new ID
+    DF_to_add[DF_to_add$individual == id, "individual"] <- nbID
+    nbID = nbID + 1 # add 1 for the next ID we will need to give
+  }
+}
+
+# Sanity check
+table(DF_to_add$individual %in% modif_sra$individual) # should be 1 true (one healthy sample)
+table(DF_to_add$Run %in% modif_sra$Run)
+
+
+#######
+# MERGE IBS/HC DATAFRAME WITH PAPER SAMPLES DATAFRAME
+#######
+
+#dim(modif_sra) # 585 samples
+dim(DF_to_add) # 141 samples
+
+# Merge
+metadata_final <- rbind(metadata_final, DF_to_add)
+dim(metadata_final) # 744 samples
+table(metadata_final$host_disease)
+
+# Save table
+write.csv(x = metadata_final, file = "../../metadata_final.csv", row.names=FALSE)
+```
+
+
+
+
+
+
+
+
+###################
+# SRA metadata
+
+Obtain the sample names that passed the quality filter with Dada2.
+```{r samples-filtered}
+# Get the samples that went through Dada2
+seqtable.nochim <- readRDS("/Users/scarcy/Desktop/Praktikum/Data/Hugherth_2020/ASVtable_final.rds")
+rownames(seqtable.nochim) <- gsub("_1_filt.fastq.gz","", rownames(seqtable.nochim)) # remove the .fastq.gz extension in sample names
+samples_needed <- rownames(seqtable.nochim)
+
+# Sanity checks
+#length(samples_needed) # 744
+#samples_needed[1:10]
+
+# Get a metadata table for these samples.
+```
+
+
+Let's look at possible inconsistencies in the metadata from the SRA.
+```{r sra-metadata-cleanup}
+# To initialize before starting loop
+id = 1000
+#IDerr <- list("SameID_DiffBMI"=0,
+#              "DiffID_SameAll"=0)
+
+
+# Duplicate metadata table and sort it by increasing BMI and increasing age
+new.metadata <- metadata
+new.metadata <- new.metadata[order(new.metadata$host_bmi, new.metadata$host_age, new.metadata$host_disease),]
+
+# Add collection_date column to keep only year-month
+new.metadata$coldate <- new.metadata$collection_date
+new.metadata$coldate <- substr(new.metadata$coldate, 0, 7)
+
+interesting_col <- c("host_ID", "host_bmi", "host_age", "host_disease", "sample_type",
+                     "host_sex", "host_psy", "collection_date")
+
+
+
+```
+
+```{r sra-metadata-cleanup-2}
+# See before
+new.metadata[,interesting_col]
+mistakes.list=list("DiffPerson" = c(), "SamePerson"=c())
+
+# For samples with the same BMI
+for(bmi in bmi_range){
+  # subset df
+  subtable <- new.metadata[new.metadata$host_bmi == bmi,]
+  
+  # Give the first row a new host_ID
+  subtable[1,]$host_ID <- id
+  id <- id+1
+  
+  # If there is only 1 sample with this BMI
+  #if(nrow(subtable)==1){
+    # check if any other sample in metadata had the same host_ID (mistake)
+    #if(new.metadata[new.metadata$host_bmi == bmi,"host_ID"] %in% new.metadata[new.metadata$host_bmi > bmi,"host_ID"]){
+    #  wrong_id <- new.metadata[new.metadata$host_bmi == bmi,"host_ID"] # get the ID
+    #  mistakes.list$DiffPerson <- append(mistakes.list$DiffPerson, new.metadata[new.metadata$host_ID == wrong_ID,"Run"])
+    #}
+  #}
+  
+  #______________________________________________
+  # If there are 2 samples or more with this BMI
+  if(nrow(subtable)>=2){
+    
+    #####
+    # Compare row-by-row
+    for (row in 2:nrow(subtable)){
+      # Compare column-by-column
+      for (col in c("host_bmi", "host_age", "host_disease", "host_sex", "coldate")){
+        # If characteristic is the same, give same host_ID as previous row
+        if (subtable[row, col] == subtable[row-1, col]){
+          subtable[row,"host_ID"] <- subtable[row-1,"host_ID"]
+        }
+        
+        # If there is only 1 characteristic  different, give new host_ID!
+        else if (subtable[row, col] != subtable[row-1, col]){
+          subtable[row,"host_ID"] <- id
+          id <- id+1
+          # Go to next row/sample
+          break
+        }
+      }
+    }
+    #####
+    
+    #####
+    # Now let's look at host_psy
+    for (ID in sort(unique(subtable$host_ID))){
+      
+      # If there are more than 1 sample from same individual
+      if(nrow(subtable[subtable$host_ID == ID,]) >= 2){
+        psy.values <- subtable[subtable$host_ID == ID,"host_psy"]
+        
+        # If all values are NA
+        if(all(is.na(psy.values))){
+          subtable[subtable$host_ID == ID,"host_psy"] <- "NA"
+        }
+        
+        # If all non-NA values agree
+        else if(length(unique(psy.values[!is.na(psy.values)])) == 1){
+          # replace NAs by the known value
+          subtable[subtable$host_ID == ID & is.na(subtable$host_psy),"host_psy"] <- unique(psy.values[!is.na(psy.values)])
+        }
+        
+        # If values are different
+        else if(length(unique(psy.values[!is.na(psy.values)])) > 1){
+          # replace host_psy by NAs
+          subtable[subtable$host_ID == ID, "host_psy"] <- "NA"
+        }
+      }
+    }
+    #####
+  }  
+  #______________________________________________
+  
+  # Replace the new.metadata subset by subtable
+  new.metadata[new.metadata$host_bmi == bmi,] <- subtable
+
+}
+
+
+# See after
+new.metadata[,interesting_col]
+
+```
+
+
+```{r}
+write.table(new.metadata, "../../modif_metadata(R).csv")
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

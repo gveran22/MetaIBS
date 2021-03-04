@@ -1,0 +1,459 @@
+---
+title: "Dada2_Pozuelo2015"
+params:
+  date: "!r Sys.Date()"
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
+---
+
+```{r, include=FALSE}
+knitr::opts_chunk$set(fig.width = 3.5, fig.height = 3, warning=FALSE, message=FALSE,
+                      root.dir = "/Users/scarcy/Desktop/Praktikum/Data/Pozuelo_2015/")
+```
+
+
+# Import library
+```{r library-import}
+library(dada2)
+packageVersion("dada2") # check dada2 version
+
+library(Biostrings)
+library(ShortRead)
+library(seqTools) # per base sequence content
+library(phyloseq)
+library(ggplot2)
+library(data.table)
+library(plyr)
+library(dplyr)
+library(qckitfastq) # per base sequence content
+library(stringr)
+```
+
+
+#####################
+##  QUALITY CHECK  ##
+#####################
+
+First, we import the fastq files containing the raw reads. The samples were downloaded from the ENA database with the accession number PRJNA268708.
+
+```{r quality-check, echo=TRUE}
+# Save the path to the directory containing the fastq zipped files
+path <- "/Users/scarcy/Desktop/Praktikum/Data/Pozuelo_2015/"
+#list.files(path) # check we are in the right directory
+
+# fastq filenames have format: SAMPLENAME.fastq.gz
+# Saves the whole directory path to each file name
+FNs <- sort(list.files(file.path(path, "original"), pattern=".fastq", full.names = TRUE))
+show(FNs[1:5])
+
+# Extract sample names, assuming filenames have format: SAMPLENAME.fastq
+sample.names <- sapply(strsplit(basename(FNs), "_"), `[`, 1)
+show(sample.names[1:5]) # saves only the file name (without the path)
+
+# Look at quality of all files
+for (i in 1:4){ # 1:length(FNs)
+  show(plotQualityProfile(FNs[i]))
+}
+
+# Look at nb of reads per sample
+#raw_stats <- data.frame('sample' = sample.names,
+#                        'reads' = fastqq(FNs)@nReads)
+#min(raw_stats$reads)
+#max(raw_stats$reads)
+#mean(raw_stats$reads)
+```
+
+We will have a quick peak at the per base sequence content of the reads in some samples, to make sure there is no anomaly (i.e. all reads having the same sequence).
+
+```{r per-base-seq-content, fig.width = 6, fig.height = 3}
+# Look at per base sequence content
+fseq <- seqTools::fastqq(FNs[10])
+rc <- read_content(fseq)
+plot_read_content(rc) + labs(title = "Per base sequence content")
+plot_read_content(rc) + xlim(0,50) + labs(title = "Per base sequence content")
+```
+
+
+```{r pdf-import, echo = FALSE}
+#_____________________________________________________________________
+#____________ THIS IS ONLY FOR (quicker) PDF OUTPUT __________________
+#_____________________________________________________________________
+
+# out process
+out1 <- readRDS("/Users/scarcy/Desktop/Praktikum/Data/Pozuelo_2015/Rproject_Dada2/out1.rds")
+out2 <- readRDS("/Users/scarcy/Desktop/Praktikum/Data/Pozuelo_2015/Rproject_Dada2/out2.rds")
+raw_stats <- readRDS("/Users/scarcy/Desktop/Praktikum/Data/Pozuelo_2015/Rproject_Dada2/raw_stats.rds")
+# look at quality
+filt1_samples <- sort(list.files(file.path(path, "filtered1"), pattern=".fastq.gz", full.names = TRUE))
+filt2_samples <- sort(list.files(file.path(path, "filtered2"), pattern=".fastq.gz", full.names = TRUE))
+# error rates
+err <- readRDS("/Users/scarcy/Desktop/Praktikum/Data/Pozuelo_2015/Rproject_Dada2/err.rds")
+# infered sequences
+seq_infered <- readRDS("/Users/scarcy/Desktop/Praktikum/Data/Pozuelo_2015/Rproject_Dada2/seq_infered.rds")
+# taxa
+taxa <- readRDS("/Users/scarcy/Desktop/Praktikum/Data/OutputTaxa/taxa_pozuelo.rds")
+# phyloseq object
+physeq <- readRDS("/Users/scarcy/Desktop/Praktikum/Data/Pozuelo_2015/physeq_pozuelo.rds")
+```
+
+
+########################
+##  LOOK FOR PRIMERS  ##
+########################
+
+Now, we will look whether the reads still contain the primers.
+
+```{r primer-check, eval = TRUE, message=FALSE}
+# V4
+FWD <- "GTGCCAGCMGCCGCGGTAA"  # 515F primer sequence
+REV <- "GGACTACHVGGGTWTCTAAT" # 806R primer sequence
+SEQBegin <- "TACGKA" # sequence at the beginning of all reads (what is it?!)
+
+# Function that, from the primer sequence, will return all combinations possible (complement, reverse complement, ...)
+allOrients <- function(primer) {
+    # Create all orientations of the input sequence
+    require(Biostrings)
+    dna <- DNAString(primer)  # The Biostrings works w/ DNAString objects rather than character vectors
+    orients <- c(Forward = dna, Complement = complement(dna), Reverse = reverse(dna), 
+        RevComp = reverseComplement(dna))
+    return(sapply(orients, toString))  # Convert back to character vector
+}
+
+# Get all combinations of the primer sequences
+FWD.orients <- allOrients(FWD) # 515F
+REV.orients <- allOrients(REV) # 806R
+SEQBegin.orients <- allOrients(SEQBegin)
+FWD.orients # sanity check
+REV.orients
+SEQBegin.orients
+
+# Function that counts number of reads in which a sequence is found
+primerHits <- function(primer, fn) {
+    # Counts number of reads in which the primer is found
+    nhits <- vcountPattern(primer, sread(readFastq(fn)), fixed = FALSE, max.mismatch = 2)
+    return(sum(nhits > 0))
+}
+
+# Get a table to know how many times the 515F and 806R primers are found in the reads of each sample
+for (i in 1:5){
+  cat("SAMPLE", sample.names[i], "with total number of", raw_stats[i,'reads'], "reads\n\n")
+  x <-  rbind(ForwardPrimer = sapply(FWD.orients, primerHits, fn = FNs[[i]]), 
+              ReversePrimer = sapply(REV.orients, primerHits, fn = FNs[[i]]),
+              SeqBeginning = sapply(SEQBegin.orients, primerHits, fn = FNs[[i]]))
+  print(x)
+  cat("\n____________________________________________\n\n")
+}
+```
+
+
+
+#####################
+## FILTER AND TRIM ##
+#####################
+
+### 1. Primer removal
+
+The reads indeed contain the reverse primer. We could not find the forward primer, but we need to give a _primer.fwd_ parameter to the function 'removePrimers', so we will give the 'TACGKA' sequence that we found at the beginning of all the reads.
+We will keep only reads containing the reverse primer, and then remove the primer!
+
+```{r primer-filter, eval = FALSE, echo = TRUE}
+# KEEP READS WITH PRIMER AND REMOVE PRIMER
+# Place filtered files in a filtered/ subdirectory
+filt1_samples <- file.path(path, "filtered1", paste0(sample.names, "_filt.fastq.gz"))
+# Assign names for the filtered fastq.gz files
+names(filt1_samples) <- sample.names
+
+# Filter first to take out primer
+out1 <- removePrimers(fn = FNs, fout = filt1_samples,
+                      primer.fwd = 'TACGKA', # sequence found at the beginning of all reads
+                      primer.rev = REV.orients['RevComp'], # revcomp of the reverse primer, found at the end of the reads
+                      trim.fwd = TRUE,
+                      trim.rev = TRUE,
+                      orient = FALSE, # keep the reads in their original orientation
+                      compress = TRUE, verbose = TRUE)
+```
+
+```{r primer-filter-check}
+# Primer removal
+out1[1:5,]
+
+# Quality profile after primer removal
+for (i in 1:4){
+  show(plotQualityProfile(filt1_samples[i]))
+}
+```
+
+We can see that the reads length has quite reduced (from ~300bp to ~250bp). Looking at the fastq files, the reverse primer was not at the very end of the reads, it was followed by the Golay barcode and other specific sequences described in the methods of the article (we can notably recognize the reverse complement of the full specific sequences 5’-{CAAGCAGAAGACGGCATACGAGAT} {Golay barcode} {AGTCAGTCAGCC} {reverse primer}-3').
+
+
+
+### 2. Quality filtering
+
+Then, we perform a quality filtering of the reads.
+
+```{r quality-filter, eval = FALSE, echo = TRUE}
+# Place filtered files in a filtered/ subdirectory
+filt2_samples <- file.path(path, "filtered2", paste0(sample.names, "_filt.fastq.gz"))
+# Assign names for the filtered fastq.gz files
+names(filt2_samples) <- sample.names
+
+out2 <- filterAndTrim(fwd = filt1_FNs, filt = filt2_samples,
+                      maxEE=4, # reads with more than 4 expected errors (sum(10e(-Q/10))) are discarded
+                      truncQ=10, # Truncate reads at the first instance of a quality score less than or equal to truncQ.
+                      minLen=200, # Discard reads shorter than 200 bp. This is done after trimming and truncation.
+                      compress=TRUE, # Output files in gzip format
+                      verbose=TRUE) # give a message saying the percentage of filtered sequences
+```
+
+Let's look at the output filtered fastq files as sanity check.
+
+```{r quality-filter-check}
+out2[1:4,] # show how many reads were filtered in each file
+
+# Look at quality profile of filtered files
+for (i in 1:4){
+  show(plotQualityProfile(filt2_samples[i]))
+}
+```
+
+
+
+#######################
+## LEARN ERROR RATES ##
+#######################
+
+Now we will build the parametric error model, to be able to infer amplicon sequence variants (ASVs) later on.
+
+```{r error-rate-estimate, eval = FALSE}
+err <- learnErrors(filt2_samples, multithread=TRUE, randomize=TRUE, verbose = 1)
+```
+
+The error rates for each possible transition (A→C, A→G, …) are shown. Points are the observed error rates for each consensus quality score. The black line shows the estimated error rates after convergence of the machine-learning algorithm. The red line shows the error rates expected under the nominal definition of the Q-score. Here the estimated error rates (black line) are a good fit to the observed rates (points), and the error rates drop with increased quality as expected.
+
+```{r plot-errors, fig.height=5, fig.width=5}
+plotErrors(err, nominalQ = TRUE)
+```
+
+
+
+##############################
+## CONSTRUCT SEQUENCE TABLE ##
+##############################
+
+### 1. Infer sample composition
+
+The _dada()_ algorithm infers sequence variants based on estimated errors (previous step). Firstly, we de-replicate the reads in each sample, to reduce the computation time.
+De-replication is a common step in almost all modern ASV inference (or OTU picking) pipelines, but a unique feature of derepFastq is that it maintains a summary of the quality information for each dereplicated sequence in $quals.
+
+```{r infer-sample-composition, eval = FALSE}
+# Prepare empty vector for the infered sequences
+seq_infered <- vector("list", length(sample.names))
+names(seq_infered) <- sample.names # names of each row will be the sample names
+
+# Iterate through the 290 samples
+for(sampl in sample.names) {
+  cat("Processing:", sampl, "\n") # print which sample is being processed
+  derep <- derepFastq(filt2_samples[[sampl]]) # dereplicate the reads in the sample
+  seq_infered[[sampl]] <- dada(derep, err=err, multithread=TRUE) # default parameters
+}
+```
+
+```{r}
+# Inspect the infered sequence variants from sample 1:5
+for (i in 1:5){
+  print(seq_infered[[i]])
+  print("________________")
+}
+```
+
+
+### 2. Construct ASV table
+
+We can now construct an amplicon sequence variant table (ASV) table, a higher-resolution version of the OTU table produced by traditional methods.
+
+```{r build-seq-table, fig.height=3, fig.width=4}
+# Make sequence table from the infered sequence variants
+seqtable <- makeSequenceTable(seq_infered)
+
+# We should have 290 samples (290 rows)
+dim(seqtable)
+
+# Inspect distribution of sequence lengths
+hist(nchar(getSequences(seqtable)), breaks = 100, xlab = "ASV length", ylab = "Number of ASVs", main="")
+```
+
+
+### 3. Remove chimeras
+
+The core dada method corrects substitution and indel errors, but chimeras remain. Fortunately, the accuracy of sequence variants after denoising makes identifying chimeric ASVs simpler than when dealing with fuzzy OTUs. Chimeric sequences are identified if they can be exactly reconstructed by combining a left-segment and a right-segment from two more abundant “parent” sequences.
+
+```{r remove-chimeras}
+seqtable.nochim <- removeBimeraDenovo(seqtable, method="consensus", multithread=TRUE, verbose=TRUE)
+
+# Check how many sequence variants we have after removing chimeras
+dim(seqtable.nochim)
+
+# Check how many reads we have after removing chimeras (we should keep the vast majority of the reads, like > 80%)
+sum(seqtable.nochim)/sum(seqtable)
+```
+
+
+
+
+##########################################
+## LOOK AT READS COUNT THROUGH PIPELINE ##
+##########################################
+
+Sanity check before assigning taxonomy.
+
+```{r reads-filtered-sanity-check}
+# Function that counts nb of reads
+getN <- function(x) sum(getUniques(x))
+
+# Table that will count number of reads for each process of interest (input reads, filtered reads, denoised reads, non chimera reads)
+track <- cbind(out1, out2[,2], sapply(seq_infered, getN), rowSums(seqtable.nochim),
+               lapply(rowSums(seqtable.nochim)*100/out1[,1], as.integer))
+
+# Assign column and row names
+colnames(track) <- c("input", "primer-filt", "quality-filt", "denoised", "nonchim", "%kept_input->output")
+rownames(track) <- gsub(".fastq", "", sample.names)
+
+# Show final table: for each row/sample, we have shown the initial number of reads, filtered reads, denoised reads, and non chimera reads
+track
+```
+
+
+
+#####################
+## ASSIGN TAXONOMY ##
+#####################
+
+Extensions: The dada2 package also implements a method to make species level assignments based on exact matching between ASVs and sequenced reference strains. Recent analysis suggests that exact matching (or 100% identity) is the only appropriate way to assign species to 16S gene fragments. Currently, species-assignment training fastas are available for the Silva and RDP 16S databases. To follow the optional species addition step, download the silva_species_assignment_v132.fa.gz file, and place it in the directory with the fastq files.
+
+```{r assign-taxonomy, eval = FALSE}
+# Assign taxonomy (with silva v138)
+taxa <- assignTaxonomy(seqtable.nochim, "/Users/scarcy/Desktop/Praktikum/Data/silva_nr_v138_train_set.fa.gz",
+                       tryRC = TRUE, # try reverse complement of the sequences
+                       multithread=TRUE, verbose = TRUE)
+
+# Add species assignment
+taxa <- addSpecies(taxa, "/Users/scarcy/Desktop/Praktikum/Data/silva_species_assignment_v138.fa.gz")
+```
+
+```{r taxa-sanity-check}
+# Check how the taxonomy table looks like
+taxa.print <- taxa 
+rownames(taxa.print) <- NULL # Removing sequence rownames for display only
+head(taxa.print)
+
+table(taxa.print[,1]) # Show the different kingdoms
+taxa.print[taxa.print[,1] == 'Eukaryota',2] # the eukaryota are either Euglenozoa, or unknown
+
+table(taxa.print[,2]) # Show the different phyla
+table(is.na(taxa.print[,2])) # is there any NA phyla?
+```
+
+
+########################
+## LAST PREPROCESSING ##
+########################
+
+We will remove any sample with less than 500 reads from further analysis, and also any ASVs with unassigned phyla.
+
+### 1. Create phyloseq object
+The preprocessing will be easier to do with ASV, taxonomic and metadata tables combined in a phyloseq object.
+
+```{r phyloseq-preprocess, echo=TRUE, eval=FALSE}
+#_________________________
+# Import metadata
+metadata_table <- read.table("/Users/scarcy/Desktop/Praktikum/Data/Pozuelo_2015/PozueloSraRunTable.txt", header = TRUE, sep = ",")
+
+# Keep relevant covariates
+sampledf <- metadata_table[, c("Run", "Sample.Name", "Collection_Date")]
+rownames(sampledf) <- sampledf$Run
+
+sampledf$Sample.Name <- as.character(sampledf$Sample.Name)
+
+# Simplify data
+sampledf$Collection <- "1st" # add column to specify if sample is from first or 2nd collection
+sampledf[gsub('.*(?=.{2}$)', '', sampledf$Sample.Name, perl=T) == '.2', 'Collection'] <- "2nd"
+
+sampledf$host_disease <- "Healthy" # add column for host_disease
+sampledf[substr(sampledf$Sample.Name, 1, 2) == "MO", 'host_disease'] <- "IBS"
+sampledf[, 'Sample.Name'] <- gsub("MO", "IBS", sampledf[, 'Sample.Name']) # replace 'MO' by 'IBS' in the sample.names
+sampledf$Sample.Name <- gsub("\\.2$", "", sampledf[, 'Sample.Name']) # remove the '.2' at the end of some of the sample.names (indicating it is the 2nd collection)
+
+colnames(sampledf) <- c("Run", "host_ID", "collection_date", "Collection", "host_disease")
+
+sampledf$author <- "Pozuelo"
+sampledf$sequencing_tech <- "Illumina"
+sampledf$variable_region <- "V4"
+
+# Remove .fastq extension in seqtable.nochim
+rownames(seqtable.nochim) <- gsub(".fastq", "", rownames(seqtable.nochim))
+
+#_________________________
+# Create phyloseq object
+physeq <- phyloseq(otu_table(seqtable.nochim, taxa_are_rows=FALSE), # by default, in otu_table the sequence variants are in rows
+                   sample_data(sampledf), 
+                   tax_table(taxa))
+
+# Remove samples with less than 500 reads
+physeq <- prune_samples(sample_sums(physeq)>=500, physeq)
+# Remove taxa that are eukaryota, or have unassigned Phyla
+physeq <- subset_taxa(physeq, Kingdom != "Eukaryota")
+physeq <- subset_taxa(physeq, !is.na(Phylum))
+```
+
+
+### 2. Save to disk
+
+```{r save, eval=FALSE}
+# Save to disk
+saveRDS(out1, "/Users/scarcy/Desktop/Praktikum/Data/Pozuelo_2015/Rproject_Dada2/out1.rds")
+saveRDS(out2, "/Users/scarcy/Desktop/Praktikum/Data/Pozuelo_2015/Rproject_Dada2/out2.rds")
+saveRDS(err, "/Users/scarcy/Desktop/Praktikum/Data/Pozuelo_2015/Rproject_Dada2/err.rds")
+saveRDS(seq_infered, "/Users/scarcy/Desktop/Praktikum/Data/Pozuelo_2015/Rproject_Dada2/seq_infered.rds")
+
+
+saveRDS(otu_table(physeq), "/Users/scarcy/Desktop/Praktikum/Data/Pozuelo_2015/Rproject_Dada2/ASVtable_final.rds") # ASV table
+saveRDS(tax_table(physeq), "/Users/scarcy/Desktop/Praktikum/Data/Pozuelo_2015/Rproject_Dada2/taxa_final.rds") # taxa table
+saveRDS(sample_data(physeq), "/Users/scarcy/Desktop/Praktikum/Data/Pozuelo_2015/Rproject_Dada2/metadata_final.rds") # metadata table
+write.csv(sample_data(physeq), "/Users/scarcy/Desktop/Praktikum/Data/Pozuelo_2015/Rproject_Dada2/PozueloMetadata.csv")
+
+saveRDS(physeq, "/Users/scarcy/Desktop/Praktikum/Data/Pozuelo_2015/physeq_pozuelo.rds") # phyloseq object
+
+
+# Save nb of reads per sample before / after dada2 pipeline
+nb.reads <- readRDS("/Users/scarcy/Desktop/Praktikum/Data/nb_reads.rds")
+nb.reads[1:290, 'Pozuelo_before'] <- fastqq(FNs)@nReads
+nb.reads[1:290, 'Pozuelo_after'] <- rowSums(seqtable.nochim)
+median(na.omit(nb.reads$Pozuelo_before)) # sanity check
+median(na.omit(nb.reads$Pozuelo_after)) # sanity check
+saveRDS(nb.reads, "/Users/scarcy/Desktop/Praktikum/Data/nb_reads.rds")
+```
+
+
+### 3. Quick peek at data analysis
+
+```{r plot, fig.width = 10}
+# Absolute abundance
+plot_bar(physeq, fill = "Phylum")+ facet_wrap("host_disease", scales="free") + theme(axis.text.x = element_blank())
+
+# Relative abundance for Phylum
+phylum.table <- physeq %>%
+  tax_glom(taxrank = "Phylum") %>%                     # agglomerate at phylum level
+  transform_sample_counts(function(x) {x/sum(x)} ) %>% # Transform to rel. abundance
+  psmelt()                                             # Melt to long format
+
+ggplot(phylum.table, aes(x = reorder(Sample, Sample, function(x) mean(phylum.table[Sample == x & Phylum == 'Bacteroidota', 'Abundance'])),
+                         y = Abundance, fill = Phylum))+
+  facet_wrap(~ host_disease, scales = "free") + # scales = "free" removes empty lines
+  geom_bar(stat = "identity") +
+  theme(axis.text.x = element_text(size = 5, angle = -90))+
+  labs(x = "Samples", y = "Relative abundance")
+
+```
+

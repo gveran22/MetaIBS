@@ -1,0 +1,208 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+####################
+# IMPORT LIBRARIES #
+####################
+
+```{r, echo = FALSE}
+library(dada2) # manage fastq file
+library(ShortRead) # manage fastq file
+library(Biostrings) # to manage dna sequences as strings
+library(seqTools) # analyse read length in fastq file
+library(phyloseq) # for phyloseq object
+library(ggplot2) # for plots
+library(ggpubr)
+library(ggrepel)
+library(reshape2)
+library(data.table)
+library(plyr)
+library(dplyr)
+library("doParallel")
+library("foreach")
+library("DECIPHER") # for phylogenetic tree
+library("phangorn")
+library("plotly") # plot 3D
+library("microbiome") # for centered log-ratio
+library("coda") # Aitchison distance
+library("coda.base") # Aitchison distance
+library("vegan") # NMDS
+library(pheatmap) # for heat map
+library(RColorBrewer)
+library(glmnet)
+```
+
+
+###############
+# IMPORT DATA #
+###############
+
+```{r import-datasets, echo = TRUE, eval = FALSE}
+#________________________________________________________________________OK
+# RINGEL-KULKA 2015
+physeq.ringel <- readRDS("/Users/scarcy/Desktop/Praktikum/Data/Ringel_Kulka_2015/physeq_ringel.rds")
+# Check if there are any eukaryota or NA phyla
+table(tax_table(physeq.ringel)[,1]) # 3,158 bacteria
+table(is.na(tax_table(physeq.ringel)[,2])) # no NA at phylum level
+
+# Check on metadata
+sample_data(physeq.ringel)
+
+
+#________________________________________________________________________OK
+# LABUS 2017
+physeq.labus <- readRDS("/Users/scarcy/Desktop/Praktikum/Data/Labus_2017/physeq_labus.rds")
+# Check if there are any eukaryota or NA phyla
+table(tax_table(physeq.labus)[,1]) # 735 bacteria
+table(is.na(tax_table(physeq.labus)[,2])) # check there are no NA phyla
+
+# Check on metadata
+sample_data(physeq.labus)
+sample_data(physeq.labus)$host_subtype <- as.character(sample_data(physeq.labus)$host_subtype)
+sample_data(physeq.labus)$host_sex <- as.character(sample_data(physeq.labus)$host_sex)
+
+# Re-order samples (have Healthy samples then IBS samples)
+ordersamples_labus <- rownames(sample_data(physeq.labus)[order(sample_data(physeq.labus)$host_disease),]) # get the order
+otu_table(physeq.labus) <- otu_table(physeq.labus)[ordersamples_labus, ] # re-order samples in the phyloseq object
+sample_data(physeq.labus) # sanity check
+
+
+#________________________________________________________________________OK
+# LOPRESTI 2019
+physeq.lopresti <- readRDS("/Users/scarcy/Desktop/Praktikum/Data/LoPresti_2019/physeq_lopresti.rds")
+# Check if there are any eukaryota or NA phyla
+table(tax_table(physeq.lopresti)[,1]) # 1295 bacteria
+table(is.na(tax_table(physeq.lopresti)[,2])) # check any NA at phylum level
+
+# Check on metadata
+sample_data(physeq.lopresti)
+sample_data(physeq.lopresti)$host_sex <- as.character(sample_data(physeq.lopresti)$host_sex)
+colnames(sample_data(physeq.lopresti))[6] <- "host_subtype"
+
+# Re-order samples (have Healthy samples then IBS samples)
+ordersamples_lopresti <- rownames(sample_data(physeq.lopresti)[order(sample_data(physeq.lopresti)$host_disease),]) # get the order
+otu_table(physeq.lopresti) <- otu_table(physeq.lopresti)[ordersamples_lopresti, ] # re-order samples in the phyloseq object
+sample_data(physeq.lopresti) # sanity check
+
+
+#________________________________________________________________________OK
+# POZUELO 2015
+physeq.pozuelo <- readRDS("/Users/scarcy/Desktop/Praktikum/Data/Pozuelo_2015/physeq_pozuelo.rds")
+# Check if there are any eukaryota or NA phyla
+table(tax_table(physeq.pozuelo)[,1]) # 21,128 bacteria
+table(is.na(tax_table(physeq.pozuelo)[,2])) # check any NA at phylum level
+
+# Check on metadata
+sample_data(physeq.pozuelo)
+
+# Re-order samples (have Healthy samples then IBS samples)
+ordersamples_pozuelo <- rownames(sample_data(physeq.pozuelo)[order(sample_data(physeq.pozuelo)$host_disease),]) # get the order
+otu_table(physeq.pozuelo) <- otu_table(physeq.pozuelo)[ordersamples_pozuelo, ] # re-order samples in the phyloseq object
+sample_data(physeq.pozuelo)
+
+
+#________________________________________________________________________OK
+# ZHUANG 2015
+physeq.zhuang <- readRDS("/Users/scarcy/Desktop/Praktikum/Data/Zhuang_2018/physeq_zhuang.rds")
+# Check if there are any eukaryota or NA phyla
+table(tax_table(physeq.zhuang)[,1]) # 705 bacteria
+table(is.na(tax_table(physeq.zhuang)[,2])) # no NA at phylum level
+
+# Check on metadata
+sample_data(physeq.zhuang)
+# Re-order samples (have Healthy samples then IBS samples)
+ordersamples_zhuang <- rownames(sample_data(physeq.zhuang)[order(sample_data(physeq.zhuang)$host_disease),]) # get the order
+otu_table(physeq.zhuang) <- otu_table(physeq.zhuang)[ordersamples_zhuang, ] # re-order samples in the phyloseq object
+sample_data(physeq.zhuang)
+
+
+#________________________________________________________________________OK
+# ZHU 2019
+physeq.zhu <- readRDS("/Users/scarcy/Desktop/Praktikum/Data/Zhu_2019/physeq_zhu.rds")
+# Check if there are any eukaryota or NA phyla
+table(tax_table(physeq.zhu)[,1]) # 943 bacteria
+table(is.na(tax_table(physeq.zhu)[,2])) # no NA at phylum level
+
+# Check on metadata & re-roder (have Healthy samples then IBS samples)
+ordersamples_zhu <- rownames(sample_data(physeq.zhu)[order(sample_data(physeq.zhu)$host_disease),]) # get the order 
+otu_table(physeq.zhu) <- otu_table(physeq.zhu)[ordersamples_zhu, ] # re-order samples in the phyloseq object
+sample_data(physeq.zhu)$host_sex <- as.character(sample_data(physeq.zhu)$host_sex)
+sample_data(physeq.zhu)
+
+
+#________________________________________________________________________OK
+# HUGERTH 2020
+physeq.hugerth <- readRDS("/Users/scarcy/Desktop/Praktikum/Data/Hugherth_2020/physeq_hugerth.rds")
+# Check if there are any eukaryota or NA phyla
+table(tax_table(physeq.hugerth)[,1]) # 5,294 bacteria
+table(is.na(tax_table(physeq.hugerth)[,2])) # no NA at phylum level
+
+# Check on metadata
+sample_data(physeq.hugerth)
+
+ordersamples_hugerth <- rownames(sample_data(physeq.hugerth)[order(sample_data(physeq.hugerth)$host_disease),]) # get the order 
+otu_table(physeq.hugerth) <- otu_table(physeq.hugerth)[ordersamples_hugerth, ] # re-order samples in the phyloseq object
+sample_data(physeq.hugerth)
+saveRDS(physeq.hugerth, "../NewPrediction/physeq_hugerth.rds")
+
+
+#________________________________________________________________________OK
+# ZEBER-LUBECKA 2016
+physeq.zeber <- readRDS("/Users/scarcy/Desktop/Praktikum/Data/Zeber-Lubecka_2016/physeq_zeber.rds")
+# Check if there are any eukaryota or NA phyla
+table(tax_table(physeq.zeber)[,1]) # 11,555 bacteria
+table(is.na(tax_table(physeq.zeber)[,2])) # no NA at phylum level
+
+# Check on metadata
+sample_data(physeq.zeber)
+sample_data(physeq.zeber)$host_disease <- as.character(sample_data(physeq.zeber)$host_disease)
+sample_data(physeq.zeber)$individual <- NULL
+# Re-order samples (have Healthy samples then IBS samples)
+ordersamples_zeber <- rownames(sample_data(physeq.zeber)[order(sample_data(physeq.zeber)$host_disease),]) # get the order
+otu_table(physeq.zeber) <- otu_table(physeq.zeber)[ordersamples_zeber, ] # re-order samples in the phyloseq object
+sample_data(physeq.zeber)
+
+#________________________________________________________________________OK
+# NAGEL 2016
+physeq.nagel <- readRDS("/Users/scarcy/Desktop/Praktikum/Data/Nagel_2016/physeq_nagel.rds")
+# Check if there are any eukaryota or NA phyla
+table(tax_table(physeq.nagel)[,1]) # 1,097 bacteria
+table(is.na(tax_table(physeq.nagel)[,2])) # no NA at phylum level
+
+# Check on metadata
+sample_data(physeq.nagel)$host_sex <- as.character(sample_data(physeq.nagel)$host_sex)
+ordersamples_nagel <- rownames(sample_data(physeq.nagel)[order(sample_data(physeq.nagel)$host_disease),]) # get the order 
+otu_table(physeq.nagel) <- otu_table(physeq.nagel)[ordersamples_nagel, ] # re-order samples in the phyloseq object
+sample_data(physeq.nagel)
+```
+
+
+#########
+# MERGE #
+#########
+
+```{r}
+# PRE-PROCESS
+physeq <- merge_phyloseq(phyloseq(tax_table(physeq.labus), otu_table(physeq.labus), sample_data(physeq.labus)),
+                         phyloseq(tax_table(physeq.lopresti), otu_table(physeq.lopresti), sample_data(physeq.lopresti)),
+                         phyloseq(tax_table(physeq.pozuelo), otu_table(physeq.pozuelo), sample_data(physeq.pozuelo)),
+                         phyloseq(tax_table(physeq.zhuang), otu_table(physeq.zhuang), sample_data(physeq.zhuang)),
+                         phyloseq(tax_table(physeq.zhu), otu_table(physeq.zhu), sample_data(physeq.zhu)),
+                         phyloseq(tax_table(physeq.hugerth), otu_table(physeq.hugerth), sample_data(physeq.hugerth)),
+                         phyloseq(tax_table(physeq.zeber), otu_table(physeq.zeber), sample_data(physeq.zeber)),
+                         phyloseq(tax_table(physeq.nagel), otu_table(physeq.nagel), sample_data(physeq.nagel)))
+
+# Add missing info in the covariates
+sample_data(physeq)[is.na(sample_data(physeq)$sample_type),"sample_type"] <- "stool"
+sample_data(physeq)
+
+#physeq_best <-  prune_samples(sample_sums(physeq)>=1000, physeq) # REMOVE SAMPLES WITH LESS THAN 1000 TOTAL COUNTS
+#physeq_best # 541 samples (without Ringel)
+
+physeq.fecal <- subset_samples(physeq, sample_type == 'stool') # KEEP ONLY FECAL SAMPLES
+physeq.fecal # 750 samples (without Ringel dataset)
+
+```
+
