@@ -1,3 +1,3 @@
-# Meta-analysis
+# Meta-analysis of microbiome composition measured by 16S rRNA seq in IBS case-control studies
 
-Description
+...Description of this project...
