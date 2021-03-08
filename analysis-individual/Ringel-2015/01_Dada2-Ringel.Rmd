@@ -106,7 +106,7 @@ Now, we will look whether the reads still contain the primers.
 
 ```{r primer-check, eval = TRUE, message=FALSE}
 # V1-V2
-FWD <- "TTTGATCMTGGCTCAG"  # 8F primer sequence
+FWD <- "TTTGATCMTGGCTCAG"  # 8F primer sequence (in reality, it's 5'-12-27-3')
 REV <- "CTGCTGCCTYCCGTA" # 357R primer sequence (in reality, it's 5'-357-543-3')
 
 # Function that, from the primer sequence, will return all combinations possible (complement, reverse complement, ...)
