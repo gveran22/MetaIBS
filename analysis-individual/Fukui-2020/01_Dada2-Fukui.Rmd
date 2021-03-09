@@ -453,18 +453,18 @@ saveRDS(mergers, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Fuku
 
 saveRDS(otu_table(physeq), "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Fukui-2020/01_Dada2-Fukui/ASVtable_final.rds") # ASV table
 saveRDS(tax_table(physeq), "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Fukui-2020/01_Dada2-Fukui/taxa_final.rds") # taxa table
-write.csv(sample_data(physeq), "/Users/scarcy/Desktop/Praktikum/Data/Hugherth_2020/HugerthMetadata.csv") # taxa table
+write.csv(sample_data(physeq), "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Fukui-2020/01_Dada2-Fukui/FukuiMetadata.csv")
 
-saveRDS(physeq, "/Users/scarcy/Desktop/Praktikum/Data/Hugherth_2020/physeq_hugerth.rds") # phyloseq object
+saveRDS(physeq, "~/Projects/IBS_Meta-analysis_16S/phyloseq-objects/physeq_fukui.rds") # phyloseq object
 
 
 # Save nb of reads per sample before / after dada2 pipeline
-nb.reads <- readRDS("/Users/scarcy/Desktop/Praktikum/Data/nb_reads.rds")
+nb.reads <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/nb_reads.rds")
 nb.reads[1:747, 'Hugerth_before'] <- fastqq(fnFs)@nReads
 nb.reads[1:744, 'Hugerth_after'] <- rowSums(seqtable.nochim)
 median(na.omit(nb.reads$Hugerth_before)) # sanity check
 median(na.omit(nb.reads$Hugerth_after)) # sanity check
-saveRDS(nb.reads, "/Users/scarcy/Desktop/Praktikum/Data/nb_reads.rds")
+saveRDS(nb.reads, "~/Projects/IBS_Meta-analysis_16S/data/nb_reads.rds")
 ```
 
 
