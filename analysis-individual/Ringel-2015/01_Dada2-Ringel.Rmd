@@ -365,7 +365,7 @@ The preprocessing will be easier to do with ASV, taxonomic and metadata tables c
 ```{r phyloseq-preprocess, echo=TRUE, eval=FALSE}
 #_________________________
 # Import metadata
-metadata_table <- read.csv("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Ringel-2015/RingelSraRunTable.csv")
+metadata_table <- read.table("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Ringel-2015/RingelSraRunTable.txt", header = TRUE, sep = ",")
 colnames(metadata_table)
 
 # Keep relevant covariates
