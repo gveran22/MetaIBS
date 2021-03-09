@@ -283,17 +283,16 @@ We can now construct an amplicon sequence variant table (ASV) table, a higher-re
 # Make sequence table from the infered sequence variants
 seqtable <- makeSequenceTable(mergers)
 
-# We should have 744 samples (744 rows)
+# We should have 111 samples (111 rows)
 dim(seqtable)
 
 # Inspect distribution of sequence lengths
 hist(nchar(getSequences(seqtable)), breaks = 100, xlab = "Read length", ylab = "Number of reads", main="")
 
-# Sequences should be between 341F - 805R, so around 427bp (removing the primers lengths).
-# Considering that we kept only reads containing the primers, and merged the reads, we shouldn't have sequences below ~400bp
+# Sequences should be between 27F - 338R, so around 311bp (removing the primers lengths).
 
-# Remove any sequence variant below outside 400-450bp
-seqtable <- seqtable[,nchar(colnames(seqtable)) %in% 400:450]
+# Remove any sequence variant below outside 250-350bp
+seqtable <- seqtable[,nchar(colnames(seqtable)) %in% 250:350]
 dim(seqtable)
 hist(nchar(getSequences(seqtable)), breaks = 100, xlab = "Read length", ylab = "Number of reads", main="")
 ```
@@ -326,25 +325,27 @@ Sanity check before assigning taxonomy.
 getN <- function(x) sum(getUniques(x))
 
 # Table that will count number of reads for each process of interest (input reads, filtered reads, denoised reads, non chimera reads)
-input <- raw_stats$reads[raw_stats$sample %in% rownames(seqtable.nochim)]
-track <- cbind(input,
-               out2[,2],
+track <- cbind(out2,
                sapply(dadaFs, getN),
                sapply(dadaRs, getN),
                sapply(mergers, getN),
                rowSums(seqtable.nochim),
-               lapply(rowSums(seqtable.nochim)*100/input, as.integer))
+               lapply(rowSums(seqtable.nochim)*100/out2[,1], as.integer))
 
 # Assign column and row names
 colnames(track) <- c("input",
-                     "quality-filt", "denoisedF", "denoisedR",
-                     'merged', 'nonchim', "%kept_input->output")
+                     "quality-filt",
+                     "denoisedF",
+                     "denoisedR",
+                     'merged',
+                     'nonchim',
+                     "%kept_input->output")
 rownames(track) <- rownames(seqtable.nochim)
 ```
 
 ```{r}
 # Show final table: for each row/sample, we have shown the initial number of reads, filtered reads, denoised reads, and non chimera reads
-track[1:100,]
+track
 ```
 
 
