@@ -10,7 +10,7 @@ output:
 
 ```{r, include=FALSE}
 knitr::opts_chunk$set(fig.width = 3.5, fig.height = 3, warning=FALSE, message=FALSE,
-                      root.dir = "/Users/scarcy/Desktop/Praktikum/Data/Ringel_Kulka_2015/")
+                      root.dir = "~/Projects/IBS_Meta-analysis_16S/")
 ```
 
 
@@ -40,7 +40,7 @@ First, we import the fastq files containing the raw reads. The samples were down
 
 ```{r quality-check, echo=TRUE, results="hide"}
 # Save the path to the directory containing the fastq zipped files
-path <- "/Users/scarcy/Desktop/Praktikum/Data/Ringel_Kulka_2015/"
+path <- "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Ringel-2015"
 list.files(path) # check we are in the right directory
 
 # fastq filenames have format: SAMPLENAME.fastq
@@ -81,19 +81,19 @@ plot_read_content(rc) + xlim(0,50) + labs(title = "Per base sequence content")
 #_____________________________________________________________________
 
 # out process
-out1 <- readRDS("/Users/scarcy/Desktop/Praktikum/Data/Ringel_Kulka_2015/Rproject_Dada2/out1.rds")
-out2 <- readRDS("/Users/scarcy/Desktop/Praktikum/Data/Ringel_Kulka_2015/Rproject_Dada2/out2.rds")
+out1 <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Ringel-2015/01_Dada2-Ringel/out1.rds")
+out2 <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Ringel-2015/01_Dada2-Ringel/out2.rds")
 # look at quality
 filt1_samples <- sort(list.files(file.path(path, "filtered1"), pattern=".fastq.gz", full.names = TRUE))
 filt2_samples <- sort(list.files(file.path(path, "filtered2"), pattern=".fastq.gz", full.names = TRUE))
 # error rates
-err <- readRDS("/Users/scarcy/Desktop/Praktikum/Data/Ringel_Kulka_2015/Rproject_Dada2/err.rds")
+err <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Ringel-2015/01_Dada2-Ringel/err.rds")
 # infered ASVs
-seq_infered <- readRDS("/Users/scarcy/Desktop/Praktikum/Data/Ringel_Kulka_2015/Rproject_Dada2/seq_infered.rds")
+seq_infered <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Ringel-2015/01_Dada2-Ringel/seq_infered.rds")
 # taxa
-taxa <- readRDS("/Users/scarcy/Desktop/Praktikum/Data/OutputTaxa/taxa_ringel.rds")
+taxa <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/OutputTaxa/taxa_ringel.rds")
 #physeq
-physeq <- readRDS("/Users/scarcy/Desktop/Praktikum/Data/Ringel_Kulka_2015/physeq_ringel.rds")
+physeq <- readRDS("~/Projects/IBS_Meta-analysis_16S/phyloseq-objects/physeq_ringel.rds")
 ```
 
 
@@ -106,7 +106,7 @@ Now, we will look whether the reads still contain the primers.
 
 ```{r primer-check, eval = TRUE, message=FALSE}
 # V1-V2
-FWD <- "TTTGATCMTGGCTCAG"  # 8F primer sequence
+FWD <- "TTTGATCMTGGCTCAG"  # 8F primer sequence (in reality, it's 5'-12-27-3')
 REV <- "CTGCTGCCTYCCGTA" # 357R primer sequence (in reality, it's 5'-357-543-3')
 
 # Function that, from the primer sequence, will return all combinations possible (complement, reverse complement, ...)
@@ -334,12 +334,12 @@ Extensions: The dada2 package also implements a method to make species level ass
 
 ```{r assign-taxonomy, eval = FALSE}
 # Assign taxonomy (with silva v138)
-taxa <- assignTaxonomy(seqtable.nochim, "/Users/scarcy/Desktop/Praktikum/Data/silva_nr_v138_train_set.fa.gz",
+taxa <- assignTaxonomy(seqtable.nochim, "~/Projects/IBS_Meta-analysis_16S/data/silva_nr_v138_train_set.fa.gz",
                        tryRC = TRUE, # try reverse complement of the sequences
                        multithread=TRUE, verbose = TRUE)
 
 # Add species assignment
-taxa <- addSpecies(taxa, "/Users/scarcy/Desktop/Praktikum/Data/silva_species_assignment_v138.fa.gz")
+taxa <- addSpecies(taxa, "~/Projects/IBS_Meta-analysis_16S/data/silva_species_assignment_v138.fa.gz")
 ```
 
 ```{r}
@@ -365,7 +365,7 @@ The preprocessing will be easier to do with ASV, taxonomic and metadata tables c
 ```{r phyloseq-preprocess, echo=TRUE, eval=FALSE}
 #_________________________
 # Import metadata
-metadata_table <- read.csv("/Users/scarcy/Desktop/Praktikum/Data/Ringel_Kulka_2015/RingelSraRunTable.csv")
+metadata_table <- read.table("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Ringel-2015/RingelSraRunTable.txt", header = TRUE, sep = ",")
 colnames(metadata_table)
 
 # Keep relevant covariates
@@ -397,26 +397,26 @@ physeq <- subset_taxa(physeq, !is.na(Phylum))
 
 ```{r save, eval=FALSE}
 # Save to disk
-saveRDS(out1, "/Users/scarcy/Desktop/Praktikum/Data/Ringel_Kulka_2015/Rproject_Dada2/out1.rds")
-saveRDS(out2, "/Users/scarcy/Desktop/Praktikum/Data/Ringel_Kulka_2015/Rproject_Dada2/out2.rds")
-saveRDS(err, "/Users/scarcy/Desktop/Praktikum/Data/Ringel_Kulka_2015/Rproject_Dada2/err.rds")
-saveRDS(seq_infered, "/Users/scarcy/Desktop/Praktikum/Data/Ringel_Kulka_2015/Rproject_Dada2/seq_infered.rds")
+saveRDS(out1, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Ringel-2015/01_Dada2-Ringel/out1.rds")
+saveRDS(out2, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Ringel-2015/01_Dada2-Ringel/out2.rds")
+saveRDS(err, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Ringel-2015/01_Dada2-Ringel/err.rds")
+saveRDS(seq_infered, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Ringel-2015/01_Dada2-Ringel/seq_infered.rds")
 
-saveRDS(otu_table(physeq), "/Users/scarcy/Desktop/Praktikum/Data/Ringel_Kulka_2015/Rproject_Dada2/ASVtable_final.rds") # ASV table
-saveRDS(tax_table(physeq), "/Users/scarcy/Desktop/Praktikum/Data/Ringel_Kulka_2015/Rproject_Dada2/taxa_final.rds") # taxa table
-saveRDS(sample_data(physeq), "/Users/scarcy/Desktop/Praktikum/Data/Ringel_Kulka_2015/Rproject_Dada2/metadata_final.rds") # metadata table
-write.csv(sample_data(physeq), "/Users/scarcy/Desktop/Praktikum/Data/Ringel_Kulka_2015/Rproject_Dada2/RingelMetadata.csv")
+saveRDS(otu_table(physeq), "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Ringel-2015/01_Dada2-Ringel/ASVtable_final.rds") # ASV table
+saveRDS(tax_table(physeq), "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Ringel-2015/01_Dada2-Ringel/taxa_final.rds") # taxa table
+saveRDS(sample_data(physeq), "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Ringel-2015/01_Dada2-Ringel/metadata_final.rds") # metadata table
+write.csv(sample_data(physeq), "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Ringel-2015/01_Dada2-Ringel/RingelMetadata.csv")
 
-saveRDS(physeq, "/Users/scarcy/Desktop/Praktikum/Data/Ringel_Kulka_2015/physeq_ringel.rds") # phyloseq object
+saveRDS(physeq, "~/Projects/IBS_Meta-analysis_16S/phyloseq-objects/physeq_ringel.rds") # phyloseq object
 
 
 # Save nb of reads per sample before / after dada2 pipeline
-nb.reads <- readRDS("/Users/scarcy/Desktop/Praktikum/Data/nb_reads.rds")
+nb.reads <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/nb_reads.rds")
 nb.reads[1:76, 'Ringel_before'] <- fastqq(FNs)@nReads
 nb.reads[1:76, 'Ringel_after'] <- rowSums(seqtable.nochim)
 median(na.omit(nb.reads$Ringel_before)) # sanity check
 median(na.omit(nb.reads$Ringel_after)) # sanity check
-saveRDS(nb.reads, "/Users/scarcy/Desktop/Praktikum/Data/nb_reads.rds")
+saveRDS(nb.reads, "~/Projects/IBS_Meta-analysis_16S/data/nb_reads.rds")
 ```
 
 
