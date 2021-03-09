@@ -10,7 +10,7 @@ output:
 
 ```{r, include=FALSE}
 knitr::opts_chunk$set(fig.width = 3.5, fig.height = 3, warning=FALSE, message=FALSE,
-                      root.dir = "/Users/scarcy/Desktop/Praktikum/Data/Hugherth_2020")
+                      root.dir = "~/Projects/IBS_Meta-analysis_16S/")
 ```
 
 
@@ -40,7 +40,7 @@ First, we import the fastq files containing the raw reads. The samples were down
 
 ```{r quality-check, echo=TRUE, results="hide"}
 # Save the path to the directory containing the fastq zipped files
-path <- "/Users/scarcy/Desktop/Praktikum/Data/Hugherth_2020/"
+path <- "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Fukui-2020"
 list.files(path) # check we are in the right directory
 
 # fastq filenames have format: SAMPLENAME.fastq.gz
@@ -49,7 +49,7 @@ fnFs <- sort(list.files(file.path(path, "original"), pattern="_1.fastq.gz", full
 fnRs <- sort(list.files(file.path(path, "original"), pattern="_2.fastq.gz", full.names = TRUE)) # reverse
 show(fnFs[1:5])
 show(fnRs[1:5])
-#length(fnFs) # should be 747
+#length(fnFs) # should be 111
 
 # Extract sample names, assuming filenames have format: SAMPLENAME.fastq.gz
 sample.names <- sapply(strsplit(basename(fnFs), "_"), `[`, 1)
@@ -62,11 +62,11 @@ for (i in 1:3){ # 1:length(fnFs)
 }
 
 # Look at nb of reads per sample
-#raw_stats <- data.frame('sample' = sample.names,
-#                        'reads' = fastqq(fnFs)@nReads)
-#min(raw_stats$reads)
-#max(raw_stats$reads)
-#mean(raw_stats$reads)
+raw_stats <- data.frame('sample' = sample.names,
+                        'reads' = fastqq(fnFs)@nReads)
+min(raw_stats$reads)
+max(raw_stats$reads)
+mean(raw_stats$reads)
 ```
 
 We will have a quick peak at the per base sequence content of the reads in some samples, to make sure there is no anomaly (i.e. all reads having the same sequence).
@@ -90,12 +90,12 @@ plot_read_content(rcR) + labs(title = "Per base sequence content - Reverse read"
 #__________________________________________________________________________
 
 # seq depth
-raw_stats <- readRDS("/Users/scarcy/Desktop/Praktikum/Data/Hugherth_2020/Rproject_Dada2/raw_stats.rds")
+raw_stats <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Fukui-2020/01_Dada2-Fukui/raw_stats.rds")
 # out process
-FWD.out1 <- readRDS("/Users/scarcy/Desktop/Praktikum/Data/Hugherth_2020/Rproject_Dada2/FWD_out1.rds")
-REV.out1 <- readRDS("/Users/scarcy/Desktop/Praktikum/Data/Hugherth_2020/Rproject_Dada2/REV_out1.rds")
-out2 <- readRDS("/Users/scarcy/Desktop/Praktikum/Data/Hugherth_2020/Rproject_Dada2/out2.rds")
-track <- readRDS("/Users/scarcy/Desktop/Praktikum/Data/Hugherth_2020/Rproject_Dada2/track.rds")
+FWD.out1 <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Fukui-2020/01_Dada2-Fukui/FWD_out1.rds")
+REV.out1 <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Fukui-2020/01_Dada2-Fukui/REV_out1.rds")
+out2 <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Fukui-2020/01_Dada2-Fukui/out2.rds")
+track <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Fukui-2020/01_Dada2-Fukui/track.rds")
 # primer removal
 FWD.filt1_samples <- sort(list.files(file.path(path, "filtered1"), pattern="_1_filt.fastq.gz", full.names = TRUE))
 REV.filt1_samples <- sort(list.files(file.path(path, "filtered1"), pattern="_2_filt.fastq.gz", full.names = TRUE))
@@ -103,13 +103,13 @@ REV.filt1_samples <- sort(list.files(file.path(path, "filtered1"), pattern="_2_f
 FWD.filt2_samples <- sort(list.files(file.path(path, "filtered2"), pattern="_1_filt.fastq.gz", full.names = TRUE))
 REV.filt2_samples <- sort(list.files(file.path(path, "filtered2"), pattern="_2_filt.fastq.gz", full.names = TRUE))
 # error rates
-errF <- readRDS("/Users/scarcy/Desktop/Praktikum/Data/Hugherth_2020/Rproject_Dada2/errF.rds")
-errR <- readRDS("/Users/scarcy/Desktop/Praktikum/Data/Hugherth_2020/Rproject_Dada2/errR.rds")
+errF <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Fukui-2020/01_Dada2-Fukui/errF.rds")
+errR <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Fukui-2020/01_Dada2-Fukui/errR.rds")
 # infered ASVs
-dadaFs <- readRDS("/Users/scarcy/Desktop/Praktikum/Data/Hugherth_2020/Rproject_Dada2/infered_seq_F.rds")
-dadaRs <- readRDS("/Users/scarcy/Desktop/Praktikum/Data/Hugherth_2020/Rproject_Dada2/infered_seq_R.rds")
+dadaFs <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Fukui-2020/01_Dada2-Fukui/infered_seq_F.rds")
+dadaRs <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Fukui-2020/01_Dada2-Fukui/infered_seq_R.rds")
 # mergers
-mergers <- readRDS("/Users/scarcy/Desktop/Praktikum/Data/Hugherth_2020/Rproject_Dada2/mergers.rds")
+mergers <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Fukui-2020/01_Dada2-Fukui/mergers.rds")
 # taxa
 taxa <- readRDS("/Users/scarcy/Desktop/Praktikum/Data/OutputTaxa/taxa_hugerth.rds")
 # phyloseq object
@@ -121,12 +121,12 @@ physeq <- readRDS("/Users/scarcy/Desktop/Praktikum/Data/Hugherth_2020/physeq_hug
 ##  LOOK FOR PRIMERS  ##
 ########################
 
-Now, we will look whether the reads still contain the primers. Primer sequences could be found in the SRARunTable (metadata table from SRA).
+Now, we will look whether the reads still contain the primers. Primer sequences were provided in the methods section of the paper. The sequences provided in the paper were long, so only the relevant part of the sequences were kept (the part of the sequences corresponding to 27F and 338R)
 
 ```{r primer-check, eval = TRUE, message=FALSE}
-# V3-V4
-FWD <- "CCTACGGGNGGCWGCAG"  # 341F primer sequence
-REV <- "GACTACHVGGGTATCTAATCC" # 805R primer sequence
+# V1-V2
+FWD <- "TTTGATCCTGGCTCAG" # 27F (end of sequence is base 27)
+REV <- "TGCCTCCCGTAGGAGT" # 338R (end of sequence is base 338)
 
 # Function that, from the primer sequence, will return all combinations possible (complement, reverse complement, ...)
 allOrients <- function(primer) {
@@ -139,8 +139,8 @@ allOrients <- function(primer) {
 }
 
 # Get all combinations of the primer sequences
-FWD.orients <- allOrients(FWD) # 341F
-REV.orients <- allOrients(REV) # 805R
+FWD.orients <- allOrients(FWD) # 27F
+REV.orients <- allOrients(REV) # 338R
 FWD.orients # sanity check
 REV.orients
 
@@ -520,14 +520,14 @@ physeq <- prune_taxa(taxa_sums(physeq) != 0, physeq)
 ```{r, eval=FALSE}
 # Save to disk
 saveRDS(out2, "/Users/scarcy/Desktop/Praktikum/Data/Hugherth_2020//Rproject_Dada2/out2.rds")
-saveRDS(errF, "/Users/scarcy/Desktop/Praktikum/Data/Hugherth_2020/Rproject_Dada2/errF.rds")
-saveRDS(errR, "/Users/scarcy/Desktop/Praktikum/Data/Hugherth_2020/Rproject_Dada2/errR.rds")
-saveRDS(dadaFs, "/Users/scarcy/Desktop/Praktikum/Data/Hugherth_2020/Rproject_Dada2/infered_seq_F.rds")
-saveRDS(dadaRs, "/Users/scarcy/Desktop/Praktikum/Data/Hugherth_2020/Rproject_Dada2/infered_seq_R.rds")
-saveRDS(mergers, "/Users/scarcy/Desktop/Praktikum/Data/Hugherth_2020/Rproject_Dada2/mergers.rds")
+saveRDS(errF, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Fukui-2020/01_Dada2-Fukui/errF.rds")
+saveRDS(errR, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Fukui-2020/01_Dada2-Fukui/errR.rds")
+saveRDS(dadaFs, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Fukui-2020/01_Dada2-Fukui/infered_seq_F.rds")
+saveRDS(dadaRs, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Fukui-2020/01_Dada2-Fukui/infered_seq_R.rds")
+saveRDS(mergers, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Fukui-2020/01_Dada2-Fukui/mergers.rds")
 
-saveRDS(otu_table(physeq), "/Users/scarcy/Desktop/Praktikum/Data/Hugherth_2020/Rproject_Dada2/ASVtable_final.rds") # ASV table
-saveRDS(tax_table(physeq), "/Users/scarcy/Desktop/Praktikum/Data/Hugherth_2020/Rproject_Dada2/taxa_final.rds") # taxa table
+saveRDS(otu_table(physeq), "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Fukui-2020/01_Dada2-Fukui/ASVtable_final.rds") # ASV table
+saveRDS(tax_table(physeq), "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Fukui-2020/01_Dada2-Fukui/taxa_final.rds") # taxa table
 write.csv(sample_data(physeq), "/Users/scarcy/Desktop/Praktikum/Data/Hugherth_2020/HugerthMetadata.csv") # taxa table
 
 saveRDS(physeq, "/Users/scarcy/Desktop/Praktikum/Data/Hugherth_2020/physeq_hugerth.rds") # phyloseq object
