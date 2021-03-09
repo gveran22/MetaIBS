@@ -407,7 +407,7 @@ saveRDS(tax_table(physeq), "~/Projects/IBS_Meta-analysis_16S/data/analysis-indiv
 saveRDS(sample_data(physeq), "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Ringel-2015/01_Dada2-Ringel/metadata_final.rds") # metadata table
 write.csv(sample_data(physeq), "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Ringel-2015/01_Dada2-Ringel/RingelMetadata.csv")
 
-saveRDS(physeq, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Ringel-2015/physeq_ringel.rds") # phyloseq object
+saveRDS(physeq, "~/Projects/IBS_Meta-analysis_16S/phyloseq-objects/physeq_ringel.rds") # phyloseq object
 
 
 # Save nb of reads per sample before / after dada2 pipeline
