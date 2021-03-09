@@ -346,6 +346,8 @@ rownames(track) <- rownames(seqtable.nochim)
 ```{r}
 # Show final table: for each row/sample, we have shown the initial number of reads, filtered reads, denoised reads, and non chimera reads
 track
+
+saveRDS(seqtable.nochim, "~/Desktop/Cluster/Dada2/seqtable_fukui.rds")
 ```
 
 
@@ -388,29 +390,31 @@ We will remove any sample with less than 500 reads from further analysis, and al
 The preprocessing will be easier to do with ASV, taxonomic and metadata tables combined in a phyloseq object.
 
 ```{r phyloseq-preprocess, echo=TRUE, eval=FALSE}
-#_________________________
-# Remove .fastq.gz extension in seqtable.nochim
-rownames(seqtable.nochim) <- gsub("_1_filt.fastq.gz", "", rownames(seqtable.nochim))
-
 #________________________
 # Import metadata
-metadata_table <- read.csv("/Users/scarcy/Desktop/Praktikum/Data/Hugherth_2020/modif_metadata(R).csv",
-                           sep=" ")
-metadata_table$collection_date <- NULL
-colnames(metadata_table)[12] <- "collection_date"
-metadata_table[] <- lapply(metadata_table, function(x) if(is.factor(x)) as.character(x) else x)
-metadata_table$host_disease[metadata_table$host_disease == "none"] <- "Healthy"
+metadata_table <- read.table("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Fukui-2020/FukuiSraRunTable.txt", header = TRUE, sep = ",")
+
+# Keep relevant columns
+metadata_table <- metadata_table[, c("Run", "Sample.Name", "Collection_date")]
+
+metadata_table[grep("IBS*",metadata_table$Sample.Name), "host_disease"] <- "IBS"
+metadata_table[grep("HC*",metadata_table$Sample.Name), "host_disease"] <- "HC"
+# Sanity check
+table(metadata_table$host_disease) # 85 IBS & 26 HC
+
+metadata_table$Sample.Name <- NULL
+colnames(metadata_table)[2] <- "collection_date"
 rownames(metadata_table) <- metadata_table$Run
 head(metadata_table)
 
-metadata_table$author <- "Hugerth"
+metadata_table$author <- "Fukui"
 metadata_table$sequencing_tech <- "Illumina"
-metadata_table$variable_region <- "V3-V4"
+metadata_table$variable_region <- "V1-V2"
 
 #_________________________
 # Create phyloseq object
 physeq <- phyloseq(otu_table(seqtable.nochim, taxa_are_rows=FALSE),
-                   sample_data(metadata_table[metadata_table$Run %in% rownames(seqtable.nochim),]),
+                   sample_data(metadata_table), 
                    tax_table(taxa))
 
 # Remove samples with less than 500 reads
@@ -440,7 +444,7 @@ physeq <- prune_taxa(taxa_sums(physeq) != 0, physeq)
 
 ```{r, eval=FALSE}
 # Save to disk
-saveRDS(out2, "/Users/scarcy/Desktop/Praktikum/Data/Hugherth_2020//Rproject_Dada2/out2.rds")
+saveRDS(out2, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Fukui-2020/01_Dada2-Fukui/out2.rds")
 saveRDS(errF, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Fukui-2020/01_Dada2-Fukui/errF.rds")
 saveRDS(errR, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Fukui-2020/01_Dada2-Fukui/errR.rds")
 saveRDS(dadaFs, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Fukui-2020/01_Dada2-Fukui/infered_seq_F.rds")
