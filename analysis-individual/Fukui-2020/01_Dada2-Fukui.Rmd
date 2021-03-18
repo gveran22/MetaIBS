@@ -113,7 +113,7 @@ mergers <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Fu
 # taxa
 taxa <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/OutputTaxa/taxa_fukui.rds")
 # phyloseq object
-physeq <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/phyloseq-objects/physeq_fukui.rds")
+physeq <- readRDS("~/Projects/IBS_Meta-analysis_16S/phyloseq-objects/physeq_fukui.rds")
 ```
 
 
