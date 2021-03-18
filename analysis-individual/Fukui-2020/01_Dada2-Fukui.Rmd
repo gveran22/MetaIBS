@@ -111,9 +111,9 @@ dadaRs <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Fuk
 # mergers
 mergers <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Fukui-2020/01_Dada2-Fukui/mergers.rds")
 # taxa
-taxa <- readRDS("/Users/scarcy/Desktop/Praktikum/Data/OutputTaxa/taxa_hugerth.rds")
+taxa <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/OutputTaxa/taxa_fukui.rds")
 # phyloseq object
-physeq <- readRDS("/Users/scarcy/Desktop/Praktikum/Data/Hugherth_2020/physeq_hugerth.rds")
+physeq <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/phyloseq-objects/physeq_fukui.rds")
 ```
 
 
@@ -375,7 +375,7 @@ taxa.print <- taxa
 rownames(taxa.print) <- NULL # Removing sequence rownames for display only
 head(taxa.print)
 
-table(taxa.print[,1]) # Show the different kingdoms (should be only bacteria)
+table(taxa.print[,1]) # Show the different kingdoms
 table(taxa.print[,2]) # Show the different Phyla
 table(is.na(taxa.print[,2])) # is there any NA phyla?
 ```
@@ -418,31 +418,17 @@ physeq <- phyloseq(otu_table(seqtable.nochim, taxa_are_rows=FALSE),
                    tax_table(taxa))
 
 # Remove samples with less than 500 reads
-physeq <- prune_samples(sample_sums(physeq)>=500, physeq) # 85 samples discarded
+physeq <- prune_samples(sample_sums(physeq)>=500, physeq) # 1 sample discarded
 # Remove taxa that are eukaryota, or have unassigned Phyla
 physeq <- subset_taxa(physeq, Kingdom != "Eukaryota")
 physeq <- subset_taxa(physeq, !is.na(Phylum))
 ```
 
 
-```{r phyloseq-preprocess-2, echo=FALSE, eval=FALSE}
-# Phyloseq object (including phylogenetic tree) was built without metadata
-physeq <- readRDS("/Users/scarcy/Desktop/Praktikum/Data/OutputPhangorn/physeq_hugerth.rds")
-physeq #659 samples
-
-# Add metadata
-physeq <- merge_phyloseq(physeq, sample_data(metadata_table[metadata_table$Run %in% sample_names(physeq),]))
-
-# Keep only healthy and IBS samples
-physeq <- subset_samples(physeq, host_disease=="IBS" | host_disease=="Healthy")
-physeq <- prune_taxa(taxa_sums(physeq) != 0, physeq)
-```
-
-
 
 ### 2. Save to disk
 
-```{r, eval=FALSE}
+```{r save-data, eval=FALSE}
 # Save to disk
 saveRDS(out2, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Fukui-2020/01_Dada2-Fukui/out2.rds")
 saveRDS(errF, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Fukui-2020/01_Dada2-Fukui/errF.rds")
@@ -460,10 +446,10 @@ saveRDS(physeq, "~/Projects/IBS_Meta-analysis_16S/phyloseq-objects/physeq_fukui.
 
 # Save nb of reads per sample before / after dada2 pipeline
 nb.reads <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/nb_reads.rds")
-nb.reads[1:747, 'Hugerth_before'] <- fastqq(fnFs)@nReads
-nb.reads[1:744, 'Hugerth_after'] <- rowSums(seqtable.nochim)
-median(na.omit(nb.reads$Hugerth_before)) # sanity check
-median(na.omit(nb.reads$Hugerth_after)) # sanity check
+nb.reads[1:747, 'Fukui_before'] <- fastqq(fnFs)@nReads
+nb.reads[1:744, 'Fukui_after'] <- rowSums(seqtable.nochim)
+median(na.omit(nb.reads$Fukui_before)) # sanity check
+median(na.omit(nb.reads$Fukui_after)) # sanity check
 saveRDS(nb.reads, "~/Projects/IBS_Meta-analysis_16S/data/nb_reads.rds")
 ```
 
@@ -480,7 +466,7 @@ phylum.table <- physeq %>%
   transform_sample_counts(function(x) {x/sum(x)} ) %>% # Transform to rel. abundance
   psmelt()                                             # Melt to long format
 
-ggplot(phylum.table, aes(x = reorder(Sample, Sample, function(x) mean(phylum.table[Sample == x & Phylum == 'Bacteroidota', 'Abundance'])),
+ggplot(phylum.table, aes(x = reorder(Sample, Sample, function(x) mean(phylum.table[Sample == x & Phylum == 'Firmicutes', 'Abundance'])),
                          y = Abundance, fill = Phylum))+
   facet_wrap(~ host_disease, scales = "free") + # scales = "free" removes empty lines
   geom_bar(stat = "identity") +
