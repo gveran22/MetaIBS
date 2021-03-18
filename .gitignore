@@ -1,6 +1,6 @@
 .git/
 .DS_Store
-data
+data/
 standard-RAxML-master
-.Rproj.user
-.Rproj
+.Rproj.user/
+*.Rproj
