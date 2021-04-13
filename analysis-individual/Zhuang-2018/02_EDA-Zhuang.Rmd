@@ -4,6 +4,7 @@ output:
   pdf_document: default
   html_document:
     df_print: paged
+    toc: true
 ---
 
 ```{r, include=FALSE}
@@ -28,6 +29,7 @@ knitr::opts_chunk$set(fig.width = 15, fig.height = 5, warning=FALSE, message=FAL
 
 library(phyloseq) # for phyloseq object
 library(ggplot2)
+library(cowplot)
 #library(ggrepel)
 #library(data.table)
 library(plyr)
@@ -92,7 +94,7 @@ rownames(mat_col) <- rownames(metadata_table)
 
 ### 1. Absolute abundances
 
-```{r plot-absolute-abundance, fig.height = 6}
+```{r plot-absolute-abundance, fig.width=10, fig.height = 5}
 # Plot Phylum
 plot_bar(physeq.zhuang, fill = "Phylum") + facet_wrap("host_disease", scales="free") +
   theme(axis.text.x = element_text(size = 8))+
@@ -112,7 +114,7 @@ plot_bar(physeq.zhuang, fill = "Class")+ facet_wrap("host_disease", scales="free
 
 ### 2. Relative abundances
 
-```{r plot-relative-abundances, fig.height = 6}
+```{r plot-relative-abundances, fig.width=10, fig.height = 5}
 # Agglomerate to phylum & class levels
 phylum.table <- physeq.zhuang %>%
   tax_glom(taxrank = "Phylum") %>%                     # agglomerate at phylum level
@@ -143,15 +145,20 @@ ggplot(class.table, aes(x = Sample, y = Abundance, fill = Phylum))+
 
 ### 3. Firmicutes/Bacteroidota ratio
 
-```{r plot-log-ratio, fig.height = 3, fig.width=7}
+```{r plot-log-ratio, fig.height = 5, fig.width=3}
 # Extract abundance of only Bacteroidota and Firmicutes
-bacter <- phylum.table[phylum.table[,'Phylum'] == 'Bacteroidota', c('Sample', 'Abundance', 'host_disease', 'Phylum')]
-bacter <- bacter[order(bacter$Sample),] # order by sample name
-firmi <- phylum.table[phylum.table[,'Phylum'] == 'Firmicutes', c('Sample', 'Abundance', 'host_disease', 'Phylum')]
-firmi <- firmi[order(firmi$Sample),] # order by sample name
+bacter <- phylum.table %>%
+  filter(Phylum == "Bacteroidota") %>%
+  select(c('Sample', 'Abundance', 'host_disease', 'Phylum')) %>%
+  arrange(Sample)
+
+firmi <- phylum.table %>%
+  filter(Phylum == "Firmicutes") %>%
+  select(c('Sample', 'Abundance', 'host_disease', 'Phylum')) %>%
+  arrange(Sample)
 
 # Calculate log2 ratio Firmicutes/Bacteroidota
-ratio.FB <- data.table('Sample' = bacter$Sample,
+ratio.FB <- data.frame('Sample' = bacter$Sample,
                        'host_disease' = bacter$host_disease,
                        'Bacteroidota' = bacter$Abundance,
                        'Firmicutes' = firmi$Abundance)
