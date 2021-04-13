@@ -74,7 +74,7 @@ dim(taxa)
 XXXXXXX
 
 ```{r import-data}
-physeq <- readRDS("/Users/scarcy/Desktop/Praktikum/Data/Labus_2017/physeq_labus.rds")
+physeq <- readRDS("~/Projects/IBS_Meta-analysis_16S/phyloseq-objects/physeq_labus.rds")
 metadata <- sample_data(physeq)
 head(metadata)
 ```
@@ -192,6 +192,8 @@ taxa_names(physeq) <- paste0("OTU", seq(ntaxa(physeq))) # replace the whole dna 
 # Save physeq object
 saveRDS(physeq, "/Users/scarcy/Desktop/Praktikum/Data/Labus_2017/Rproject_DataAnalysis/physeq.rds")
 saveRDS(physeq, "/Users/scarcy/Desktop/Praktikum/Data/Rproject_COMBINE/physeq_labus.rds")
+
+head(otu_table(physeq))
 ```
 
 
