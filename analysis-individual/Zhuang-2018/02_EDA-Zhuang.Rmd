@@ -29,6 +29,7 @@ knitr::opts_chunk$set(fig.width = 15, fig.height = 5, warning=FALSE, message=FAL
 
 library(phyloseq) # for phyloseq object
 library(ggplot2)
+#library(ggpubr)
 library(cowplot)
 #library(ggrepel)
 #library(data.table)
@@ -169,7 +170,7 @@ ggplot(ratio.FB, aes(x = host_disease, y = logRatioFB))+
   geom_boxplot(outlier.shape = NA)+
   geom_jitter(width=0.1)+
   labs(x = "",  y = 'Log2(Firmicutes/Bacteroidota)', title = "Firmicutes:Bacteroidota ratio")+
-  theme_bw()
+  theme_cowplot()
 ```
 
 
@@ -237,68 +238,63 @@ dev.off()
 ####################
 
 ```{r normalize-data, eval = FALSE, echo = TRUE}
-# REMOVE SAMPLES WITH LESS THAN 1000 COUNTS
-physeq_best <-  prune_samples(sample_sums(physeq)>=1000, physeq)
-physeq_best
+# Sanity check no sample with less than 500 total count
+table(sample_sums(physeq.zhuang)<500) # all FALSE
 
 #____________________________________________________________________
 # PHYLOSEQ OBJECT WITH NON-ZERO COMPOSITIONS
-physeq.NZcomp <- physeq_best
-otu_table(physeq.NZcomp)[otu_table(physeq.NZcomp) == 0] <- 0.5
+physeq.NZcomp <- physeq.zhuang
+otu_table(physeq.NZcomp)[otu_table(physeq.NZcomp) == 0] <- 0.5 # pseudocounts
 
-# check the 0 values have been replaced
-otu_table(physeq_best)[1:5,1:5]
-otu_table(physeq.NZcomp)[1:5,1:5]
+# Sanity check that 0 values have been replaced
+# otu_table(physeq.zhuang)[1:5,1:5]
+# otu_table(physeq.NZcomp)[1:5,1:5]
 
 # transform into compositions
-physeq.NZcomp <- transform_sample_counts(physeq.NZcomp, function(x) x / sum(x) ) # divide each count by the total number of counts (per sample)
-sum(otu_table(physeq.NZcomp) < 0) # see how many negative values are present in the matrix
+physeq.NZcomp <- transform_sample_counts(physeq.NZcomp, function(x) x / sum(x) )
 table(rowSums(otu_table(physeq.NZcomp))) # check if there is any row not summing to 1
 
-# save the physeq.NZcomp object
-saveRDS(physeq.NZcomp, "/Users/scarcy/Desktop/Praktikum/Data/Zhuang_2018/Rproject_DataAnalysis/physeq_NZcomp.rds")
+# Save object
+saveRDS(physeq.NZcomp, file.path(path, "data/analysis-individual/Zhuang-2018/02_EDA-Zhuang/physeq_NZcomp.rds"))
 
 #____________________________________________________________________
 # PHYLOSEQ OBJECT WITH RELATIVE COUNT (BETWEEN 0 AND 1)
-physeq.rel <- physeq_best
+physeq.rel <- physeq.zhuang
 physeq.rel <- transform_sample_counts(physeq.rel, function(x) x / sum(x) ) # divide each count by the total number of counts (per sample)
 
 # check the counts are all relative
-otu_table(physeq)[1:5, 1:5]
-otu_table(physeq.rel)[1:5, 1:5]
+# otu_table(physeq.zhuang)[1:5, 1:5]
+# otu_table(physeq.rel)[1:5, 1:5]
 
 # sanity check
-sum(otu_table(physeq.rel) < 0) # see how many negative values are present in the matrix
 table(rowSums(otu_table(physeq.rel))) # check if there is any row not summing to 1
 
 # save the physeq.rel object
-saveRDS(physeq.rel, "/Users/scarcy/Desktop/Praktikum/Data/Zhuang_2018/Rproject_DataAnalysis/physeq_relative.rds")
+saveRDS(physeq.rel, file.path(path, "data/analysis-individual/Zhuang-2018/02_EDA-Zhuang/physeq_relative.rds"))
 
 #____________________________________________________________________
 # PHYLOSEQ OBJECT WITH COMMON-SCALE NORMALIZATION
-physeq.CSN <- physeq_best
-min(sample_sums(physeq.CSN)) # sanity check
-physeq.CSN <- transform_sample_counts(physeq.CSN, function(x) (x*min(sample_sums(physeq.CSN))) / sum(x) ) # divide each count by the total number of counts (per sample)
+physeq.CSN <- physeq.zhuang
+physeq.CSN <- transform_sample_counts(physeq.CSN, function(x) (x*min(sample_sums(physeq.CSN))) / sum(x) )
 
 # sanity check
-sum(otu_table(physeq.CSN) < 0) # see how many negative values are present in the matrix
-table(rowSums(otu_table(physeq.CSN))) # check if there is any row not summing to 1
+table(rowSums(otu_table(physeq.CSN))) # check that all rows are summing to the same total
 
 # save the physeq.CSN object
-saveRDS(physeq.CSN, "/Users/scarcy/Desktop/Praktikum/Data/Zhuang_2018/Rproject_DataAnalysis/physeq_CSN.rds")
+saveRDS(physeq.CSN, file.path(path, "data/analysis-individual/Zhuang-2018/02_EDA-Zhuang/physeq_CSN.rds"))
 
 
 #____________________________________________________________________
 # PHYLOSEQ OBJECT WITH CENTERED LOG RATIO COUNT
-physeq.clr <- physeq_best
-physeq.clr <- transform(physeq.clr, "clr") # the function adds pseudocounts itself
+physeq.clr <- physeq.zhuang
+physeq.clr <- microbiome::transform(physeq.zhuang, "clr") # the function adds pseudocounts itself
 
 # Compare the otu tables in the original phyloseq object and the new one after CLR transformation
-otu_table(physeq_best)[1:5, 1:5] # should contain absolute counts
+otu_table(physeq.zhuang)[1:5, 1:5] # should contain absolute counts
 otu_table(physeq.clr)[1:5, 1:5] # should all be relative
 
 # save the physeq.rel object
-saveRDS(physeq.clr, "/Users/scarcy/Desktop/Praktikum/Data/Zhuang_2018/Rproject_DataAnalysis/physeq_clr.rds")
+saveRDS(physeq.clr, file.path(path, "data/analysis-individual/Zhuang-2018/02_EDA-Zhuang/physeq_clr.rds"))
 ```
 
 
@@ -394,9 +390,6 @@ p2 <- ggplot(plot.df[plot.df$distance != "Weighted Unifrac",], aes(Axis.1, Axis.
         strip.text.x = element_blank(),
         #axis.line = element_line(size = 1, arrow = arrow(length = unit(0.1, "inches")))
         )
-
-library(ggplot2)
-library(ggpubr)
 
 jpeg("/Users/scarcy/Desktop/Praktikum/Thesis/dist_Zhuang.jpeg", height = 800, width = 4000, res = 100)
 ggarrange(p2, p1, ncol = 2, widths = c(2,1))
