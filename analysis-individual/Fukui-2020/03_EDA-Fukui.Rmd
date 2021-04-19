@@ -30,6 +30,7 @@ library("coda") # Aitchison distance
 library("coda.base") # Aitchison distance
 library("vegan") # NMDS
 library(pheatmap) # for heatmap
+library(dendextend) # for dendrogram
 ```
 
 
@@ -372,7 +373,7 @@ ggplot(plot.df, aes(Axis.1, Axis.2, color=host_disease))+
   theme(strip.text.x = element_text(size=20))+
   labs(color="Disease")
 
-# ggsave(file.path(path, "analysis-individual/Fukui-2020/plots-fukui/distances4_MDS.jpg"), height = 4, width = 15)
+# ggsave(file.path(path, "data/analysis-individual/PLOTS/plots-Fukui-EDA/distances4_MDS.jpg"), height = 4, width = 15)
 ```
 
 
@@ -524,7 +525,7 @@ dend.average <- color_branches(dend.average, k=3)
 
 # Plot
 par(mar=c(3,2,3,7), xpd=TRUE)
-plot(dend.average , main="Hierarchical clustering: UPGMA", horiz = T)
+plot(dend.average , main="Hierarchical clustering: Ward", horiz = T)
 legend(x = 50,
      legend = c("Healthy" , "IBS"), 
      col = c("blue", "red"), 
