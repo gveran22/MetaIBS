@@ -39,10 +39,10 @@ Fukui (_J. Clin. Med_) - [Usefulness of Machine Learning-Based Gut Microbiome An
 
 ### c) Assign taxonomy
 Taxonomy assigned with Silva v138.
-- Bacteria - ...
-- Archaea - ...
-- Eukaryota - ...
-There was ... unassigned phyla. The final ASV table contains **... sequence variants**.
+- Bacteria - 6852
+- Archaea - 0
+- Eukaryota - 1
+There was 7 unassigned phyla. The final ASV table contains **6846 sequence variants**.
 
 ## Metadata
 - none (IBS vs HC)

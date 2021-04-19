@@ -1,11 +1,12 @@
 ---
-title: "Dada2_Hugherth2020"
+title: "Dada2_Fukui2020"
 params:
   date: "!r Sys.Date()"
 output:
-  pdf_document: default
   html_document:
     df_print: paged
+    toc: true
+  pdf_document: default
 ---
 
 ```{r, include=FALSE}
@@ -92,13 +93,7 @@ plot_read_content(rcR) + labs(title = "Per base sequence content - Reverse read"
 # seq depth
 raw_stats <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Fukui-2020/01_Dada2-Fukui/raw_stats.rds")
 # out process
-FWD.out1 <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Fukui-2020/01_Dada2-Fukui/FWD_out1.rds")
-REV.out1 <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Fukui-2020/01_Dada2-Fukui/REV_out1.rds")
 out2 <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Fukui-2020/01_Dada2-Fukui/out2.rds")
-track <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Fukui-2020/01_Dada2-Fukui/track.rds")
-# primer removal
-FWD.filt1_samples <- sort(list.files(file.path(path, "filtered1"), pattern="_1_filt.fastq.gz", full.names = TRUE))
-REV.filt1_samples <- sort(list.files(file.path(path, "filtered1"), pattern="_2_filt.fastq.gz", full.names = TRUE))
 # quality profiles
 FWD.filt2_samples <- sort(list.files(file.path(path, "filtered2"), pattern="_1_filt.fastq.gz", full.names = TRUE))
 REV.filt2_samples <- sort(list.files(file.path(path, "filtered2"), pattern="_2_filt.fastq.gz", full.names = TRUE))
@@ -152,7 +147,7 @@ primerHits <- function(primer, fn) {
 }
 
 # Look in all samples how many times the 341F and 805R primers are found in the reads of each sample
-for (i in 1:111){
+for (i in 1:3){
   cat("SAMPLE", sample.names[i], "with total number of", raw_stats[i,'reads'], "reads\n\n")
   x <- rbind(ForwardRead.FWDPrimer = sapply(FWD.orients, primerHits, fn = fnFs[[i]]),
              ForwardRead.REVPrimer = sapply(REV.orients, primerHits, fn = fnFs[[i]]),
@@ -320,7 +315,7 @@ sum(seqtable.nochim)/sum(seqtable)
 
 Sanity check before assigning taxonomy.
 
-```{r reads-filtered-sanity-check, echo=TRUE, eval=FALSE}
+```{r reads-filtered-sanity-check, echo=TRUE}
 # Function that counts nb of reads
 getN <- function(x) sum(getUniques(x))
 
@@ -341,13 +336,9 @@ colnames(track) <- c("input",
                      'nonchim',
                      "%kept_input->output")
 rownames(track) <- rownames(seqtable.nochim)
-```
 
-```{r}
 # Show final table: for each row/sample, we have shown the initial number of reads, filtered reads, denoised reads, and non chimera reads
 track
-
-saveRDS(seqtable.nochim, "~/Desktop/Cluster/Dada2/seqtable_fukui.rds")
 ```
 
 
@@ -430,6 +421,7 @@ physeq <- subset_taxa(physeq, !is.na(Phylum))
 
 ```{r save-data, eval=FALSE}
 # Save to disk
+saveRDS(raw_stats, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Fukui-2020/01_Dada2-Fukui/raw_stats.rds")
 saveRDS(out2, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Fukui-2020/01_Dada2-Fukui/out2.rds")
 saveRDS(errF, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Fukui-2020/01_Dada2-Fukui/errF.rds")
 saveRDS(errR, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Fukui-2020/01_Dada2-Fukui/errR.rds")
