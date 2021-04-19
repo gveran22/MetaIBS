@@ -468,6 +468,69 @@ heatmp.fukui <- plotHeatmaps(dlist = dist.fukui, fontsize = 8)
 ## REPRODUCE PLOTS FROM PAPER ##
 ################################
 
+First, let's try to reproduce figure 2A. It's a PCoA of microbiome composition based on unweighted UniFrac.
 
+```{r reproduce-fig1B, fig.width = 6, fig.height = 5}
+# ___________________________________________________________________________________________________________
+# FIGURE 1B
+set.seed(123)
+fig.2A <- ordinate(physeq.rel, "PCoA", "unifrac", weighted=FALSE)
+plot_ordination(physeq.rel, fig.2A, color="host_disease", shape = "host_disease")+
+  geom_point(size=5, alpha=0.5) +
+  scale_color_manual(values = c('blue', 'red'))+ scale_shape_manual(values = c(17,16))+
+  theme_classic()+
+  ggtitle("PCoA on weighted-UniFrac distance")
+
+```
+
+
+
+Now, let's reproduce figure 2B. They performed a hierarchical clustering with Ward linkage on the unweighted Unifrac distance.
+
+```{r reproduce-fig1A, fig.width = 10, fig.height = 5}
+# ___________________________________________________________________________________________________________
+# FIGURE 1A
+
+# Get unweighted unifrac
+set.seed(123)
+unw.uniF <- UniFrac(physeq.rel, weighted=FALSE)
+
+# Hierarchical clustering on Bray-Curtis distance
+hc.average <- hclust(unw.uniF, method = "ward.D")
+
+# Make into dendogram
+dend.average <- as.dendrogram(hc.average)
+
+# Function that will allow to color the leaves of the tree according to disease type (healthy vs IBS)
+color_leaf<<-function(n){
+    if(is.leaf(n)){
+        # take the current attributes
+        a=attributes(n)
+        
+        # deduce the line in the original data, to get the corresponding disease status
+        line=match(attributes(n)$label, sample_names(physeq.fukui))
+        disease=sample_data(physeq.fukui)[line, "host_disease"];
+            if(disease=="Healthy"){col_disease="blue"};if(disease=="IBS"){col_disease="red"}
+        
+        #Modification of leaf attribute
+        attr(n,"nodePar") <- c(a$nodePar, list(cex=1.5, lab.cex=0.6, pch=20, col=col_disease, lab.font=1, lab.cex=1))
+        }
+    return(n)
+}
+
+# Apply the color attributes to the dendograms
+dend.average <- dendrapply(dend.average, color_leaf)
+dend.average <- color_branches(dend.average, k=3)
+
+# Plot
+par(mar=c(3,2,3,7), xpd=TRUE)
+plot(dend.average , main="Hierarchical clustering: UPGMA", horiz = T)
+legend(x = 50,
+     legend = c("Healthy" , "IBS"), 
+     col = c("blue", "red"), 
+     pch = c(20,20), bty = "n",  pt.cex = 1.5, cex = 1, 
+     text.col = "black", horiz = FALSE, inset = c(0, 0.1))
+
+```
 
 
