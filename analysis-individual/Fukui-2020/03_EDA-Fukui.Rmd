@@ -251,7 +251,7 @@ physeq.NZcomp <- transform_sample_counts(physeq.NZcomp, function(x) x / sum(x) )
 table(rowSums(otu_table(physeq.NZcomp))) # check if there is any row not summing to 1
 
 # Save object
-saveRDS(physeq.NZcomp, file.path(path, "data/analysis-individual/Fukui-2020/02_EDA-fukui/physeq_NZcomp.rds"))
+saveRDS(physeq.NZcomp, file.path(path, "data/analysis-individual/Fukui-2020/02_EDA-Fukui/physeq_NZcomp.rds"))
 
 #____________________________________________________________________
 # PHYLOSEQ OBJECT WITH RELATIVE COUNT (BETWEEN 0 AND 1)
@@ -266,7 +266,7 @@ physeq.rel <- transform_sample_counts(physeq.rel, function(x) x / sum(x) ) # div
 table(rowSums(otu_table(physeq.rel))) # check if there is any row not summing to 1
 
 # save the physeq.rel object
-saveRDS(physeq.rel, file.path(path, "data/analysis-individual/Fukui-2020/02_EDA-fukui/physeq_relative.rds"))
+saveRDS(physeq.rel, file.path(path, "data/analysis-individual/Fukui-2020/02_EDA-Fukui/physeq_relative.rds"))
 
 #____________________________________________________________________
 # PHYLOSEQ OBJECT WITH COMMON-SCALE NORMALIZATION
@@ -277,7 +277,7 @@ physeq.CSN <- transform_sample_counts(physeq.CSN, function(x) (x*min(sample_sums
 table(rowSums(otu_table(physeq.CSN))) # check that all rows are summing to the same total
 
 # save the physeq.CSN object
-saveRDS(physeq.CSN, file.path(path, "data/analysis-individual/Fukui-2020/02_EDA-fukui/physeq_CSN.rds"))
+saveRDS(physeq.CSN, file.path(path, "data/analysis-individual/Fukui-2020/02_EDA-Fukui/physeq_CSN.rds"))
 
 
 #____________________________________________________________________
@@ -290,7 +290,7 @@ otu_table(physeq.fukui)[1:5, 1:5] # should contain absolute counts
 otu_table(physeq.clr)[1:5, 1:5] # should all be relative
 
 # save the physeq.rel object
-saveRDS(physeq.clr, file.path(path, "data/analysis-individual/Fukui-2020/02_EDA-fukui/physeq_clr.rds"))
+saveRDS(physeq.clr, file.path(path, "data/analysis-individual/Fukui-2020/02_EDA-Fukui/physeq_clr.rds"))
 ```
 
 
