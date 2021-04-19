@@ -76,9 +76,7 @@ plot_tree(physeq.zhuang, color = "host_disease", ladderize="left")
 physeq.rel <- readRDS("/Users/scarcy/Desktop/Praktikum/Data/Zhuang_2018/Rproject_DataAnalysis/physeq_relative.rds")
 physeq.clr <- readRDS("/Users/scarcy/Desktop/Praktikum/Data/Zhuang_2018/Rproject_DataAnalysis/physeq_clr.rds")
 
-# For heatmaps: have group color
-mat_col <- data.frame(group = metadata_table[,"host_disease"])
-rownames(mat_col) <- rownames(metadata_table)
+
 ```
 
 
@@ -420,91 +418,46 @@ plotDistances3D(dist.zhuang$Bray, "Bray-Curtis")
 ## HIERARCHICAL CLUSTERING ##
 #############################
 
-```{r hierarchical-clust, fig.width = 10, fig.width = 7}
-Heatmaps <- function(dist_list, fontsize){
-  # Weighted Unifrac
-  heatmp.UniF <- pheatmap(as.matrix(dist_list$UniF), 
-                          clustering_distance_rows = dist_list$UniF,
-                          clustering_distance_cols = dist_list$UniF,
+```{r hierarchical-clust, fig.width = 5, fig.width = 3}
+# For heatmaps: have group color
+matcol <- data.frame(group = sample_data(physeq.zhuang)[,"host_disease"])
+
+
+# Function to get heatmap from the distances computed
+plotHeatmaps <- function(dlist, fontsize){
+  
+  # Initialize variables
+  i=1
+  plist <- vector("list", 4)
+  names(plist) <- names(dlist)
+  
+  # Loop through distances
+  for(d in dlist){
+    plist[[i]] <- pheatmap(as.matrix(d), 
+                          clustering_distance_rows = d,
+                          clustering_distance_cols = d,
                           fontsize = fontsize,
                           fontsize_col = fontsize-5,
                           fontsize_row = fontsize-5,
-                          annotation_col = mat_col,
-                          annotation_row = mat_col,
-                          annotation_colors = list(group = c('Healthy' = 'blue', 'IBS' = 'red')),
+                          annotation_col = matcol,
+                          annotation_row = matcol,
+                          annotation_colors = list(host_disease = c('Healthy' = 'blue', 'IBS' = 'red')),
                           cluster_rows = T,
                           cluster_cols = T,
-                          clustering_method = 'complete', #hierarchical method
-                          main = 'Weighted unifrac distance')
-
-  # Aitchison
-  heatmp.Ait <- pheatmap(as.matrix(dist_list$Ait), 
-                         clustering_distance_rows = dist_list$Ait,
-                         clustering_distance_cols = dist_list$Ait,
-                         fontsize = fontsize,
-                         fontsize_col = fontsize-5,
-                         fontsize_row = fontsize-5,
-                         # border_color = NA,
-                         cluster_rows = T,
-                         cluster_cols = T,
-                         clustering_method = "complete", #hierarchical method
-                         annotation_col = mat_col,
-                         annotation_row = mat_col,
-                         annotation_colors = list(group = c('Healthy' = 'blue', 'IBS' = 'red')),
-                         main = "Aitchison distance")
+                          clustering_method = 'complete', # hc method
+                          main = names(dlist)[i]) # have name of distance as title
+    i <- i+1
+  }
   
-    # Canberra
-  heatmp.Can <- pheatmap(as.matrix(dist_list$Can), 
-                         clustering_distance_rows = dist_list$Can,
-                         clustering_distance_cols = dist_list$Can,
-                         fontsize = fontsize,
-                         fontsize_col = fontsize-5,
-                         fontsize_row = fontsize-5,
-                         # border_color = NA,
-                         cluster_rows = T,
-                         cluster_cols = T,
-                         clustering_method = "complete", #hierarchical method
-                         annotation_col = mat_col,
-                         annotation_row = mat_col,
-                         annotation_colors = list(group = c('Healthy' = 'blue', 'IBS' = 'red')),
-                         main = "Canberra distance")
-  
-  return(list("UniF" = heatmp.UniF, "Ait" = heatmp.Ait, "Can" = heatmp.Can))
+  return(plist)
 }
 
 
 # Get the heatmaps
-no_glom.heatmaps <- Heatmaps(dist_list = no_glom.dist, fontsize = 8)
+heatmp.zhuang <- plotHeatmaps(dlist = dist.zhuang, fontsize = 8)
 ```
 
 
-
-```{r export-plots-2, eval = FALSE, echo = FALSE}
-# MDS 2D all distances
-jpeg("./Plots/AllDistances_MDS.jpg", width = 3000, height = 2000, res = 90)
-no_glom.2D.alldist +
-  theme(axis.text.x = element_text(size = 20),
-        legend.text = element_text(size = 50),
-        axis.title = element_text(size = 50),
-        title = element_text(size = 50),
-        strip.text = element_text(size = 50))+
-  labs(title = "Zhuang dataset (2018)")
-dev.off()
-
-# Heatmaps
-jpeg("Heatmap_Aitchison.jpg", width = 1400, height = 1000, res = 300)
-no_glom.heatmaps$Ait
-dev.off()
-
-jpeg("Heatmap_UniF.jpg", width = 1400, height = 1000, res = 300)
-no_glom.heatmaps$UniF
-dev.off()
-
-jpeg("Heatmap_Canberra.jpg", width = 1400, height = 1000, res = 300)
-no_glom.heatmaps$Can
-dev.off()
-
-```
 
 
 ################################
