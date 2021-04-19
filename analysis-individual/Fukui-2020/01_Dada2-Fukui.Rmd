@@ -438,8 +438,8 @@ saveRDS(physeq, "~/Projects/IBS_Meta-analysis_16S/phyloseq-objects/physeq_fukui.
 
 # Save nb of reads per sample before / after dada2 pipeline
 nb.reads <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/nb_reads.rds")
-nb.reads[1:747, 'Fukui_before'] <- fastqq(fnFs)@nReads
-nb.reads[1:744, 'Fukui_after'] <- rowSums(seqtable.nochim)
+nb.reads[1:111, 'Fukui_before'] <- fastqq(fnFs)@nReads
+nb.reads[1:111, 'Fukui_after'] <- rowSums(seqtable.nochim)
 median(na.omit(nb.reads$Fukui_before)) # sanity check
 median(na.omit(nb.reads$Fukui_after)) # sanity check
 saveRDS(nb.reads, "~/Projects/IBS_Meta-analysis_16S/data/nb_reads.rds")
