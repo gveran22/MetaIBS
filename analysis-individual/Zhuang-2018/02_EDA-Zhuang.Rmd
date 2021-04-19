@@ -464,12 +464,15 @@ heatmp.zhuang <- plotHeatmaps(dlist = dist.zhuang, fontsize = 8)
 ## REPRODUCE PLOTS FROM PAPER ##
 ################################
 
-```{r reproduce-plots}
+
+First, let's reproduce figure 1A. They performed a hierarchical clustering with UPGMA on the bray-curtis distance.
+
+```{r reproduce-fig1A}
 # ___________________________________________________________________________________________________________
 # FIGURE 1A
 
 # Hierarchical clustering on Bray-Curtis distance
-hc.average <- hclust(no_glom.dist$Bray, method = "average")
+hc.average <- hclust(dist.zhuang$Bray, method = "average") # UPGMA = average
 
 # Make into dendogram
 dend.average <- as.dendrogram(hc.average)
@@ -481,8 +484,8 @@ color_leaf<<-function(n){
         a=attributes(n)
         
         # deduce the line in the original data, to get the corresponding disease status
-        line=match(attributes(n)$label, rownames(metadata_table))
-        disease=metadata_table[line, "host_disease"];
+        line=match(attributes(n)$label, sample_names(physeq.zhuang))
+        disease=sample_data(physeq.zhuang)[line, "host_disease"];
             if(disease=="Healthy"){col_disease="blue"};if(disease=="IBS"){col_disease="red"}
         
         #Modification of leaf attribute
@@ -503,42 +506,23 @@ legend(x = 35,
      pch = c(20,20), bty = "n",  pt.cex = 1.5, cex = 1, 
      text.col = "black", horiz = FALSE, inset = c(0, 0.1))
 
+```
 
+
+Now let's try to reproduce figure 1B. It's a PCoA of microbiome composition based on UniFrac.
+
+```{r reproduce-fig1B}
 # ___________________________________________________________________________________________________________
 # FIGURE 1B
-set.seed(321)
-fig.1B <-  ordinate(physeq.rel, "PCoA", "unifrac", weighted=TRUE)
+set.seed(123)
+fig.1B <- ordinate(physeq.rel, "PCoA", "unifrac", weighted=TRUE)
 plot_ordination(physeq.rel, fig.1B, color="host_disease", shape = "host_disease")+
   geom_point(size=5, alpha=0.5) +
   scale_color_manual(values = c('blue', 'red'))+ scale_shape_manual(values = c(17,16))+
   theme_classic()+
   ggtitle("PCoA on weighted-UniFrac distance")
 
-
-# Order level
-order.table <- physeq %>%
-  tax_glom(taxrank = "Order") %>%                     # agglomerate at class level
-  transform_sample_counts(function(x) {x/sum(x)} ) %>% # Transform to rel. abundance
-  psmelt() 
-
-jpeg("plot_order_relAbundance.jpg", width = 4000, height = 2000)
-ggplot(order.table, aes(x = Sample, y = Abundance, fill = Order))+
-  facet_wrap(~ host_disease, scales = "free") + # scales = "free" removes empty lines
-  geom_bar(stat = "identity") +
-  theme(axis.text.x = element_text(size = 30, angle = -90),
-        axis.text.y = element_text(size = 30),
-        legend.text = element_text(size = 50),
-        title = element_text(size = 50),
-        strip.text = element_text(size = 50))+
-  labs(x = "Samples", y = "Relative abundance")
-dev.off()
-
-mean(order.table[order.table[,'Order'] == 'Oscillospirales', 'Abundance'])
-mean(order.table[order.table[,'Order'] == 'Lachnospirales' & order.table[,'host_disease'] == 'Healthy', 'Abundance'])
-order.table[order(order.table[,"Abundance"]),]
-
 ```
-
 
 
 
