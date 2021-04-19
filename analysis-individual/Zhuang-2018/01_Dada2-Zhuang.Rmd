@@ -373,6 +373,9 @@ sampledf$host_disease <- as.character(sampledf$host_disease)
 sampledf$host_disease[substr(sampledf$host_disease, start = 1, stop = 2) == "HC"] <- "Healthy" # Replace with better names
 sampledf$host_disease[substr(sampledf$host_disease, start = 1, stop = 3) == "IBS"] <- "IBS"
 
+sampledf[sampledf$host_disease == "Healthy", "host_subtype"] <- "HC"
+sampledf[sampledf$host_disease == "IBS", "host_subtype"] <- "IBS-D" # only IBS-diarrhea patients in this cohort
+
 sampledf$author <- "Zhuang"
 sampledf$sequencing_tech <- "Illumina"
 sampledf$variable_region <- "V3-V4"
