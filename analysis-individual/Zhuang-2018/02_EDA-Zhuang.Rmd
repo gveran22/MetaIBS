@@ -356,7 +356,7 @@ ggplot(plot.df, aes(Axis.1, Axis.2, color=host_disease))+
   theme(strip.text.x = element_text(size=20))+
   labs(color="Disease")
 
-# ggsave(file.path(path, "analysis-individual/Zhuang-2018/plots-zhuang/distances4_MDS.jpg"), height = 4, width = 15)
+# ggsave(file.path(path.plots, "distances4_MDS.jpg"), height = 4, width = 15)
 ```
 
 
