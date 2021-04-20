@@ -19,6 +19,9 @@ Datasets for which I have little hope:
 
 ## Details to know
 
+- fukui:
+	- no covariates (except healthy/IBS)
+
 - hugerth:
   - stool samples & sigmoid mucosa biopsy samples (specified in column "sample_type"), sometimes from the same patient (patient identified by "host_ID")
   - covariates on age, BMI, gender, psychological state
