@@ -36,7 +36,32 @@ dim(paperdf) # 17,854 samples
 table(str_sub(paperdf$collection_date, start=-4)) # latest sample from paper metadata table is 2017
 table(str_sub(sradf$ENA.FIRST.PUBLIC..run., end=4)) # latest sample from SRA metadata is 2021
 
-# => We will extract sample names from SRA metadata
+# => We will extract sample Runs from SRA metadata
+
+
+###############
+# IBS SAMPLES #
+###############
+
+# Subset table to individuals with IBS medical diagnosis
+table(sradf$ibs) # 2895 "Diagnosed by a medical professional (doctor, physician assistant)"
+ibs.df <- sradf[grep("doctor", sradf$ibs),]
+dim(ibs.df) # 2895 patients
+table(ibs.df$bowel_movement_quality) 
+
+# Check it is only fecal samples
+table(ibs.df$Organism) # 2671 human gut metagenome
+table(ibs.df$SAMPLE_TYPE) # 2383 stool
+
+
+# Remove other conditions
+table(ibs.df$ibd) # 2445 "I do not have this condition"
+table(ibs.df$cdiff) # 2593 éI do not have this condition" remove C.difficile
+table(ibs.df$fungal_overgrowth) # 1907 "I do not have this condition"
+# remove diabetes??
+# remove lung_disease, liver_disease, kidney_disease??
+
+
 
 
 
