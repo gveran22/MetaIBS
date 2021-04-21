@@ -45,11 +45,31 @@ table(str_sub(sradf$ENA.FIRST.PUBLIC..run., end=4)) # latest sample from SRA met
 
 # For simplicity purposes, we will keep only samples and columns of interest
 
-# Keep only 16S rRNA seq
-sradf <- sradf[sradf$target_gene..exp. == "16S rRNA",]
+# Keep only gut metadata
+sradf %>%
+  filter(target_gene..exp. == "16S rRNA") %>% # 16s rRNA seq
+  filter(SAMPLE_TYPE %in% c("feces", "Stool", "stool") & Organism %in% c("feces metagenome", "human gut metagenome", "gut metagenome")) # gut metagenome
+
+# Check that the "subset_healthy" corresponds to:
+# - ppl between 20-69 yo
+# - BMI between 18.5-30
+# - no antibiotic in past year
+# - no IBD
+# - no diabetes
+sradf %>%
+  filter(subset_healthy == TRUE) %>%
+  # filter(subset_age == TRUE) %>%
+  # filter(bmi_cat %in% c("Normal", "Overweight")) %>%
+  # filter(diabetes == "I do not have this condition") %>%
+  # filter(ibd == "I do not have this condition") %>%
+  # filter(antibiotic_history == "I have not taken antibiotics in the past year.") %>%
+  dim
+# 11,261 people labeled as 'healthy'
+
 
 # Remove columns that will not be of use
-skip_columns <- c("BioProject",
+skip_columns <- c("SAMPLE_TYPE", "Organism",
+                  "BioProject",
                   "center_name..exp.",
                   "Center.Name",
                   "Consent",
@@ -94,15 +114,10 @@ sradf <- sradf %>%
   select(-all_of(skip_columns))
 
 
-# To check for IBS: antibiotic_history, probiotic_frequency?, diabetes?, ibd, gluten (celiac disease),
-# thyroid?, autoimmune?, fungal_overgrowth, clinical_condition?, lung_disease?, liver_disease?, kidney_disease?, cdiff,
-# acne_medication?
+
 
 # Cleanup columns: bowel_movement_frequency, bowel_movement_quality
 
-# Samples to keep : SAMPLE_TYPE (Stool or stool)
-
-# Healthy: subset_healthy
 
 table(sradf$acne_medication)
  
