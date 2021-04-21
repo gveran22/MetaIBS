@@ -67,15 +67,13 @@ for (taxa in taxa.levels){
     psmelt() %>%
     select(-c(Run, author, sequencing_tech, variable_region))
   # Save as csv file
-  file.name <- file.path(path, "aggregated-tables/Zhu-2019",
-                         paste(paste("zhu", paste(tolower(taxa), "agg", sep="-"), sep="_"), ".csv", sep=""))
-  write.csv(df, file.name)
+  # file.name <- file.path(path, "aggregated-tables/Zhu-2019",
+  #                        paste(paste("zhu", paste(tolower(taxa), "agg", sep="-"), sep="_"), ".csv", sep=""))
+  # write.csv(df, file.name)
 }
 
 
 
 
-
-
-
+table(sample_data(physeq.zhu)$host_disease)
 

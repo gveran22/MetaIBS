@@ -9,6 +9,6 @@ For Johannes: try the **Zhu-2019** dataset first!
 
 # Description of datasets
 
-|   Dataset  | Healthy | IBS |  n  |  Covariates |
-| ---------- | :-----: | :-: | :-: | :---------: |
-| Zhu (2019) |   14    | 15  |  29 | age, gender |
+|   Dataset  | N samples |  Covariates | N phyla | N classes | N orders | N families | N genera |
+| ---------- | :-------: | :---------: | :-----: | :-------: | :------: | :--------: | :------: |
+| Zhu (2019) |    29     | age, gender |    11   |    17     |    40    |     57     |   141    |
