@@ -54,8 +54,23 @@ test.genus %>%
 
 
 
+#_________________________
+# Zhu aggregation
 
+taxa.levels <- c("Phylum", "Class", "Order", "Family", "Genus")
 
+# Aggregate at each level
+for (taxa in taxa.levels){
+  # Aggregate
+  df <- physeq.zhu %>%
+    tax_glom(taxrank = taxa) %>%
+    psmelt() %>%
+    select(-c(Run, author, sequencing_tech, variable_region))
+  # Save as csv file
+  file.name <- file.path(path, "aggregated-tables/Zhu-2019",
+                         paste(paste("zhu", paste(tolower(taxa), "agg", sep="-"), sep="_"), ".csv", sep=""))
+  write.csv(df, file.name)
+}
 
 
 
