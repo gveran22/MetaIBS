@@ -73,9 +73,3 @@ plotAllDistances <- function(physeq_obj, ait_dist, ordination="MDS"){
 
 
 
-
-
-
-
-
-
