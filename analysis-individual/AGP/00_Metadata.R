@@ -66,6 +66,18 @@ sradf %>%
   dim
 # 11,261 people labeled as 'healthy'
 
+# Remove patients with unwanted comorbidities
+sradf %>%
+  filter(subset_healthy == TRUE) %>%
+  filter(gluten == "No") %>% # doesn't follow gluten-free diet
+  filter(fungal_overgrowth == "I do not have this condition" & cdiff == "I do not have this condition") %>% # remove gut infections
+  filter(lung_disease == "I do not have this condition" &
+           liver_disease == "I do not have this condition" &
+           kidney_disease == "I do not have this condition") %>%
+  filter(clinical_condition == "I do not have this condition")
+
+
+
 
 # Remove columns that will not be of use
 skip_columns <- c("SAMPLE_TYPE", "Organism",
