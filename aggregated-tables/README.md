@@ -20,3 +20,13 @@ For Johannes: try the **Zhu-2019** dataset first!
 |  Zeber (2016)  |     90    |gender, IBS subtype           |    11    |   20    |   49    |    76    |   215   |
 |   Zhu (2019)   |     29    |age, gender                   |    11    |   17    |   40    |    57    |   141   |
 | Zhuang (2018)  |     30    |             -                |     8    |   13    |   27    |    38    |    98   |
+
+
+!!! **TO NOTE** !!!
+
+Datasets with fecal samples and sigmoid colon biopsy samples, specified in the `sample_data` column:
+- Hugerth (2019)
+- LoPresti (2019)
+
+Dataset with 2 samples per patient (taken with 1-month interval), specified in the `Collection` column:
+- Pozuelo (2015)
