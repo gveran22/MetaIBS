@@ -78,6 +78,21 @@ sradf %>%
 
 
 
+# Reformat age column
+sradf %>%
+  mutate(Age_years = replace(Age_years,
+                             Age_years %in% c("","LabControl test", unique(grep("Not", sradf$Age_years, value=TRUE, ignore.case=TRUE)), "Unspecified"),
+                             NA)) %>%
+  mutate(Age_years = as.numeric(Age_years)) %>%
+  filter(Age_years > 0 & Age_years < 70)
+
+
+# Healthy: subset_healthy
+
+# To check for IBS: , probiotic_frequency?,
+# thyroid?, autoimmune?, clinical_condition?,
+
+
 
 # Remove columns that will not be of use
 skip_columns <- c("SAMPLE_TYPE", "Organism",
