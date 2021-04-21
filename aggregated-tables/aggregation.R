@@ -55,25 +55,47 @@ test.genus %>%
 
 
 #_________________________
-# Zhu aggregation
+# Aggregation for all datasets
 
 taxa.levels <- c("Phylum", "Class", "Order", "Family", "Genus")
 
-# Aggregate at each level
-for (taxa in taxa.levels){
-  # Aggregate
-  df <- physeq.zhu %>%
-    tax_glom(taxrank = taxa) %>%
-    psmelt() %>%
-    select(-c(Run, author, sequencing_tech, variable_region))
-  # Save as csv file
-  # file.name <- file.path(path, "aggregated-tables/Zhu-2019",
-  #                        paste(paste("zhu", paste(tolower(taxa), "agg", sep="-"), sep="_"), ".csv", sep=""))
-  # write.csv(df, file.name)
+datasets <- list("Fukui-2020" = physeq.fukui,
+                 "Hugerth-2019" = physeq.hugerth,
+                 "Labus-2017" = physeq.labus,
+                 "LoPresti-2019" = physeq.lopresti,
+                 "Nagel-2016" = physeq.nagel,
+                 "Pozuelo-2015" = physeq.pozuelo,
+                 "Zeber-2016" = physeq.zeber,
+                 "Zhu-2019" = physeq.zhu,
+                 "Zhuang-2018" = physeq.zhuang)
+
+# Init
+i=0
+
+# Iterate through each dataset
+for(physeq.cohort in datasets){
+  
+  i=i+1
+  cat("++", gsub( "-.*$", "", names(datasets[i])), "++\n")
+  
+  # Aggregate at each taxonomic level
+  for (taxa in taxa.levels){
+    # Print dataset
+    
+    # Aggregate
+    df <- physeq.cohort %>%
+      tax_glom(taxrank = taxa) %>%
+      psmelt() %>%
+      select(-c(Run, sequencing_tech, variable_region))
+    cat(taxa, ":", length(unique(df[,taxa])), "\n") # print nb of each taxonomic level
+    # Save as csv file
+    cohort <- tolower(gsub( "-.*$", "", names(datasets[i])))
+    file.name <- file.path(path, "aggregated-tables/",
+                           names(datasets[i]), # sub-directory
+                           paste(paste(cohort, paste(tolower(taxa), "agg", sep="-"), sep="_"), # i.e. fukui_phylum-agg
+                                 ".csv", sep=""))
+    write.csv(df, file.name)
+  }
+
 }
-
-
-
-
-table(sample_data(physeq.zhu)$host_disease)
 
