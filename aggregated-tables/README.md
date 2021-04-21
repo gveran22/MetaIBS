@@ -24,7 +24,7 @@ For Johannes: try the **Zhu-2019** dataset first!
 
 !!! **TO NOTE** !!!
 
-Datasets with fecal samples and sigmoid colon biopsy samples, specified in the `sample_data` column:
+Datasets with fecal samples and sigmoid mucosa biopsy samples, specified in the `sample_data` column:
 - Hugerth (2019)
 - LoPresti (2019)
 
