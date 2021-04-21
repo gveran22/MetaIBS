@@ -105,6 +105,24 @@ midstringent <- sradf %>%
   #          clinical_condition == "I do not have this condition")
 table(midstringent$ibs) # 590 IBS vs 5517 healthy
 
+# Least stringent FILTERING
+lowstringent <- sradf %>%
+  ### MANDATORY FILTERS ###
+  filter(ibd == "I do not have this condition") %>%
+  filter(cdiff == "I do not have this condition") %>% # remove gut infections
+  filter(!gluten %in% unique(grep("diagnosed", sradf$gluten, value=TRUE))) %>% # celiac disease or gluten allergy
+  filter(antibiotic_history %in% c("I have not taken antibiotics in the past year.", "6 months")) %>%
+  ### OPTIONAL FILTERS ###
+  # filter(fungal_overgrowth == "I do not have this condition") %>%
+  filter(subset_age == TRUE)
+  # filter(bmi_cat %in% c("Normal", "Overweight"))
+# filter(diabetes == "I do not have this condition" &
+#          lung_disease == "I do not have this condition" &
+#          liver_disease == "I do not have this condition" &
+#          kidney_disease == "I do not have this condition" &
+#          clinical_condition == "I do not have this condition")
+table(lowstringent$ibs) # 993 IBS vs 7192 healthy
+
 
 # Healthy patients?
 sradf %>%
