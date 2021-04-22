@@ -30,6 +30,6 @@ Datasets for which I have little hope:
 | Ringel (2015)  |     76    | _No label IBS/Healthy_       |                    -                   |
 |  Zeber (2016)  |     90    |gender, IBS subtype           |                    -                   |
 |   Zhu (2019)   |     29    |age, gender                   |                    -                   |
-| Zhuang (2018)  |     30    |             -                |                    -                   |
+| Zhuang (2018)  |     30    |IBS subtype (all IBS-D)       | all IBS patients are IBS-diarrhea      |
 
 
