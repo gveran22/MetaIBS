@@ -19,7 +19,7 @@ For Johannes: try the **Zhu-2019** dataset first!
 | Pozuelo (2015) |    290    |             -                |    15    |   24    |   65    |   105    |   312   |
 |  Zeber (2016)  |     90    |gender, IBS subtype           |    11    |   20    |   49    |    76    |   215   |
 |   Zhu (2019)   |     29    |age, gender                   |    11    |   17    |   40    |    57    |   141   |
-| Zhuang (2018)  |     30    |             -                |     8    |   13    |   27    |    38    |    98   |
+| Zhuang (2018)  |     30    |IBS subtype (all IBS-D)       |     8    |   13    |   27    |    38    |    98   |
 
 
 !!! **TO NOTE** !!!
@@ -30,3 +30,6 @@ Datasets with fecal samples and sigmoid mucosa biopsy samples, specified in the 
 
 Dataset with 2 samples per patient (taken with 1-month interval), specified in the `Collection` column:
 - Pozuelo (2015)
+
+Dataset with **only IBS-diarrhea** patients (other datasets have some patients with IBS-constipation, IBS-diarrhea, or IBS-mixed):
+- Zhuang(2018)
