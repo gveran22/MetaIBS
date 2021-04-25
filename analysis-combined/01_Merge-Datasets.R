@@ -39,6 +39,54 @@ datasets <- list("fukui" = physeq.fukui,
 # CHECK COMMON ASVs #
 #####################
 
+# MOCK DATA
+# Create mock data
+df <- data.frame("ASV" = paste("ASV", rep(1:5), sep=""),
+                 "Sequence" = c("ATTTGAC", "GCATTAGCTTTA", "TTTGA", "GCTATCG", "AGCTTTA"),
+                 "Phylum" = c("Firmicutes", "Bacteroidota", "Firmicutes", "Actinobacteria", "Bacteroidota"),
+                 "Class" = c("Clostridia", "Bacteria", "Clostridia", "Proteomachin", "Bacteria")) %>%
+  arrange(nchar(Sequence))
+
+# Init
+new.df <- data.frame(matrix(ncol=5, nrow=0))
+colnames(new.df) <- c(colnames(df), "ASV_new")
+
+allseq <- df$Sequence
+i=1
+
+# Identify ASVs with same sequence and give them same ASV reference
+while(length(allseq) !=0 ){
+  
+  seq <- allseq[1]
+  
+  cat("\n++ Sequence:", seq, "++\n")
+  
+  # Subset df by sequence
+  tempdf <- df %>%
+    filter(str_detect(Sequence, seq)) %>%
+    mutate(ASV_new = paste("ASV", i, sep=""))
+  
+  # Remove sequences already identified
+  allseq <- allseq[!allseq %in% tempdf$Sequence]
+  cat("\n")
+  cat("Seq vector:", allseq, "\n\n")
+  
+  # Keep only 1 sequence (the shortest one)
+  tempdf <- tempdf %>%
+    filter(Sequence == Sequence[which.min(nchar(Sequence))])
+  
+  # Add to new.df
+  new.df <- rbind(new.df, tempdf)
+  print(new.df)
+  
+  i=i+1
+}
+
+
+
+
+#_______________________________________
+
 # Get ASV sequences for each dataset
 ASVs <- vector("list", length(datasets))
 names(ASVs) <- names(datasets)
