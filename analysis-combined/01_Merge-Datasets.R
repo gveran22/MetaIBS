@@ -41,7 +41,8 @@ datasets <- list("fukui" = physeq.fukui,
 
 # MOCK DATA
 # Create mock data
-df <- data.frame("ASV" = paste("ASV", rep(1:5), sep=""),
+df <- data.frame("author" = c("fukui", "fukui", "zhu", "pozuelo", "fukui"),
+                 "ASV" = paste("ASV", rep(1:5), sep=""),
                  "Sequence" = c("ATTTGAC", "GCATTAGCTTTA", "TTTGA", "GCTATCG", "AGCTTTA"),
                  "Phylum" = c("Firmicutes", "Bacteroidota", "Firmicutes", "Actinobacteria", "Bacteroidota"),
                  "Class" = c("Clostridia", "Bacteria", "Clostridia", "Proteomachin", "Bacteria")) %>%
@@ -66,56 +67,38 @@ while(length(allseq) !=0 ){
     filter(str_detect(Sequence, seq)) %>%
     mutate(ASV_new = paste("ASV", i, sep=""))
   
+  # Add to new.df
+  new.df <- rbind(new.df, tempdf)
+  print(new.df)
+  
   # Remove sequences already identified
   allseq <- allseq[!allseq %in% tempdf$Sequence]
   cat("\n")
   cat("Seq vector:", allseq, "\n\n")
   
-  # Keep only 1 sequence (the shortest one)
-  tempdf <- tempdf %>%
-    filter(Sequence == Sequence[which.min(nchar(Sequence))])
-  
-  # Add to new.df
-  new.df <- rbind(new.df, tempdf)
-  print(new.df)
-  
   i=i+1
 }
+
+
+# Keep only 1 sequence per ASV (the shortest one)
+new.df %>%
+  group_by(ASV_new) %>%
+  filter(Sequence == Sequence[which.min(nchar(Sequence))]) %>%
+  select(-ASV)
+
+# See common ASVs between datasets (authors)
+new.df %>%
+  select(author, ASV_new)
+
 
 
 
 
 #_______________________________________
 
-# Get ASV sequences for each dataset
-ASVs <- vector("list", length(datasets))
-names(ASVs) <- names(datasets)
 
-i=0
-for (physeq.cohort in datasets){
-  i=i+1
-  taxa_names(physeq.cohort) <- refseq(physeq.cohort)
-  ASVs[[i]] <- colnames(otu_table(physeq.cohort))
-}
+# BUILD TAXONOMIC TABLE WITH ALL DATASSETS
 
 
-# Quick peek if we can find Nagel's ASVs in Pozuelo's ASVs (V4 variable region)
-mean(nchar(ASVs$nagel)) # ~254 bp per ASV
-mean(nchar(ASVs$pozuelo)) # ~246 bp per ASV
-
-for (asv in ASVs$pozuelo){
-  
-  print(table(str_detect(ASVs$nagel, asv)))
-  
-}
 
 
-# Previous code
-for (i in 1:420){
-  table(substr(taxa_names(physeq.zhu), start = i, stop = i+248) %in% taxa_names(physeq.pozuelo))
-}
-
-table(substr(taxa_names(physeq.zhu), start = 160, stop = 413) %in% taxa_names(physeq.pozuelo))
-
-# 9 OTUs of length 246bp are common
-# pozuelo: 200 - 248 bp
