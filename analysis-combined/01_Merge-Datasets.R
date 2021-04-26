@@ -105,9 +105,52 @@ taxtable <- lapply(datasets, function(physeq){
   tax_table(physeq) %>%
     as.data.frame() %>%
     mutate(author = unique(sample_data(physeq)$author)) %>%
-    mutate(vregion = unique(sample_data(physeq)$variable_region))
+    mutate(vregion = unique(sample_data(physeq)$variable_region)) %>%
+    mutate(sequence = rownames(tax_table(physeq)))
   
 }) %>%
-  bind_rows()
+  bind_rows() %>%
+  arrange(nchar(sequence))
+
+print(nrow(taxtable)) # 49,619 ASVs
 
 
+# MERGE COMMON ASVs
+
+taxtable.new <- data.frame(matrix(ncol=ncol(taxtable)+1, nrow=0))
+colnames(taxtable.new) <- c(colnames(taxtable), "ASV")
+
+allseq <- taxtable$sequence
+i=1
+
+# Identify ASVs with same sequence and give them same ASV reference
+while(length(allseq) !=0 ){
+  
+  seq <- allseq[1]
+  
+  # Subset df by sequence
+  tempdf <- taxtable %>%
+    filter(str_detect(sequence, seq)) %>%
+    mutate(ASV = paste("ASV", i, sep=""))
+  
+  # Add to new.df
+  taxtable.new <- rbind(taxtable.new, tempdf)
+
+  # Remove sequences already identified
+  allseq <- allseq[!allseq %in% tempdf$sequence]
+  
+  # Follow progress of computation
+  if(length(allseq)%%10==0){ print(length(allseq)) }
+  
+  i=i+1
+}
+
+
+# Keep only 1 sequence per ASV (the shortest one)
+taxtable.new %>%
+  group_by(ASV) %>%
+  filter(sequence == sequence[which.min(nchar(sequence))])
+
+
+# See common ASVs between datasets (authors)
+test <- taxtable.new %>%
