@@ -99,6 +99,15 @@ new.df %>%
 
 # BUILD TAXONOMIC TABLE WITH ALL DATASSETS
 
-
+taxtable <- lapply(datasets, function(physeq){
+  
+  taxa_names(physeq) <- refseq(physeq)
+  tax_table(physeq) %>%
+    as.data.frame() %>%
+    mutate(author = unique(sample_data(physeq)$author)) %>%
+    mutate(vregion = unique(sample_data(physeq)$variable_region))
+  
+}) %>%
+  bind_rows()
 
 
