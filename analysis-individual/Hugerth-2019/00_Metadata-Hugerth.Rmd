@@ -60,25 +60,14 @@ sraDF <- sraDF %>%
   
 head(sraDF)
 
+
+
 #######
 # Create a new dataframe with only ibs/hc samples
-mtDF_ibs_hc <- metadata[metadata$gastrointestinal_tract_disorder == "none" |
-                          metadata$gastrointestinal_tract_disorder == "IBS(irritable-bowel syndrome)" |
-                          metadata$gastrointestinal_tract_disorder == "IBS (irritable-bowel syndrome)",]
-mtDF_ibs_hc$gastrointestinal_tract_disorder <- gsub("none", "Healthy", mtDF_ibs_hc$gastrointestinal_tract_disorder)
-mtDF_ibs_hc$gastrointestinal_tract_disorder <- gsub("IBS.*", "IBS", mtDF_ibs_hc$gastrointestinal_tract_disorder)
-mtDF_ibs_hc <- mtDF_ibs_hc[complete.cases(mtDF_ibs_hc[,"gastrointestinal_tract_disorder"]),] # remove the NA row
+sraDF.ibs <- sraDF %>%
+  filter(host_disease == "Healthy" | host_disease == "IBS")
 
-# Give better column names
-mtDF_ibs_hc$environment_.biome. <- NULL # remove column saying all samples are from human gut
-#colnames(mtDF_ibs_hc) # current column names
-colnames(mtDF_ibs_hc) <- c("Run", "collection_date", "sample_type", "host_age", "host_bmi", "host_ID",
-                           "sample_storage_duration", "sequencing_run", "extraction_plate",
-                           "host_psy", "host_sex", "host_disease")
-
-table(mtDF_ibs_hc$host_disease) # sanity check ok (hc 467 - ibs 140)
-
-table(sraDF$gastrointestinal_tract_disorder)
+table(sraDF.ibs$host_disease) # sanity check ok (hc 467 - ibs 140)
 ```
 
 
