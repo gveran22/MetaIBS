@@ -3,53 +3,62 @@ title: "R Notebook"
 output: html_notebook
 ---
 
-############
-Library import
+##########
+# IMPORT #
+##########
 
-```{r}
+# Libraries
+```{r import-libraries}
 #install.packages("readxl")
 library("readxl")
-library(stringr)
 library(data.table)
+library(tidyverse)
+```
+
+# Data
+```{r import-data}
+path <- "~/Projects/IBS_Meta-analysis_16S"
+
+# Metadata table downloaded from the SRA
+sraDF <- read.csv(file.path(path, "data/analysis-individual/Hugerth-2019/HugerthSraRunTable.txt"), header=TRUE, sep = ",")
+#head(sraDF)
 ```
 
 
-####################
-# SRA metadata table
+##################
+# CLEANUP TABLES #
+##################
+
+# SRA METADATA TABLE
 
 The SRA metadata table was downloaded from the SRA with the accession number PRJEB31817.
 
 ```{r sra-metadata}
 ########
-# Import the metadata table downloaded from the SRA
-sraDF <- read.csv("../../SraRunTable.txt", header=TRUE, sep = ",")
-head(sraDF)
-
-########
-# Keep only the relevant columns
+# Keep only relevant columns
 col <- c("Run", "Collection_Date", "environment_.biome.", "host_body_product", "Host_Age", "host_body.mass_index", "host_subject_ID", "sample_storage_duration", "sequencing_run", "Extraction_Plate", "host_disease_status", "host_sex", "gastrointestinal_tract_disorder")
-metadata <- sraDF[col]
 
-# Do a few modifications for simplicity
-metadata <- metadata[metadata$environment_.biome. != "bioreactor",] # remove "bioreactor" samples
-metadata$environment_.biome. <- NULL
-
-metadata <- transform(metadata, host_body_product = as.character(host_body_product)) # host_body_product as character
-metadata <- transform(metadata, gastrointestinal_tract_disorder = as.character(gastrointestinal_tract_disorder))
-metadata[metadata$host_body_product == "Mucosal tissue","host_body_product"] <- "sigmoid"
-metadata[metadata$host_body_product == "Faeces","host_body_product"] <- "stool"
-
-colnames(metadata) <- c("Run", "collection_date", "sample_type", "host_age",
-                        "host_bmi", "host_ID", "sample_storage_duration",
-                        "sequencing_run", "extraction_plate", "host_psy",
-                        "host_sex", "host_disease")
-
-metadata <- transform(metadata, host_psy = as.character(host_psy))
-metadata <- transform(metadata, host_sex = as.character(host_sex))
-metadata <- transform(metadata, collection_date = as.character(collection_date))
-metadata$host_disease <- gsub("IBS.*", "IBS", metadata$host_disease)
-
-head(metadata)
+# CLEANUP SRADF
+sraDF <- sraDF %>%
+  select(col) %>%
+  # remove 26 "bioreactor" samples (controls)
+  filter(environment_.biome. != "bioreactor") %>% 
+  select(-environment_.biome.) %>%
+  # rename columns
+  rename_with(tolower) %>%
+  rename(sample_type=host_body_product,
+         host_bmi=host_body.mass_index,
+         host_ID=host_subject_id,
+         host_psy=host_disease_status,
+         host_disease=gastrointestinal_tract_disorder) %>%
+  # rename sample_type
+  mutate(sample_type=replace(sample_type, sample_type=="Mucosal tissue", "sigmoid"),
+         sample_type=replace(sample_type, sample_type=="Faeces", "stool")) %>%
+  # rename IBS & healthy in host_disease
+  mutate(host_disease=gsub("IBS.*)", "IBS", host_disease),
+         host_disease=replace(host_disease, host_disease=="none", "Healthy"))
+  
+head(sraDF)
 
 #######
 # Create a new dataframe with only ibs/hc samples
@@ -69,7 +78,7 @@ colnames(mtDF_ibs_hc) <- c("Run", "collection_date", "sample_type", "host_age", 
 
 table(mtDF_ibs_hc$host_disease) # sanity check ok (hc 467 - ibs 140)
 
-
+table(sraDF$gastrointestinal_tract_disorder)
 ```
 
 
