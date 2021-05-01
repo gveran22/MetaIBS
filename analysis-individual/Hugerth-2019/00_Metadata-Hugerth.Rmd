@@ -22,6 +22,10 @@ path <- "~/Projects/IBS_Meta-analysis_16S"
 # Metadata table downloaded from the SRA
 sraDF <- read.csv(file.path(path, "data/analysis-individual/Hugerth-2019/HugerthSraRunTable.txt"), header=TRUE, sep = ",")
 #head(sraDF)
+
+# Import the supplementary ASV table from the paper
+paper_supp <- read_excel(file.path(path, "data/analysis-individual/Hugerth-2019/00_Metadata-Hugerth/Paper_Samples/ASV_table_PAPER.xlsx"))
+head(paper_supp)
 ```
 
 
@@ -72,46 +76,40 @@ table(sraDF.ibs$host_disease) # sanity check ok (hc 467 - ibs 140)
 
 
 
-###################
-# Authors samples
+# PAPER SUPPLEMENTARY
 
 The supplementary material with the ASV table of the authors was downloaded directly from the paper's website https://gut.bmj.com/content/69/6/1076
 
 ```{r paper-supplementary}
-################################
-# ASV TABLE SUPPLEMENTARY DATA #
-################################
-
-# Import the supplementary ASV table from the authors
-paper_supp <- read_excel("../Paper_Samples/ASV_table_PAPER.xlsx")
-head(paper_supp)
-
 # Create dataframe with the sample names (found as column names in the ASV table)
-paper_samples <- data.frame("raw_names" = colnames(paper_supp)[2:562])
-head(paper_samples)
-dim(paper_samples) # there are 561 rows (as there are 561 samples in the paper)
+paperDF <- data.frame("raw_names" = colnames(paper_supp)[2:562])
+head(paperDF)
+dim(paperDF) # there are 561 rows (as there are 561 samples in the paper)
 
 # The sample names look like "X170429_27.547_0039_sigmoideum"
 # Which corresponds to "sequencing run _ extraction plate _ subject ID _ sample type"
 
 # We need to "split" the sample names
-paper_samples[,2:5] <- str_split_fixed(paper_samples$raw_names, "_", 4)
-colnames(paper_samples)[2:5] <- c("sequencing_run", "Extraction_Plate", "host_subject_ID", "host_body_product")
-head(paper_samples)
+paperDF <- paperDF %>%
+  separate(col=raw_names, into=c("sequencing_run", "Extraction_Plate", "host_subject_ID", "host_body_product"), sep="_", remove=FALSE) %>%
+  # rename columns
+  rename_with(tolower) %>%
+  rename(host_ID=host_subject_id,
+         sample_type=host_body_product) %>%
+  # cleanup
+  mutate(sequencing_run=gsub("X", "", sequencing_run),
+         extraction_plate=gsub("[.]", "-", extraction_plate),
+         host_ID=as.numeric(host_ID)) %>%
+  # rename sample_type
+  mutate(sample_type=replace(sample_type, sample_type=="sigmoideum", "sigmoid"),
+         sample_type=replace(sample_type, sample_type=="feces", "stool"))
+  
+head(paperDF)  
 
-# Modifications to fit this data to the SRA metadata table
-paper_samples$Extraction_Plate <- gsub("[.]", "-", paper_samples$Extraction_Plate) # replace "." by "-" on the extraction_plate
-paper_samples$sequencing_run <- gsub("X", "", paper_samples$sequencing_run) # remove the "X" on the sequencing_run
-paper_samples <- transform(paper_samples, host_subject_ID = as.numeric(host_subject_ID)) # subject_ID numeric
-paper_samples <- transform(paper_samples, host_body_product = as.character(host_body_product)) # host_body_product as.character
-paper_samples[paper_samples$host_body_product == "sigmoideum","host_body_product"] <- "sigmoid"
-#colnames(paper_samples) <- c("raw_names", "sequencing_run", "extraction_plate", "host_ID", "sample_type")
-
-#table(paper_samples$sample_type)
-#table(metadata$host_body_product)
+```
 
 
-
+```{r}
 #####################################
 # CROSS-REFERENCE WITH SRA METADATA #
 #####################################
@@ -123,6 +121,7 @@ shared_col <- c("sequencing_run", "Extraction_Plate", "host_subject_ID", "host_b
 dim(merge(x=paper_samples, y=metadata[,ycol], by=shared_col, all.x=FALSE)) # 558 samples (not 561)
 # There are 4 samples that are unassigned in the SRA metadata (not deposited on SRA database?...)
 ```
+
 
 When merging the samples included in the paper with the metadata deposited on the SRA, there are 558 samples that have a match in the SRA database. Which samples are unassigned?
 
