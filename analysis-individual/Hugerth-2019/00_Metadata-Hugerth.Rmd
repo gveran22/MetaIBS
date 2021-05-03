@@ -178,22 +178,29 @@ paperRuns.DF <- paper_runs %>%
   mutate(host_disease=gsub("IBS.*)", "IBS", host_disease),
          host_disease=replace(host_disease, host_disease=="none", "Healthy"))
 
+# DISEASE PHENOTYPE OF THE SAMPLES SUGGESTED TO DOWNLOAD
+paperRuns.DF %>%
+  count(host_disease)
+
 ######
 # Compare the samples from the supplementary ASV table, and the "suggested" samples to download
 table(paperDF$Run %in% paperRuns.DF$Run)
-# What are those 7 Runs that don't match?
-paperDF %>%
-  filter(!Run %in% paperRuns.DF$Run)
-# Interestingly, we find again the 4 samples that had no entry in the SRA metadata... And the other 3 samples are healthy
+# What are those Runs that don't match?
+bind_rows(paperDF %>% filter(!Run %in% paperRuns.DF$Run),
+          paperRuns.DF %>% filter(!Run %in% paperDF$Run)) %>%
+  arrange(host_ID)
+# 7 samples from supplementary table are not in samples suggested to download
+# 6 samples suggested to download are not in supplementary table
+# HOWEVER, these samples correspond to the sample individuals!! (same host_IDs...)
 ```
 
-Overall, we have found the 561 samples included in the analysis by the paper. We found the sample names from (1) the supplementary ASV table and from (2) the samples ERS3379832-ERS3380418. They both correspond to the same samples ( _except for 6 samples, but we checked that they belong to the same individuals, just not the same sequencing_run or extraction_plate_ ).
+Overall, we have found the 561 samples included in the analysis by the paper. We found the sample names from (1) the supplementary ASV table and from (2) the samples ERS3379832-ERS3380418. They both correspond to the same samples ( _except for 6-7 samples, but they belong to the same individuals..._).
 
 These 561 samples have the following gastrointestinal disorders:
 - 321 healthy
 - 96 IBS
-- 130 other diseases (C.difficile infection, polyps, hyperplastic polyps, etc.)
-- 14 unknown
+- 134 other diseases (C.difficile infection, polyps, hyperplastic polyps, etc.)
+- 10 unknown
 
 
 #########################################
