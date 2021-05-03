@@ -379,6 +379,59 @@ sraDF %>%
 
 
 
+```{r filter-metadata}
+# Duplicate SRA metadata
+metadata <- sraDF %>%
+  # create column for year-month collection date
+  mutate(coldate=substr(collection_date, 0, 7))
+
+# Try out stuff
+metadata %>%
+  # group_by same BMI, age, gender, disease
+  group_by(host_bmi, host_age, host_sex, host_disease, coldate) %>%
+  mutate(id=group_indices()) %>%
+  # ungroup host_sex
+  ungroup(host_sex) %>%
+  arrange(host_bmi, host_age, host_sex, host_disease) %>%
+  # Change column order
+  relocate(coldate, .after=Run) %>%
+  relocate(id, .after=host_disease) %>%
+  relocate(host_ID, .after=id)
+# max(test$id) # 816 IDs (coldate)
+
+
+# Cleanup
+metadata %>%
+  # group_by same BMI, age, gender, disease
+  group_by(host_bmi, host_age, host_sex, host_disease) %>%
+  mutate(id=group_indices()) %>%
+  arrange(host_bmi, host_age, host_sex, host_disease) %>%
+  # Change column order
+  relocate(coldate, .after=Run) %>%
+  relocate(id, .after=host_disease) %>%
+  relocate(host_ID, .after=id)
+  #group_vars()
+# max(test$id) # 811 IDs
+
+
+
+
+# Verify that individuals with same coldate, bmi, age don't have different diseases
+metadata %>%
+  group_by(coldate, host_bmi, host_age) %>%
+  filter(n_distinct(host_disease)>1) %>%
+  arrange(coldate, host_bmi, host_age) %>%
+  # Change column order
+  relocate(coldate, .after=Run)
+
+# Verify individuals with same coldate, bmi, age, disease, but different genders
+metadata %>%
+  group_by(coldate, host_bmi, host_age, host_disease) %>%
+  filter(n_distinct(host_sex)>1) %>%
+  arrange(coldate, host_bmi, host_age, host_disease) %>%
+  # Change column order
+  relocate(collection_date, .after=Run)
+```
 
 
 XXXXXXXXXXXXXXXXXXXXXXXX REMOVE PART BELOW (OLD JUNK) XXXXXXXXXXXXXXXXXXXXXXXX
