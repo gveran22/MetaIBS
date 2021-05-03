@@ -99,8 +99,7 @@ paperDF <- paperDF %>%
   separate(col=raw_names, into=c("sequencing_run", "Extraction_Plate", "host_subject_ID", "host_body_product"), sep="_", remove=FALSE) %>%
   # rename columns
   rename_with(tolower) %>%
-  rename(Run=run,
-         host_ID=host_subject_id,
+  rename(host_ID=host_subject_id,
          sample_type=host_body_product) %>%
   # cleanup
   mutate(sequencing_run=gsub("X", "", sequencing_run),
@@ -135,7 +134,7 @@ paperDF %>%
 
 # Check if some samples were unassigned in the SRA metadata
 paperDF %>%
-  filter(is.na(run))
+  filter(is.na(Run))
 # => 4 samples are unassigned (not deposited on SRA database?...)
 
 
@@ -203,6 +202,10 @@ These 561 samples have the following gastrointestinal disorders:
 - 10 unknown
 
 
+
+XXXXXXXXXXXXXXXXXXXXXXXX REMOVE PART BELOW (JUNK) XXXXXXXXXXXXXXXXXXXXXXXX
+
+
 #########################################
 # Samples to quality filter through Dada2
 
@@ -240,8 +243,6 @@ mtDF_ibs_hc[mtDF_ibs_hc$Run == "ERR3586005",] # healthy
 mtDF_ibs_hc[mtDF_ibs_hc$Run == "ERR3586042",] # healthy
 mtDF_ibs_hc[mtDF_ibs_hc$Run == "ERR3586312",] # healthy
 #authors_merged[authors_merged$Run == "ERR3586004",]
-
-
 ```
 
 
@@ -345,7 +346,7 @@ write.csv(x = metadata_final, file = "../../metadata_final.csv", row.names=FALSE
 
 
 
-
+XXXXXXXXXXXXXXXXXXXXXXXX CLEANUP PART BELOW (PROPER REFORMATTING OF SRA METADATA) XXXXXXXXXXXXXXXXXXXXXXXX
 
 
 ###################
