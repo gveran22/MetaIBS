@@ -349,8 +349,40 @@ write.csv(x = metadata_final, file = "../../metadata_final.csv", row.names=FALSE
 XXXXXXXXXXXXXXXXXXXXXXXX CLEANUP PART BELOW (PROPER REFORMATTING OF SRA METADATA) XXXXXXXXXXXXXXXXXXXXXXXX
 
 
-###################
-# SRA metadata
+##########################################
+# REMOVE INCONSISTENCIES IN SRA METADATA #
+##########################################
+
+
+Let's quantify the inconsistencies
+
+```{r metadata-inconsistencies}
+# For easier read of dataframes, re-order columns
+sraDF <- sraDF %>%
+  # Change column order
+  relocate(host_bmi, .after=Run) %>%
+  relocate(host_age, .after=host_bmi) %>%
+  relocate(host_sex, .after=host_age) %>%
+  relocate(sample_type, .after=host_sex) %>%
+  relocate(host_psy, .after=sample_type) %>%
+  relocate(host_disease, .after=host_psy) %>%
+  relocate(host_ID, .after=host_disease)
+
+
+# Samples with same host_ID but different disease phenotype
+sraDF %>%
+  group_by(host_ID) %>%
+  filter(n_distinct(host_disease)>1) %>%
+  arrange(host_ID)
+  
+```
+
+
+
+
+
+XXXXXXXXXXXXXXXXXXXXXXXX REMOVE PART BELOW (OLD JUNK) XXXXXXXXXXXXXXXXXXXXXXXX
+
 
 Obtain the sample names that passed the quality filter with Dada2.
 ```{r samples-filtered}
@@ -365,7 +397,6 @@ samples_needed <- rownames(seqtable.nochim)
 
 # Get a metadata table for these samples.
 ```
-
 
 Let's look at possible inconsistencies in the metadata from the SRA.
 ```{r sra-metadata-cleanup}
@@ -385,9 +416,6 @@ new.metadata$coldate <- substr(new.metadata$coldate, 0, 7)
 
 interesting_col <- c("host_ID", "host_bmi", "host_age", "host_disease", "sample_type",
                      "host_sex", "host_psy", "collection_date")
-
-
-
 ```
 
 ```{r sra-metadata-cleanup-2}
