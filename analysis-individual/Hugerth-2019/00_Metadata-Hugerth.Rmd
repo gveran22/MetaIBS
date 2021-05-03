@@ -50,7 +50,8 @@ sraDF <- sraDF %>%
   select(-environment_.biome.) %>%
   # rename columns
   rename_with(tolower) %>%
-  rename(sample_type=host_body_product,
+  rename(Run=run,
+         sample_type=host_body_product,
          host_bmi=host_body.mass_index,
          host_ID=host_subject_id,
          host_psy=host_disease_status,
@@ -105,56 +106,48 @@ paperDF <- paperDF %>%
          sample_type=replace(sample_type, sample_type=="feces", "stool"))
   
 head(paperDF)  
-
 ```
 
 
-```{r}
-#####################################
-# CROSS-REFERENCE WITH SRA METADATA #
-#####################################
-
-ycol <- c("sequencing_run", "Extraction_Plate", "host_subject_ID", "host_body_product", "Run", "gastrointestinal_tract_disorder")
-shared_col <- c("sequencing_run", "Extraction_Plate", "host_subject_ID", "host_body_product")
-
-# Can all samples from paper be found on SRA metadata?
-dim(merge(x=paper_samples, y=metadata[,ycol], by=shared_col, all.x=FALSE)) # 558 samples (not 561)
-# There are 4 samples that are unassigned in the SRA metadata (not deposited on SRA database?...)
-```
-
-
-When merging the samples included in the paper with the metadata deposited on the SRA, there are 558 samples that have a match in the SRA database. Which samples are unassigned?
+Now let's assign host_disease of the samples included in the paper. We have information on the sample_type, extraction_plate, sequencing_run and individual ID, which should be enough to identify the samples in the sraDF.
 
 ```{r paper-supplementary-2}
-# Merge with the SRA metadata
-authors_merged <- merge(x=paper_samples, y=metadata[,ycol], by=shared_col,
-                        all.x=TRUE) # keep all samples from paper, even if there is no match in the SRA metadata
+#####################################
+# CROSS-REFERENCE WITH SRA METADATA #
 
-# Sanity check we have 561 samples
-dim(authors_merged)
+# Add SRA columns to paperDF
+sharedcol <- c("sequencing_run", "extraction_plate", "host_ID", "sample_type")
+paperDF <- left_join(paperDF, sraDF, by=sharedcol)
+dim(paperDF) # 562 rows, when we had 561 before...
 
-# ______________
-# ONE SAMPLE WITH DOUBLE ENTRY IN THE SRA DATABASE
-# There is 562 samples when there should be only 561, so one sample from paper must have had 2 matches into the SRA metadata
-authors_merged[authors_merged$raw_names == authors_merged$raw_names[duplicated(authors_merged$raw_names)], ]
-# it's a healthy sample with 2 entries in the SRA
 
-# ______________
-# FOUR UNASSIGNED SAMPLES IN SRA DATABASE
-# Look at the samples that were "unassigned" in the SRA metadata table
-authors_merged[is.na(authors_merged$Run),]
-# host_subject_id of unassigned samples: 3967, 4149, 4206, 4339
-# They are all fecal samples from the sequencing_run 180316 and the extraction_plate 27-1881
-```
+# Check if some samples had double entry in SRA metadata
+paperDF %>%
+  group_by(raw_names) %>%
+  filter(n()>1)
+# => 1 sample has 2 entries in the SRA metadata (Healthy, age 41, bmi 25.71, collection_date 17/01/2006, but inconsistent gender)
 
-Now, let's look at the disease phenotype of the samples included in the paper.
-```{r paper-supplementary-3}
+
+# Check if some samples were unassigned in the SRA metadata
+paperDF %>%
+  filter(is.na(run))
+# => 4 samples are unassigned (not deposited on SRA database?...)
+
+
 # DISEASE PHENOTYPE OF THE SAMPLES INCLUDED IN PAPER
-# What is the disease of the 561 samples?
-authors_merged <- transform(authors_merged, gastrointestinal_tract_disorder = as.character(gastrointestinal_tract_disorder))
-as.data.frame(table(authors_merged$gastrointestinal_tract_disorder))
-# take into account that one healthy sample got a double match into the SRA => there are 321 healthy samples (not 322)
+paperDF %>%
+  count(host_disease)
+# take into account that one healthy sample got a double match into the SRA
+# => 321 healthy samples (paper describes 466)
+# => 96 IBS samples (paper describes 95)
+# => rest is non-IBS and non-healthy (n=144)
 ```
+
+
+
+
+
+# SAMPLES TO DOWNLOAD AS INDICATED IN PAPER
 
 There is a second way we can double-check which samples were included in the analysis of the paper.
 
