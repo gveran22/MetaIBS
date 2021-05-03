@@ -20,12 +20,16 @@ library(tidyverse)
 path <- "~/Projects/IBS_Meta-analysis_16S"
 
 # Metadata table downloaded from the SRA
-sraDF <- read.csv(file.path(path, "data/analysis-individual/Hugerth-2019/HugerthSraRunTable.txt"), header=TRUE, sep = ",")
-#head(sraDF)
+sra_metadata <- read.csv(file.path(path, "data/analysis-individual/Hugerth-2019/HugerthSraRunTable.txt"), header=TRUE, sep = ",")
+#head(sra_metadata)
 
 # Import the supplementary ASV table from the paper
 paper_supp <- read_excel(file.path(path, "data/analysis-individual/Hugerth-2019/00_Metadata-Hugerth/Paper_Samples/ASV_table_PAPER.xlsx"))
 head(paper_supp)
+
+# Import the "suggested" runs from the paper (samples ERS3379832-ERS3380418)
+paper_runs <- read.csv(file.path(path, "data/analysis-individual/Hugerth-2019/00_Metadata-Hugerth/paper_suggested.csv"), header=TRUE, sep = ",")
+head(paper_runs)
 ```
 
 
@@ -43,7 +47,7 @@ The SRA metadata table was downloaded from the SRA with the accession number PRJ
 col <- c("Run", "Collection_Date", "environment_.biome.", "host_body_product", "Host_Age", "host_body.mass_index", "host_subject_ID", "sample_storage_duration", "sequencing_run", "Extraction_Plate", "host_disease_status", "host_sex", "gastrointestinal_tract_disorder")
 
 # CLEANUP SRADF
-sraDF <- sraDF %>%
+sraDF <- sra_metadata %>%
   select(col) %>%
   # remove 26 "bioreactor" samples (controls)
   filter(environment_.biome. != "bioreactor") %>% 
@@ -95,7 +99,8 @@ paperDF <- paperDF %>%
   separate(col=raw_names, into=c("sequencing_run", "Extraction_Plate", "host_subject_ID", "host_body_product"), sep="_", remove=FALSE) %>%
   # rename columns
   rename_with(tolower) %>%
-  rename(host_ID=host_subject_id,
+  rename(Run=run,
+         host_ID=host_subject_id,
          sample_type=host_body_product) %>%
   # cleanup
   mutate(sequencing_run=gsub("X", "", sequencing_run),
@@ -105,7 +110,7 @@ paperDF <- paperDF %>%
   mutate(sample_type=replace(sample_type, sample_type=="sigmoideum", "sigmoid"),
          sample_type=replace(sample_type, sample_type=="feces", "stool"))
   
-head(paperDF)  
+head(paperDF) 
 ```
 
 
@@ -145,44 +150,41 @@ paperDF %>%
 
 
 
-
-
 # SAMPLES TO DOWNLOAD AS INDICATED IN PAPER
-
-There is a second way we can double-check which samples were included in the analysis of the paper.
 
 *The paper indicates to download samples ERS3379832-ERS3380418*. That's a total of 587 samples. Considering that there are 26 control samples, that would mean there are 561 IBS or healthy samples (which matches the number of samples analyzed in the paper).
 
-Now, we downloaded the _SraRunInfo.csv_ file for samples ERS3379832-ERS3380418 on the SRA database. Let's import it, and compare the Run numbers from that file, with the Run numbers we indirectly obtained from the supplementary ASV table.
-```{r paper-supplementary-4}
-# Import the "suggested" runs
-sraRunInfo <- read.csv("paper_suggested.csv", header=TRUE, sep = ",")
-head(sraRunInfo)
+Now, the _SraRunInfo.csv_ file for samples ERS3379832-ERS3380418 was downloaded on the SRA database. Let's import it, and compare the Run numbers from that file, with the Run numbers we indirectly obtained from the supplementary ASV table.
 
-# The first 26 samples in the table are the controls (the "bioreactor" samples)
-table(sraRunInfo$Run[1:587] %in% metadata$Run)
-table(sraRunInfo$Run[27:587] %in% metadata$Run)
+```{r suggested-runs}
+# CLEANUP PAPERRUNS DF
+paperRuns.DF <- paper_runs %>%
+  select(Run, Sample) %>%
+  # add SRA metadata to have info on samples ERS3379832-ERS3380418
+  left_join(sra_metadata, by="Run") %>%
+  # do same cleanup as for sraDF
+  select(c(col, "Sample")) %>%
+  filter(environment_.biome. != "bioreactor") %>% 
+  select(-environment_.biome.) %>%
+  rename_with(tolower) %>%
+  rename(Run=run,
+         sample_type=host_body_product,
+         host_bmi=host_body.mass_index,
+         host_ID=host_subject_id,
+         host_psy=host_disease_status,
+         host_disease=gastrointestinal_tract_disorder) %>%
+  mutate(sample_type=replace(sample_type, sample_type=="Mucosal tissue", "sigmoid"),
+         sample_type=replace(sample_type, sample_type=="Faeces", "stool")) %>%
+  mutate(host_disease=gsub("IBS.*)", "IBS", host_disease),
+         host_disease=replace(host_disease, host_disease=="none", "Healthy"))
 
-# Merge to get the gastro-intestinal disorder of these runs
-paper_merged <- merge(x=sraRunInfo[, c("Run","Sample")],
-                      y=metadata[,c("Run", "gastrointestinal_tract_disorder")], by=c("Run"),
-                      all.x=FALSE)
-dim(paper_merged)
-
-# For the "real" human fecal samples, do they correspond to the samples found in the supplementary ASV table?
-table(paper_merged$Run %in% authors_merged$Run)
-
-# What are those 6 Runs that don't match?
-unmatched_runs <- as.vector(factor(paper_merged$Run[which(!paper_merged$Run %in% authors_merged$Run)]))
-unmatched_IDs <- c()
-for(run in unmatched_runs){
-  unmatched_IDs <- append(unmatched_IDs, metadata[metadata$Run == run,]$host_subject_ID)
-}
-unmatched_IDs # we have the subject_id of these 6 runs that don't match
-
-# Here we can see that the individuals can be found in the supplementary ASV table, but probably the sequencing_run and extraction_plate don't match with the run numbers of the sraRunInfo table.
-paper_samples[paper_samples$host_subject_ID %in% unmatched_IDs,] # ASV table
-metadata[metadata$Run %in% unmatched_runs, c("Run", "sequencing_run", "Extraction_Plate", "host_subject_ID", "host_body_product")] # sraRunInfo
+######
+# Compare the samples from the supplementary ASV table, and the "suggested" samples to download
+table(paperDF$Run %in% paperRuns.DF$Run)
+# What are those 7 Runs that don't match?
+paperDF %>%
+  filter(!Run %in% paperRuns.DF$Run)
+# Interestingly, we find again the 4 samples that had no entry in the SRA metadata... And the other 3 samples are healthy
 ```
 
 Overall, we have found the 561 samples included in the analysis by the paper. We found the sample names from (1) the supplementary ASV table and from (2) the samples ERS3379832-ERS3380418. They both correspond to the same samples ( _except for 6 samples, but we checked that they belong to the same individuals, just not the same sequencing_run or extraction_plate_ ).
