@@ -380,26 +380,32 @@ sraDF %>%
 
 
 ```{r filter-metadata}
-# Duplicate SRA metadata
+#_____________________________________________
+# DUPLICATE SRA METADATA
 metadata <- sraDF %>%
   # create column for year-month collection date
   mutate(coldate=substr(collection_date, 0, 7))
 
-# Try out stuff
-metadata %>%
+
+#_____________________________________________
+# STRINGENT FILTERING
+stringent.df <- metadata %>%
   # group_by same BMI, age, gender, disease
   group_by(host_bmi, host_age, host_sex, host_disease, coldate) %>%
   mutate(id=group_indices()) %>%
-  # ungroup host_sex
-  ungroup(host_sex) %>%
-  arrange(host_bmi, host_age, host_sex, host_disease) %>%
+  ungroup() %>%
   # Change column order
   relocate(coldate, .after=Run) %>%
   relocate(id, .after=host_disease) %>%
-  relocate(host_ID, .after=id)
-# max(test$id) # 816 IDs (coldate)
+  relocate(host_ID, .after=id) %>%
+  # Remove useless columns
+  select(-c(coldate, host_ID)) %>%
+  rename(host_ID=id) %>%
+  # Keep only IBS & HC
+  filter(host_disease == "IBS" | host_disease == "Healthy")
 
 
+#_____________________________________________
 # Cleanup
 metadata %>%
   # group_by same BMI, age, gender, disease
@@ -426,7 +432,7 @@ metadata %>%
 
 # Verify individuals with same coldate, bmi, age, disease, but different genders
 metadata %>%
-  group_by(coldate, host_bmi, host_age, host_disease) %>%
+  group_by(collection_date, host_bmi, host_age, host_disease) %>%
   filter(n_distinct(host_sex)>1) %>%
   arrange(coldate, host_bmi, host_age, host_disease) %>%
   # Change column order
