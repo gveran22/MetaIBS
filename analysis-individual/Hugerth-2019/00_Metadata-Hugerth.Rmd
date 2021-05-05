@@ -384,9 +384,30 @@ sraDF %>%
 # DUPLICATE SRA METADATA
 metadata <- sraDF %>%
   # create column for year-month collection date
-  mutate(coldate=substr(collection_date, 0, 7))
+  mutate(coldate=substr(collection_date, 0, 7)) %>%
+  # replace BMI=0 by NA
+  mutate(host_bmi=na_if(host_bmi, 0.0))
 
 
+# Verify that individuals with same coldate, bmi, age don't have different diseases
+metadata %>%
+  group_by(coldate, host_bmi, host_age) %>%
+  filter(n_distinct(host_disease)>1) %>%
+  arrange(coldate, host_bmi, host_age) %>%
+  # Change column order
+  relocate(coldate, .after=Run)
+
+# Verify individuals with same coldate, bmi, age, disease, but different genders
+metadata %>%
+  group_by(collection_date, host_bmi, host_age, host_disease) %>%
+  filter(n_distinct(host_sex)>1) %>%
+  arrange(coldate, host_bmi, host_age, host_disease) %>%
+  # Change column order
+  relocate(collection_date, .after=Run)
+```
+
+
+```{r}
 #_____________________________________________
 # STRINGENT FILTERING
 stringent.df <- metadata %>%
@@ -415,42 +436,28 @@ stringent.df <- stringent.df %>%
   mutate(host_psy=case_when(n_distinct(host_psy)>1 ~ NA_character_, TRUE ~ host_psy)) %>%
   ungroup()
 
-```
 
 
-```{r}
 #_____________________________________________
-# Cleanup
+# LESS STRINGENT FILTERING (more inferring)
 metadata %>%
-  # group_by same BMI, age, gender, disease
-  group_by(host_bmi, host_age, host_sex, host_disease) %>%
+  # group_by same BMI, age, disease & collection date
+  group_by(host_bmi, host_age, host_disease, coldate) %>%
   mutate(id=group_indices()) %>%
+  ungroup() %>%
+  # group by id
+  group_by(id) %>%
+  filter(n_distinct(host_sex) >1) %>%
+  
+  # FOR PRINTING
   arrange(host_bmi, host_age, host_sex, host_disease) %>%
   # Change column order
-  relocate(coldate, .after=Run) %>%
+  relocate(coldate) %>%
+  relocate(Run, .after=extraction_plate) %>%
+  relocate(host_psy, .after=host_ID) %>%
   relocate(id, .after=host_disease) %>%
   relocate(host_ID, .after=id)
   #group_vars()
-# max(test$id) # 811 IDs
-
-
-
-
-# Verify that individuals with same coldate, bmi, age don't have different diseases
-metadata %>%
-  group_by(coldate, host_bmi, host_age) %>%
-  filter(n_distinct(host_disease)>1) %>%
-  arrange(coldate, host_bmi, host_age) %>%
-  # Change column order
-  relocate(coldate, .after=Run)
-
-# Verify individuals with same coldate, bmi, age, disease, but different genders
-metadata %>%
-  group_by(collection_date, host_bmi, host_age, host_disease) %>%
-  filter(n_distinct(host_sex)>1) %>%
-  arrange(coldate, host_bmi, host_age, host_disease) %>%
-  # Change column order
-  relocate(collection_date, .after=Run)
 ```
 
 
