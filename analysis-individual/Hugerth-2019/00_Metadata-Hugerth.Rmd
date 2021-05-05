@@ -405,6 +405,20 @@ stringent.df <- metadata %>%
   filter(host_disease == "IBS" | host_disease == "Healthy")
 
 
+# Now that we have new identifiers, we can infer some missing data in the host_psy column
+stringent.df <- stringent.df %>%
+  # group by ID
+  group_by(host_ID) %>%
+  # replace NA values if we have several samples per individual
+  fill(host_psy, .direction="downup") %>%
+  # for individuals with inconsistent host_psy values, replace by NA
+  mutate(host_psy=case_when(n_distinct(host_psy)>1 ~ NA_character_, TRUE ~ host_psy)) %>%
+  ungroup()
+
+```
+
+
+```{r}
 #_____________________________________________
 # Cleanup
 metadata %>%
