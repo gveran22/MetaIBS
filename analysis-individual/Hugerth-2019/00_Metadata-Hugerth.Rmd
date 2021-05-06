@@ -443,10 +443,10 @@ stringent.df <- stringent.df %>%
 metadata %>%
   # group_by same BMI, age, disease & collection date
   group_by(host_bmi, host_age, host_disease, coldate) %>%
-  mutate(id=group_indices()) %>%
+  mutate(new_id=group_indices()) %>%
   ungroup() %>%
   # group by id
-  group_by(id) %>%
+  group_by(new_id) %>%
   filter(n_distinct(host_sex) >1) %>%
   
   # FOR PRINTING
@@ -455,8 +455,8 @@ metadata %>%
   relocate(coldate) %>%
   relocate(Run, .after=extraction_plate) %>%
   relocate(host_psy, .after=host_ID) %>%
-  relocate(id, .after=host_disease) %>%
-  relocate(host_ID, .after=id)
+  relocate(new_id, .after=host_disease) %>%
+  relocate(host_ID, .after=new_id)
   #group_vars()
 ```
 

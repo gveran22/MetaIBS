@@ -140,11 +140,18 @@ while(length(allseq) !=0 ){
   allseq <- allseq[!allseq %in% tempdf$sequence]
   
   # Follow progress of computation
-  if(length(allseq)%%10==0){ print(length(allseq)) }
+  if(length(allseq)%%100==0){ print(length(allseq)) }
   
   i=i+1
 }
 
+saveRDS(taxtable.new, "~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/01_Merge-Datasets/taxtable_merged.rds")
+
+# Sanity check
+taxtable.new %>%
+  group_by(ASV) %>%
+  mutate(verif = str_detect(sequence, sequence[which.min(nchar(sequence))]))
+  
 
 # Keep only 1 sequence per ASV (the shortest one)
 taxtable.new %>%
@@ -154,3 +161,4 @@ taxtable.new %>%
 
 # See common ASVs between datasets (authors)
 test <- taxtable.new %>%
+  select(author, ASV)
