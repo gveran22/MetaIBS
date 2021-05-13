@@ -353,8 +353,9 @@ XXXXXXXXXXXXXXXXXXXXXXXX CLEANUP PART BELOW (PROPER REFORMATTING OF SRA METADATA
 # REMOVE INCONSISTENCIES IN SRA METADATA #
 ##########################################
 
+To keep the original SRA metadata table "intact", we will duplicate it. We will rename a few diseases to avoid confusions (i.e Hyperplastic_polyp & hyperplastic_polyp). Also, as for some samples the day of the collection date is not always provided, we will create a new column to store the information of year&month of collection date.
 
-```{r metadata-inconsistencies}
+```{r}
 # For easier read of dataframes, re-order columns
 sraDF <- sraDF %>%
   # Change column order
@@ -366,21 +367,6 @@ sraDF <- sraDF %>%
   relocate(host_disease, .after=host_psy) %>%
   relocate(host_ID, .after=host_disease)
 
-
-# Samples with same host_ID but different disease phenotype
-sraDF %>%
-  group_by(host_ID) %>%
-  filter(n_distinct(host_disease)>1) %>%
-  arrange(host_ID)
-  
-```
-
-
-### 1. Inconsistencies in disease phenotype
-
-Some individuals with same host_ID have different disease phenotype.
-
-```{r filter-metadata}
 #_____________________________________________
 # DUPLICATE SRA METADATA
 metadata <- sraDF %>%
@@ -395,8 +381,25 @@ metadata <- sraDF %>%
          host_disease=gsub("hyperplasticpolyp", "hyperplastic_polyp", host_disease),
          host_disease=gsub("Hyperplastic_polyp", "hyperplastic_polyp", host_disease),
          host_disease=gsub("Chron'sdisease", "Chron's", host_disease))
+  
+```
 
 
+### 1. Inconsistencies in disease phenotype
+
+More than 100 samples with same host_ID have different disease phenotype.
+
+```{r metadata-inconsistencies-1}
+# Samples with same host_ID but different disease phenotype
+metadata %>%
+  group_by(host_ID) %>%
+  filter(n_distinct(host_disease)>1) %>%
+  arrange(host_ID)
+```
+
+Now, if we were to consider other covariates as proxies for sample identifiers, we get much less inconsistencies in disease phenotype. We can use BMI, age and collection date as relevant information to identify samples belonging to the same individual.
+
+```{r metadata-inconsistencies-2}
 # Verify that individuals with same coldate, bmi, age don't have different diseases
 metadata %>%
   group_by(coldate, host_bmi, host_age) %>%
@@ -404,7 +407,11 @@ metadata %>%
   arrange(coldate, host_bmi, host_age) %>%
   # Change column order
   relocate(coldate, .after=Run)
+```
+Five samples have same collection_date, 
 
+
+```{r}
 # Verify individuals with same coldate, bmi, age, disease, but different genders
 metadata %>%
   group_by(collection_date, host_bmi, host_age, host_disease) %>%
@@ -413,6 +420,7 @@ metadata %>%
   # Change column order
   relocate(collection_date, .after=Run)
 ```
+
 
 
 ```{r}
