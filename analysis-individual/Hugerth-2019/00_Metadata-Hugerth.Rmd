@@ -354,8 +354,6 @@ XXXXXXXXXXXXXXXXXXXXXXXX CLEANUP PART BELOW (PROPER REFORMATTING OF SRA METADATA
 ##########################################
 
 
-Let's quantify the inconsistencies
-
 ```{r metadata-inconsistencies}
 # For easier read of dataframes, re-order columns
 sraDF <- sraDF %>%
@@ -378,6 +376,9 @@ sraDF %>%
 ```
 
 
+### 1. Inconsistencies in disease phenotype
+
+Some individuals with same host_ID have different disease phenotype.
 
 ```{r filter-metadata}
 #_____________________________________________
@@ -386,7 +387,14 @@ metadata <- sraDF %>%
   # create column for year-month collection date
   mutate(coldate=substr(collection_date, 0, 7)) %>%
   # replace BMI=0 by NA
-  mutate(host_bmi=na_if(host_bmi, 0.0))
+  mutate(host_bmi=na_if(host_bmi, 0.0)) %>%
+  # for consistency & simplicity, rename some diseases
+  mutate(host_disease=gsub(" ", "", host_disease),
+         host_disease=gsub("C.difficile", "Cdiff", host_disease),
+         host_disease=gsub("infection", "", host_disease),
+         host_disease=gsub("hyperplasticpolyp", "hyperplastic_polyp", host_disease),
+         host_disease=gsub("Hyperplastic_polyp", "hyperplastic_polyp", host_disease),
+         host_disease=gsub("Chron'sdisease", "Chron's", host_disease))
 
 
 # Verify that individuals with same coldate, bmi, age don't have different diseases
