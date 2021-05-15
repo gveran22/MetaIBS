@@ -353,7 +353,7 @@ XXXXXXXXXXXXXXXXXXXXXXXX CLEANUP PART BELOW (PROPER REFORMATTING OF SRA METADATA
 # REMOVE INCONSISTENCIES IN SRA METADATA #
 ##########################################
 
-To keep the original SRA metadata table "intact", we will duplicate it. We will rename a few diseases to avoid confusions (i.e Hyperplastic_polyp & hyperplastic_polyp). Also, as for some samples the day of the collection date is not always provided, we will create a new column to store the information of year&month of collection date.
+To keep the original SRA metadata table "intact", we will duplicate it. We will rename a few diseases to avoid confusions (i.e Hyperplastic_polyp & hyperplastic_polyp). Also, as for some samples the _day_ of the collection date is not always provided, we will create new columns to store the information of year, month, and day.
 
 ```{r}
 # For easier read of dataframes, re-order columns
@@ -370,8 +370,8 @@ sraDF <- sraDF %>%
 #_____________________________________________
 # DUPLICATE SRA METADATA
 metadata <- sraDF %>%
-  # create column for year-month collection date
-  mutate(coldate=substr(collection_date, 0, 7)) %>%
+  # separate collection_date into year-month-day
+  separate(collection_date, c("coldate_y", "coldate_m", "coldate_d"), sep="-", fill="right", remove=FALSE) %>%
   # replace BMI=0 by NA
   mutate(host_bmi=na_if(host_bmi, 0.0)) %>%
   # for consistency & simplicity, rename some diseases
@@ -387,7 +387,7 @@ metadata <- sraDF %>%
 
 ### 1. Inconsistencies in disease phenotype
 
-More than 100 samples with same host_ID have different disease phenotype.
+More than 100 samples with same host_ID have different disease phenotype (below).
 
 ```{r metadata-inconsistencies-1}
 # Samples with same host_ID but different disease phenotype
@@ -397,7 +397,7 @@ metadata %>%
   arrange(host_ID)
 ```
 
-Now, if we were to consider other covariates as proxies for sample identifiers, we get much less inconsistencies in disease phenotype. We can use BMI, age and collection date as relevant information to identify samples belonging to the same individual.
+Now, if we were to consider other covariates as proxies for sample identifiers, we get much less inconsistencies in disease phenotype. We can use BMI, age and collection date as relevant information to identify samples belonging to the same individual. Then we have 1 
 
 ```{r metadata-inconsistencies-2}
 # Verify that individuals with same coldate, bmi, age don't have different diseases
@@ -405,7 +405,7 @@ metadata %>%
   group_by(coldate, host_bmi, host_age) %>%
   filter(n_distinct(host_disease)>1) %>%
   arrange(coldate, host_bmi, host_age) %>%
-  # Change column order
+  # change column order
   relocate(coldate, .after=Run)
 ```
 Five samples have same collection_date, 
