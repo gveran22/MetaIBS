@@ -389,7 +389,7 @@ metadata <- sraDF %>%
 
 More than 100 samples with same host_ID have different disease phenotype (below).
 
-```{r metadata-inconsistencies-1}
+```{r disease-inconsistencies-1}
 # Samples with same host_ID but different disease phenotype
 metadata %>%
   group_by(host_ID) %>%
@@ -401,7 +401,7 @@ Now, if we were to consider other covariates as proxies for sample identifiers, 
 Using this method, we only find four samples with inconsistent disease phenotype, but the one sample with the inconsistency actually has a different collection **day** (to take into account later!!), so this sample is expected to belong to a different individual.
 Two other samples have inconsistent disease phenotype. However, one of these samples is missing information on collection **day**, and the other has an unknown disease phenotype (empty case). These two samples could either belong to the same individual and only have missing information, or could belong to two distinct individuals.
 
-```{r metadata-inconsistencies-2}
+```{r disease-inconsistencies-2}
 # Verify that individuals with same coldate, bmi, age don't have different diseases
 metadata %>%
   group_by(coldate_y, coldate_m, host_bmi, host_age) %>%
@@ -414,18 +414,45 @@ metadata %>%
 
 ### 2. Inconsistencies in gender
 
-Other inconsistencies happen in the gender column.
+Other inconsistencies happen in the gender column. As expected, more than 300 samples with the same host_ID have different gender (on top of a different disease phenotype, age, and BMI...).
 
-```{r}
-# Verify individuals with same coldate, bmi, age, disease, but different genders
+```{r gender-inconsistencies-1}
+# Samples with same host_ID but different disease phenotype
 metadata %>%
-  group_by(collection_date, host_bmi, host_age, host_disease) %>%
+  group_by(host_ID) %>%
   filter(n_distinct(host_sex)>1) %>%
-  arrange(coldate, host_bmi, host_age, host_disease) %>%
-  # Change column order
-  relocate(collection_date, .after=Run)
+  arrange(host_ID)
 ```
 
+Now, if we try to use again the BMI, age, collection date (year + month) and host_disease as proxies for sample identifiers, we still get ~200 samples that have inconsistent gender. This is partly due to missing information on the collection **day** for some samples.
+
+```{r gender-inconsistencies-2}
+# Verify individuals with same coldate, bmi, age, disease, but different genders
+metadata %>%
+  group_by(coldate_y, coldate_m, host_bmi, host_age, host_disease) %>%
+  filter(n_distinct(host_sex)>1) %>%
+  arrange(coldate_y, coldate_m, host_bmi, host_age, host_disease) %>%
+  # Change column order
+  relocate(collection_date, .after=Run) %>%
+  relocate(host_disease, .after=host_sex)
+```
+
+If we keep only samples for which we have full information on their collection date (y-m-d), we have 9 samples with inconsistent gender despite all other demographics being identical.
+If these information were true, it would imply that two individuals (1 female, 1 male) with the exact same age, BMI, disease happened to be recruited to the study the exact same day. This happened only 9 times, which could be possible considering the low odds of this happening.
+
+```{r gender-inconsistencies-3}
+# Verify individuals with same coldate, bmi, age, disease, but different genders
+metadata %>%
+  # keep only samples with information on whole collection_date (y-m-d)
+  filter(nchar(collection_date) == 10) %>%
+  # select samples with inconsistent gender
+  group_by(collection_date, host_bmi, host_age, host_disease) %>%
+  filter(n_distinct(host_sex)>1) %>%
+  arrange(collection_date, host_bmi, host_age, host_disease) %>%
+  # Change column order
+  relocate(collection_date, .after=Run) %>%
+  relocate(host_disease, .after=host_sex)
+```
 
 
 ```{r}
