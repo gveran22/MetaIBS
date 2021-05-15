@@ -349,9 +349,9 @@ write.csv(x = metadata_final, file = "../../metadata_final.csv", row.names=FALSE
 XXXXXXXXXXXXXXXXXXXXXXXX CLEANUP PART BELOW (PROPER REFORMATTING OF SRA METADATA) XXXXXXXXXXXXXXXXXXXXXXXX
 
 
-##########################################
-# REMOVE INCONSISTENCIES IN SRA METADATA #
-##########################################
+############################################
+# IDENTIFY INCONSISTENCIES IN SRA METADATA #
+############################################
 
 To keep the original SRA metadata table "intact", we will duplicate it. We will rename a few diseases to avoid confusions (i.e Hyperplastic_polyp & hyperplastic_polyp). Also, as for some samples the _day_ of the collection date is not always provided, we will create new columns to store the information of year, month, and day.
 
@@ -475,58 +475,84 @@ We will need to take into account the missing data in the host_psy column. We co
 
 
 
-```{r}
+
+##########################################
+# REMOVE INCONSISTENCIES IN SRA METADATA #
+##########################################
+
+We need to identify samples belonging to the same individual based on their demographic characteristics, and assign them the same ID. We will perform two types of filtering:
+- **stringent filtering**: samples belong to the same individual if they have the same BMI, age, disease, collection_date (y-m) AND gender.
+- **less stringent**: samples belong to the same individual if they have the same BMI, age, disease, collection_date (y-m). For the few samples with inconsistent gender, we will check if we know the collection **day** and if we can infer the most likely gender, or if we should replace by _NA_ values.
+
+### 1. Stringent filtering
+
+```{r stringent-filtering}
 #_____________________________________________
 # STRINGENT FILTERING
 stringent.df <- metadata %>%
   # group_by same BMI, age, gender, disease
-  group_by(host_bmi, host_age, host_sex, host_disease, coldate) %>%
+  group_by(host_bmi, host_age, host_disease, coldate_y, coldate_m, host_sex) %>%
   mutate(id=group_indices()) %>%
   ungroup() %>%
-  # Change column order
-  relocate(coldate, .after=Run) %>%
+  # change column order
+  relocate(collection_date, .after=Run) %>%
   relocate(id, .after=host_disease) %>%
   relocate(host_ID, .after=id) %>%
-  # Remove useless columns
-  select(-c(coldate, host_ID)) %>%
+  # remove useless columns
+  select(-c(coldate_y, coldate_m, coldate_d, host_ID)) %>%
   rename(host_ID=id) %>%
-  # Keep only IBS & HC
+  # keep only IBS & HC
   filter(host_disease == "IBS" | host_disease == "Healthy")
 
+# Sanity check nb of IBS & Healthy
+table(stringent.df$host_disease) # 467 HC, 140 IBS
 
+#_____________________________________________
+# INFER HOST_PSY
 # Now that we have new identifiers, we can infer some missing data in the host_psy column
 stringent.df <- stringent.df %>%
-  # group by ID
+  # group by individual
   group_by(host_ID) %>%
-  # replace NA values if we have several samples per individual
+  # if several samples for the individual, replace NA values by the known host_psy diagnosis
   fill(host_psy, .direction="downup") %>%
   # for individuals with inconsistent host_psy values, replace by NA
   mutate(host_psy=case_when(n_distinct(host_psy)>1 ~ NA_character_, TRUE ~ host_psy)) %>%
   ungroup()
 
+```
 
+### 2. Less stringent filtering
 
+```{r less-stringent}
 #_____________________________________________
 # LESS STRINGENT FILTERING (more inferring)
 metadata %>%
   # group_by same BMI, age, disease & collection date
-  group_by(host_bmi, host_age, host_disease, coldate) %>%
+  group_by(host_bmi, host_age, host_disease,  collection_date) %>%
   mutate(new_id=group_indices()) %>%
   ungroup() %>%
   # group by id
   group_by(new_id) %>%
   filter(n_distinct(host_sex) >1) %>%
+  drop_na(coldate_d) %>%
+  #mutate(new_new_id=case_when(n_distinct(collection_date)>1 ~ NA_character_, TRUE ~ new_id))%>%
   
   # FOR PRINTING
   arrange(host_bmi, host_age, host_sex, host_disease) %>%
   # Change column order
-  relocate(coldate) %>%
+  relocate(collection_date) %>%
   relocate(Run, .after=extraction_plate) %>%
   relocate(host_psy, .after=host_ID) %>%
   relocate(new_id, .after=host_disease) %>%
   relocate(host_ID, .after=new_id)
   #group_vars()
 ```
+
+
+
+
+
+
 
 
 XXXXXXXXXXXXXXXXXXXXXXXX REMOVE PART BELOW (OLD JUNK) XXXXXXXXXXXXXXXXXXXXXXXX
