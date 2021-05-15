@@ -454,6 +454,26 @@ metadata %>%
   relocate(host_disease, .after=host_sex)
 ```
 
+### 3. Inconsistencies in psychological disorder
+
+Other inconsistencies happen in the host_psy column, even by using the BMI, age, collection date (year + month) and host_disease as proxies for sample identifiers. More than 200 samples have inconsistent host_psy, often due to missing data.
+
+```{r psy-inconsistencies-1}
+# Verify individuals with same coldate, bmi, age, disease, but different host_psy
+metadata %>%
+  # select samples with inconsistent host_psy
+  group_by(coldate_y, coldate_m, host_bmi, host_age, host_disease) %>%
+  filter(n_distinct(host_psy)>1) %>%
+  arrange(collection_date, host_bmi, host_age, host_disease) %>%
+  # Change column order
+  relocate(collection_date, .after=Run) %>%
+  relocate(host_disease, .after=host_sex) %>%
+  relocate(host_psy, .after=host_disease)
+```
+
+We will need to take into account the missing data in the host_psy column. We could infer some of the missing data after identifying samples belonging to the same individual.
+
+
 
 ```{r}
 #_____________________________________________
