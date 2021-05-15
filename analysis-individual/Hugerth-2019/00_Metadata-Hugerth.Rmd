@@ -533,18 +533,29 @@ metadata %>%
   ungroup() %>%
   # group by id
   group_by(new_id) %>%
-  filter(n_distinct(host_sex) >1) %>%
-  drop_na(coldate_d) %>%
-  #mutate(new_new_id=case_when(n_distinct(collection_date)>1 ~ NA_character_, TRUE ~ new_id))%>%
+  # filter(n_distinct(host_sex)>1) %>%
+  # drop_na(coldate_d) %>%
+  # if inconsistent gender and 3 or more samples, replace gender by the most frequent one
+  mutate(new_sex=case_when(n_distinct(host_sex)>1 & n_distinct(Run)>2 ~ names(which.max(table(host_sex))),
+                           TRUE ~ host_sex)) %>%
+  # if 2 samples, replace gender by NA
+  mutate(new_sex=case_when(n_distinct(host_sex)>1 & n_distinct(Run)==2 ~ NA_character_,
+                           TRUE ~ host_sex)) %>%
   
   # FOR PRINTING
   arrange(host_bmi, host_age, host_sex, host_disease) %>%
+  # mutate(test=case_when(new_sex != host_sex ~ "diff",
+  #                          TRUE ~ NA_character_)) %>%
+  # group_by(Run) %>%
+  # filter(new_sex != host_sex) %>%
   # Change column order
   relocate(collection_date) %>%
   relocate(Run, .after=extraction_plate) %>%
   relocate(host_psy, .after=host_ID) %>%
   relocate(new_id, .after=host_disease) %>%
-  relocate(host_ID, .after=new_id)
+  relocate(host_ID, .after=new_id) %>%
+  relocate(new_sex, .after=host_sex) %>%
+  relocate(test, .after=new_sex)
   #group_vars()
 ```
 
