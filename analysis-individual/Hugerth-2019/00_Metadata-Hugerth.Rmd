@@ -397,19 +397,24 @@ metadata %>%
   arrange(host_ID)
 ```
 
-Now, if we were to consider other covariates as proxies for sample identifiers, we get much less inconsistencies in disease phenotype. We can use BMI, age and collection date as relevant information to identify samples belonging to the same individual. Then we have 1 
+Now, if we were to consider other covariates as proxies for sample identifiers, we get much less inconsistencies in disease phenotype. We can use BMI, age and collection date (year + month) as relevant information to identify samples belonging to the same individual.
+Using this method, we only find four samples with inconsistent disease phenotype, but the one sample with the inconsistency actually has a different collection **day** (to take into account later!!), so this sample is expected to belong to a different individual.
+Two other samples have inconsistent disease phenotype. However, one of these samples is missing information on collection **day**, and the other has an unknown disease phenotype (empty case). These two samples could either belong to the same individual and only have missing information, or could belong to two distinct individuals.
 
 ```{r metadata-inconsistencies-2}
 # Verify that individuals with same coldate, bmi, age don't have different diseases
 metadata %>%
-  group_by(coldate, host_bmi, host_age) %>%
+  group_by(coldate_y, coldate_m, host_bmi, host_age) %>%
   filter(n_distinct(host_disease)>1) %>%
-  arrange(coldate, host_bmi, host_age) %>%
+  arrange(coldate_y, coldate_m, host_bmi, host_age) %>%
   # change column order
-  relocate(coldate, .after=Run)
+  relocate(collection_date, .after=Run)
 ```
-Five samples have same collection_date, 
 
+
+### 2. Inconsistencies in gender
+
+Other inconsistencies happen in the gender column.
 
 ```{r}
 # Verify individuals with same coldate, bmi, age, disease, but different genders
