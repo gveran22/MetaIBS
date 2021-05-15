@@ -526,39 +526,57 @@ stringent.df <- stringent.df %>%
 ```{r less-stringent}
 #_____________________________________________
 # LESS STRINGENT FILTERING (more inferring)
-metadata %>%
+flex.df <- metadata %>%
   # group_by same BMI, age, disease & collection date
   group_by(host_bmi, host_age, host_disease,  collection_date) %>%
-  mutate(new_id=group_indices()) %>%
+  mutate(id=group_indices()) %>%
   ungroup() %>%
-  # group by id
-  group_by(new_id) %>%
-  # filter(n_distinct(host_sex)>1) %>%
-  # drop_na(coldate_d) %>%
+  group_by(id) %>%
   # if inconsistent gender and 3 or more samples, replace gender by the most frequent one
   mutate(new_sex=case_when(n_distinct(host_sex)>1 & n_distinct(Run)>2 ~ names(which.max(table(host_sex))),
                            TRUE ~ host_sex)) %>%
   # if 2 samples, replace gender by NA
   mutate(new_sex=case_when(n_distinct(host_sex)>1 & n_distinct(Run)==2 ~ NA_character_,
-                           TRUE ~ host_sex)) %>%
-  
-  # FOR PRINTING
-  arrange(host_bmi, host_age, host_sex, host_disease) %>%
-  # mutate(test=case_when(new_sex != host_sex ~ "diff",
-  #                          TRUE ~ NA_character_)) %>%
-  # group_by(Run) %>%
-  # filter(new_sex != host_sex) %>%
-  # Change column order
-  relocate(collection_date) %>%
-  relocate(Run, .after=extraction_plate) %>%
-  relocate(host_psy, .after=host_ID) %>%
-  relocate(new_id, .after=host_disease) %>%
-  relocate(host_ID, .after=new_id) %>%
+                          TRUE ~ new_sex)) %>%
+  # change column order
+  relocate(collection_date, .after=Run) %>%
+  relocate(id, .after=host_disease) %>%
+  relocate(host_ID, .after=id) %>%
   relocate(new_sex, .after=host_sex) %>%
-  relocate(test, .after=new_sex)
-  #group_vars()
-```
+  # remove useless columns
+  select(-c(coldate_y, coldate_m, coldate_d, host_ID)) %>%
+  rename(host_ID=id) %>%
+  # keep only IBS & HC
+  filter(host_disease == "IBS" | host_disease == "Healthy")
 
+
+# Sanity check nb of IBS & Healthy
+table(flex.df$host_disease) # 467 HC, 140 IBS
+
+# Sanity check: look at samples for which host_sex changed
+ids <- flex.df %>% filter(new_sex != host_sex | is.na(new_sex)) %>% select(host_ID) %>% unique()
+flex.df %>%
+  filter(host_ID %in% ids$host_ID) %>%
+  arrange(host_ID)
+
+
+#_____________________________________________
+# INFER HOST_PSY
+# Now that we have new identifiers, we can infer some missing data in the host_psy column
+flex.df <- flex.df %>%
+  # after sanity checks, we can replace the column host_sex
+  select(-host_sex) %>%
+  rename(host_sex=new_sex) %>%
+  # group by individual
+  group_by(host_ID) %>%
+  # if several samples for the individual, replace NA values by the known host_psy diagnosis
+  fill(host_psy, .direction="downup") %>%
+  # for individuals with inconsistent host_psy values, replace by NA
+  mutate(host_psy=case_when(n_distinct(host_psy)>1 ~ NA_character_, TRUE ~ host_psy)) %>%
+  ungroup()
+
+
+```
 
 
 
