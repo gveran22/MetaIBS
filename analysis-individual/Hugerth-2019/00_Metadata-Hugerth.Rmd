@@ -1,13 +1,21 @@
 ---
 title: "R Notebook"
-output: html_notebook
+output:
+  html_document:
+    df_print: paged
+    toc: true
 ---
+
+```{r, include=FALSE}
+knitr::opts_chunk$set(warning=FALSE, message=FALSE,
+                      root.dir = "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Hugerth-2019/00_Metadata-Hugerth/")
+```
 
 ##########
 # IMPORT #
 ##########
 
-# Libraries
+## 1. Libraries
 ```{r import-libraries}
 #install.packages("readxl")
 library("readxl")
@@ -15,13 +23,13 @@ library(data.table)
 library(tidyverse)
 ```
 
-# Data
+## 2. Data
 ```{r import-data}
 path <- "~/Projects/IBS_Meta-analysis_16S"
 
 # Metadata table downloaded from the SRA
 sra_metadata <- read.csv(file.path(path, "data/analysis-individual/Hugerth-2019/HugerthSraRunTable.txt"), header=TRUE, sep = ",")
-#head(sra_metadata)
+head(sra_metadata)
 
 # Import the supplementary ASV table from the paper
 paper_supp <- read_excel(file.path(path, "data/analysis-individual/Hugerth-2019/00_Metadata-Hugerth/Paper_Samples/ASV_table_PAPER.xlsx"))
@@ -37,7 +45,7 @@ head(paper_runs)
 # CLEANUP TABLES #
 ##################
 
-# SRA METADATA TABLE
+## 1. SRA metadata table
 
 The SRA metadata table was downloaded from the SRA with the accession number PRJEB31817.
 
@@ -76,12 +84,13 @@ head(sraDF)
 sraDF.ibs <- sraDF %>%
   filter(host_disease == "Healthy" | host_disease == "IBS")
 
-table(sraDF.ibs$host_disease) # sanity check ok (hc 467 - ibs 140)
+table(sraDF.ibs$host_disease) # sanity check (hc 467 - ibs 140)
 ```
 
+Even though the paper reported to have 95 IBS samples and 466 healthy samples (Table 2), on the SRA there is a different number of IBS/healthy samples... Let's try to figure out which samples were included in the paper.
 
 
-# PAPER SUPPLEMENTARY
+## 2. Paper supplementary
 
 The supplementary material with the ASV table of the authors was downloaded directly from the paper's website https://gut.bmj.com/content/69/6/1076
 
@@ -149,9 +158,9 @@ paperDF %>%
 
 
 
-# SAMPLES TO DOWNLOAD AS INDICATED IN PAPER
+## 3. Samples to download as indicated in paper
 
-*The paper indicates to download samples ERS3379832-ERS3380418*. That's a total of 587 samples. Considering that there are 26 control samples, that would mean there are 561 IBS or healthy samples (which matches the number of samples analyzed in the paper).
+Another way to verify which samples were included in the analysis of the paper, is that *the paper indicates to download samples ERS3379832-ERS3380418*. That's a total of 587 samples. Considering that there are 26 control samples, that would mean there are 561 IBS or healthy samples (which matches the number of samples analyzed in the paper).
 
 Now, the _SraRunInfo.csv_ file for samples ERS3379832-ERS3380418 was downloaded on the SRA database. Let's import it, and compare the Run numbers from that file, with the Run numbers we indirectly obtained from the supplementary ASV table.
 
@@ -188,18 +197,18 @@ table(paperDF$Run %in% paperRuns.DF$Run)
 bind_rows(paperDF %>% filter(!Run %in% paperRuns.DF$Run),
           paperRuns.DF %>% filter(!Run %in% paperDF$Run)) %>%
   arrange(host_ID)
-# 7 samples from supplementary table are not in samples suggested to download
-# 6 samples suggested to download are not in supplementary table
+# 7 samples from supplementary ASV table are not in samples suggested to download
+# 6 samples suggested to download are not in supplementary ASV table
 # HOWEVER, these samples correspond to the sample individuals!! (same host_IDs...)
 ```
 
 Overall, we have found the 561 samples included in the analysis by the paper. We found the sample names from (1) the supplementary ASV table and from (2) the samples ERS3379832-ERS3380418. They both correspond to the same samples ( _except for 6-7 samples, but they belong to the same individuals..._).
 
-These 561 samples have the following gastrointestinal disorders:
-- 321 healthy
-- 96 IBS
-- 134 other diseases (C.difficile infection, polyps, hyperplastic polyps, etc.)
-- 10 unknown
+These 561 samples have the following gastrointestinal disorders: <br/>
+- 321 healthy <br/>
+- 96 IBS <br/>
+- 134 other diseases (C.difficile infection, polyps, hyperplastic polyps, etc.) <br/>
+- 10 unknown <br/>
 
 
 
@@ -213,13 +222,14 @@ To keep the original SRA metadata table "intact", we will duplicate it. We will 
 # For easier read of dataframes, re-order columns
 sraDF <- sraDF %>%
   # Change column order
-  relocate(host_bmi, .after=Run) %>%
+  relocate(Run, .before=sample_storage_duration) %>%
+  relocate(host_ID) %>%
+  relocate(host_disease, .after=host_ID) %>%
+  relocate(host_bmi, .after=host_disease) %>%
   relocate(host_age, .after=host_bmi) %>%
   relocate(host_sex, .after=host_age) %>%
   relocate(sample_type, .after=host_sex) %>%
-  relocate(host_psy, .after=sample_type) %>%
-  relocate(host_disease, .after=host_psy) %>%
-  relocate(host_ID, .after=host_disease)
+  relocate(host_psy, .after=sample_type)
 
 #_____________________________________________
 # DUPLICATE SRA METADATA
@@ -239,9 +249,9 @@ metadata <- sraDF %>%
 ```
 
 
-### 1. Inconsistencies in disease phenotype
+## 1. Inconsistencies in disease phenotype
 
-More than 100 samples with same host_ID have different disease phenotype (below).
+More than 100 samples with same host_ID have different disease phenotype (below). They also have completely different demographics (BMI, age, ...), which suggests the host_ID isn't always reliable to identify samples coming from the same individual.
 
 ```{r disease-inconsistencies-1}
 # Samples with same host_ID but different disease phenotype
@@ -251,9 +261,10 @@ metadata %>%
   arrange(host_ID)
 ```
 
-Now, if we were to consider other covariates as proxies for sample identifiers, we get much less inconsistencies in disease phenotype. We can use BMI, age and collection date (year + month) as relevant information to identify samples belonging to the same individual.
-Using this method, we only find four samples with inconsistent disease phenotype, but the one sample with the inconsistency actually has a different collection **day** (to take into account later!!), so this sample is expected to belong to a different individual.
-Two other samples have inconsistent disease phenotype. However, one of these samples is missing information on collection **day**, and the other has an unknown disease phenotype (empty case). These two samples could either belong to the same individual and only have missing information, or could belong to two distinct individuals.
+Now, if we were to consider other covariates as proxies for sample identifiers, we get much less inconsistencies in disease phenotype. We can use **BMI, age and collection date (year + month)** as relevant information to identify samples belonging to the same individual. <br/>
+<br/>
+Using this method, we only find four samples with inconsistent disease phenotype (below), but the one sample with the inconsistency actually has a different collection _day_ (to take into account later!!), so this sample is expected to belong to a different individual. <br/>
+Two other samples have inconsistent disease phenotype. However, one of these samples is missing information on collection _day_, and the other has an unknown disease phenotype (empty case). These two samples could either belong to the same individual and only have missing information, or could belong to two distinct individuals.
 
 ```{r disease-inconsistencies-2}
 # Verify that individuals with same coldate, bmi, age don't have different diseases
@@ -262,11 +273,11 @@ metadata %>%
   filter(n_distinct(host_disease)>1) %>%
   arrange(coldate_y, coldate_m, host_bmi, host_age) %>%
   # change column order
-  relocate(collection_date, .after=Run)
+  relocate(collection_date, .after=host_disease)
 ```
 
 
-### 2. Inconsistencies in gender
+## 2. Inconsistencies in gender
 
 Other inconsistencies happen in the gender column. As expected, more than 300 samples with the same host_ID have different gender (on top of a different disease phenotype, age, and BMI...).
 
@@ -275,10 +286,12 @@ Other inconsistencies happen in the gender column. As expected, more than 300 sa
 metadata %>%
   group_by(host_ID) %>%
   filter(n_distinct(host_sex)>1) %>%
-  arrange(host_ID)
+  arrange(host_ID) %>%
+  # change column order
+  relocate(host_sex, .after=host_ID)
 ```
 
-Now, if we try to use again the BMI, age, collection date (year + month) and host_disease as proxies for sample identifiers, we still get ~200 samples that have inconsistent gender. This is partly due to missing information on the collection **day** for some samples.
+Now, if we try to use again the **BMI, age, collection date (year + month) and host_disease** as proxies for sample identifiers, we still get ~200 samples that have inconsistent gender. This is partly due to missing information on the collection _day_ for some samples.
 
 ```{r gender-inconsistencies-2}
 # Verify individuals with same coldate, bmi, age, disease, but different genders
@@ -287,11 +300,11 @@ metadata %>%
   filter(n_distinct(host_sex)>1) %>%
   arrange(coldate_y, coldate_m, host_bmi, host_age, host_disease) %>%
   # Change column order
-  relocate(collection_date, .after=Run) %>%
-  relocate(host_disease, .after=host_sex)
+  relocate(host_sex, .after=host_ID) %>%
+  relocate(collection_date, .after=host_sex)
 ```
 
-If we keep only samples for which we have full information on their collection date (y-m-d), we have 9 samples with inconsistent gender despite all other demographics being identical.
+If we keep only samples for which we have full information on their collection date (y-m-d), we have 9 samples with inconsistent gender despite all other demographics being identical. <br/>
 If these information were true, it would imply that two individuals (1 female, 1 male) with the exact same age, BMI, disease happened to be recruited to the study the exact same day. This happened only 9 times, which could be possible considering the low odds of this happening.
 
 ```{r gender-inconsistencies-3}
@@ -303,12 +316,12 @@ metadata %>%
   group_by(collection_date, host_bmi, host_age, host_disease) %>%
   filter(n_distinct(host_sex)>1) %>%
   arrange(collection_date, host_bmi, host_age, host_disease) %>%
-  # Change column order
-  relocate(collection_date, .after=Run) %>%
-  relocate(host_disease, .after=host_sex)
+  # change column order
+  relocate(host_sex, .after=host_ID)
 ```
 
-### 3. Inconsistencies in psychological disorder
+
+## 3. Inconsistencies in psychological disorder
 
 Other inconsistencies happen in the host_psy column, even by using the BMI, age, collection date (year + month) and host_disease as proxies for sample identifiers. More than 200 samples have inconsistent host_psy, often due to missing data.
 
@@ -319,10 +332,9 @@ metadata %>%
   group_by(coldate_y, coldate_m, host_bmi, host_age, host_disease) %>%
   filter(n_distinct(host_psy)>1) %>%
   arrange(collection_date, host_bmi, host_age, host_disease) %>%
-  # Change column order
-  relocate(collection_date, .after=Run) %>%
-  relocate(host_disease, .after=host_sex) %>%
-  relocate(host_psy, .after=host_disease)
+  # change column order
+  relocate(host_psy, .after=host_ID) %>%
+  relocate(collection_date, .after=host_psy)
 ```
 
 We will need to take into account the missing data in the host_psy column. We could infer some of the missing data after identifying samples belonging to the same individual.
@@ -334,9 +346,14 @@ We will need to take into account the missing data in the host_psy column. We co
 # REMOVE INCONSISTENCIES IN SRA METADATA #
 ##########################################
 
-We need to identify samples belonging to the same individual based on their demographic characteristics, and assign them the same ID. We will perform two types of filtering:
-- **stringent filtering**: samples belong to the same individual if they have the same BMI, age, disease, collection_date (y-m) AND gender.
+We need to identify samples belonging to the same individual based on their demographic characteristics, and assign them the same ID. We will perform two types of filtering:  <br/>
+- **stringent filtering**: samples belong to the same individual if they have the same BMI, age, disease, collection_date (y-m) AND gender.  <br/>
 - **less stringent**: samples belong to the same individual if they have the same BMI, age, disease, collection_date (y-m-d). For the few samples with inconsistent gender, we will check if we have more than 2 samples and thus we can infer the most likely gender (_most frequent gender reported_), or if we should replace by _NA_ values.
+<br/>
+<br/>
+![Schematic representation of the filtering process](../../data/analysis-individual/Hugerth-2019/00_Metadata-Hugerth/Metadata_Strategy.jpeg)
+<br/>
+<br/>
 
 ```{r metadata-cleanup}
 #_____________________________________________
@@ -422,25 +439,11 @@ clean.df %>%
 ```
 
 
+#################
+# SAVE METADATA #
+#################
 
-```{r}
-write.table(new.metadata, "../../modif_metadata(R).csv")
-
+```{r save-data, echo=TRUE, eval=FALSE}
+write.table(clean.df, file.path(path, "data/analysis-individual/Hugerth-2019/00_Metadata-Hugerth/modif_metadata(R).csv"))
 ```
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
