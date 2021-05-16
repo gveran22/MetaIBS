@@ -581,7 +581,9 @@ max(stringent.df$host_ID)
 
 
 ```{r}
-metadata %>%
+#_____________________________________________
+# BUILD NEW METADATA TABLE
+clean.df <- metadata %>%
   # 1) STRINGENT FILTERING: group_by same BMI, age, gender, disease
   group_by(host_bmi, host_age, host_disease, coldate_y, coldate_m, host_sex) %>%
   mutate(ID_stringent=group_indices()) %>%
@@ -611,6 +613,32 @@ metadata %>%
   select(-c(coldate_y, coldate_m, coldate_d, host_ID)) %>%
   # keep only IBS & HC
   filter(host_disease == "IBS" | host_disease == "Healthy")
+
+
+#_____________________________________________
+# SANITY CHECKS
+# Sanity check nb of IBS & Healthy
+table(clean.df$host_disease) # 467 HC, 140 IBS
+
+# Sanity check: look at samples for which host_sex changed
+ids <- clean.df %>% filter(sex_flexibl != sex_stringent | is.na(sex_flexibl)) %>% select(ID_flexibl) %>% unique()
+clean.df %>%
+  filter(ID_flexibl %in% ids$ID_flexibl) %>%
+  arrange(ID_flexibl)
+
+
+#_____________________________________________
+# INFER HOST_PSY
+# Now that we have new identifiers, we can infer some missing data in the host_psy column
+clean.df <- clean.df %>%
+  # group by individual
+  group_by(ID_stringent) %>%
+  # if several samples for the individual, replace NA values by the known host_psy diagnosis
+  fill(host_psy, .direction="downup") %>%
+  # for individuals with inconsistent host_psy values, replace by NA
+  mutate(host_psy=case_when(n_distinct(host_psy)>1 ~ NA_character_, TRUE ~ host_psy)) %>%
+  ungroup()
+
 ```
 
 
