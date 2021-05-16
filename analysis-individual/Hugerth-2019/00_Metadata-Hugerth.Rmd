@@ -575,11 +575,43 @@ flex.df <- flex.df %>%
   mutate(host_psy=case_when(n_distinct(host_psy)>1 ~ NA_character_, TRUE ~ host_psy)) %>%
   ungroup()
 
-
+max(flex.df$host_ID)
+max(stringent.df$host_ID)
 ```
 
 
-
+```{r}
+metadata %>%
+  # 1) STRINGENT FILTERING: group_by same BMI, age, gender, disease
+  group_by(host_bmi, host_age, host_disease, coldate_y, coldate_m, host_sex) %>%
+  mutate(ID_stringent=group_indices()) %>%
+  ungroup() %>%
+  
+  # 2) LESS STRINGENT FILTERING: group_by same BMI, age, disease & collection date
+  group_by(host_bmi, host_age, host_disease,  collection_date) %>%
+  mutate(ID_flexibl=group_indices()) %>%
+  ungroup() %>%
+  # > change gender when inconsistent for each individual
+  group_by(ID_flexibl) %>%
+  # --> if inconsistent gender and 3 or more samples, replace gender by the most frequent one
+  mutate(sex_flexibl=case_when(n_distinct(host_sex)>1 & n_distinct(Run)>2 ~ names(which.max(table(host_sex))),
+                           TRUE ~ host_sex)) %>%
+  # --> if inconsistent gender and only 2 samples, replace gender by NA
+  mutate(sex_flexibl=case_when(n_distinct(host_sex)>1 & n_distinct(Run)==2 ~ NA_character_,
+                            TRUE ~ sex_flexibl)) %>%
+  
+  # 3) REMODEL DATAFRAME
+  # change column order
+  relocate(collection_date, .after=Run) %>%
+  relocate(ID_stringent, .after=host_disease) %>%
+  relocate(ID_flexibl, .after=ID_stringent) %>%
+  relocate(sex_flexibl, .after=host_sex) %>%
+  rename(sex_stringent=host_sex) %>%
+  # remove useless columns
+  select(-c(coldate_y, coldate_m, coldate_d, host_ID)) %>%
+  # keep only IBS & HC
+  filter(host_disease == "IBS" | host_disease == "Healthy")
+```
 
 
 
