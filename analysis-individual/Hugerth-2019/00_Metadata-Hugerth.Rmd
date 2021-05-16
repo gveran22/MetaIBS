@@ -336,8 +336,7 @@ We will need to take into account the missing data in the host_psy column. We co
 
 We need to identify samples belonging to the same individual based on their demographic characteristics, and assign them the same ID. We will perform two types of filtering:
 - **stringent filtering**: samples belong to the same individual if they have the same BMI, age, disease, collection_date (y-m) AND gender.
-- **less stringent**: samples belong to the same individual if they have the same BMI, age, disease, collection_date (y-m). For the few samples with inconsistent gender, we will check if we know the collection **day** and if we can infer the most likely gender, or if we should replace by _NA_ values.
-
+- **less stringent**: samples belong to the same individual if they have the same BMI, age, disease, collection_date (y-m-d). For the few samples with inconsistent gender, we will check if we have more than 2 samples and thus we can infer the most likely gender (_most frequent gender reported_), or if we should replace by _NA_ values.
 
 ```{r metadata-cleanup}
 #_____________________________________________
@@ -397,7 +396,29 @@ clean.df <- clean.df %>%
   # for individuals with inconsistent host_psy values, replace by NA
   mutate(host_psy=case_when(n_distinct(host_psy)>1 ~ NA_character_, TRUE ~ host_psy)) %>%
   ungroup()
+```
 
+We have the same number of healthy & ibs samples with both filtering methods. Let's check how many paired samples we get (stool-sigmoid) from both methods.
+```{r paired-data-check}
+# STRINGENT FILTERING
+clean.df %>%
+  group_by(ID_stringent) %>%
+  # count nb of distinct sample_type
+  tally(n_distinct(sample_type)) %>%
+  # keep only individuals with 2 distinct sample_type
+  filter(n > 1) %>%
+  dim()
+# 163 individuals with paired samples
+
+# FLEXIBLE FILTERING
+clean.df %>%
+  group_by(ID_flexibl) %>%
+  # count nb of distinct sample_type
+  tally(n_distinct(sample_type)) %>%
+  # keep only individuals with 2 distinct sample_type
+  filter(n > 1) %>%
+  dim()
+# 140 individuals with paired samples
 ```
 
 
