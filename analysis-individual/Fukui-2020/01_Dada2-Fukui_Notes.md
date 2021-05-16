@@ -24,7 +24,7 @@ Fukui (_J. Clin. Med_) - [Usefulness of Machine Learning-Based Gut Microbiome An
 - forward primer found at the beginning of forward reads (same for reverse reads & reverse primer). Primers found in >95% of reads.
 
 ## Filtering
-- **primer removal**: fastq files deposited on the SRA/ENA databases don't contain Ilumina headers, which are needed to merge paired reads later on (if there is a different number of forward and reverse reads for each sample). Thus, primer sequences could not be removed.
+- **primer removal**: fastq files deposited on the SRA/ENA databases don't contain Ilumina headers, which are needed to merge paired reads later on (if there is a different number of forward and reverse reads for each sample). Thus, primer sequences could not be removed (the first 25bp were trimmed instead).
 - **quality filtering**: \~92% of reads are kept
 
 ## Learn error rates
