@@ -35,10 +35,12 @@ datasets <- list("fukui" = physeq.fukui,
                  "zhu" = physeq.zhu,
                  "zhuang" = physeq.zhuang)
 
+
 #####################
-# CHECK COMMON ASVs #
+# MERGE COMMON ASVs #
 #####################
 
+#_______________________________________
 # MOCK DATA
 # Create mock data
 df <- data.frame("author" = c("fukui", "fukui", "zhu", "pozuelo", "fukui"),
@@ -47,6 +49,7 @@ df <- data.frame("author" = c("fukui", "fukui", "zhu", "pozuelo", "fukui"),
                  "Phylum" = c("Firmicutes", "Bacteroidota", "Firmicutes", "Actinobacteria", "Bacteroidota"),
                  "Class" = c("Clostridia", "Bacteria", "Clostridia", "Proteomachin", "Bacteria")) %>%
   arrange(nchar(Sequence))
+
 
 # Init
 new.df <- data.frame(matrix(ncol=5, nrow=0))
@@ -91,11 +94,7 @@ new.df %>%
   select(author, ASV_new)
 
 
-
-
-
 #_______________________________________
-
 
 # BUILD TAXONOMIC TABLE WITH ALL DATASSETS
 
@@ -148,10 +147,21 @@ while(length(allseq) !=0 ){
 saveRDS(taxtable.new, "~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/01_Merge-Datasets/taxtable_merged.rds")
 
 # Sanity check
+taxtable.new <- readRDS(file.path(path, "data/analysis-combined/01_Merge-Datasets/taxtable_merged.rds"))
+# check that the shortest sequence of each ASV can be found in the other sequences
 taxtable.new %>%
   group_by(ASV) %>%
-  mutate(verif = str_detect(sequence, sequence[which.min(nchar(sequence))]))
-  
+  mutate(verif = str_detect(sequence, sequence[which.min(nchar(sequence))])) %>%
+  ungroup() %>%
+  count(verif)
+# Only TRUEs!! =)
+
+# check that ASVs with several sequence have the same taxa assigned to them
+test <- taxtable.new %>%
+  group_by(ASV) %>%
+  # if several sequences for the ASV, replace NA values by the known Genus of other sequences
+  fill(Genus, .direction="downup") %>%
+  filter(n_distinct(Genus)>1)
 
 # Keep only 1 sequence per ASV (the shortest one)
 taxtable.new %>%
