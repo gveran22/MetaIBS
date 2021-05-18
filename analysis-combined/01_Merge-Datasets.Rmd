@@ -68,10 +68,10 @@ df <- data.frame("author" = c("fukui", "fukui", "zhu", "pozuelo", "fukui"),
                  "Phylum" = c("Firmicutes", "Bacteroidota", "Firmicutes", "Actinobacteria", "Bacteroidota"),
                  "Class" = c("Clostridia", "Bacteria", "Clostridia", "Proteomachin", "Bacteria")) %>%
   arrange(nchar(Sequence))
-
+head(df)
 
 # Init
-new.df <- data.frame(matrix(ncol=5, nrow=0))
+new.df <- data.frame(matrix(ncol=6, nrow=0))
 colnames(new.df) <- c(colnames(df), "ASV_new")
 
 allseq <- df$Sequence
@@ -81,8 +81,7 @@ i=1
 while(length(allseq) !=0 ){
   
   seq <- allseq[1]
-  
-  cat("\n++ Sequence:", seq, "++\n")
+  # cat("\n++ Sequence:", seq, "++\n")
   
   # Subset df by sequence
   tempdf <- df %>%
@@ -91,16 +90,20 @@ while(length(allseq) !=0 ){
   
   # Add to new.df
   new.df <- rbind(new.df, tempdf)
-  print(new.df)
+  # print(new.df)
   
   # Remove sequences already identified
   allseq <- allseq[!allseq %in% tempdf$Sequence]
-  cat("\n")
-  cat("Seq vector:", allseq, "\n\n")
+  df <- df %>% filter(!Sequence %in% tempdf$Sequence)
+  # print(head(df))
+  # cat("\n")
+  # cat("Seq vector:", allseq, "\n\n")
   
   i=i+1
 }
 
+head(new.df)
+# Common ASVs were correctly identified.
 
 # Keep only 1 sequence per ASV (the shortest one)
 new.df %>%
@@ -140,7 +143,7 @@ print(nrow(taxtable)) # 49,619 ASVs
 
 Now we can identify common ASVs just like we did with the mock data.
 
-```{r merge-ASV}
+```{r merge-ASV, echo=TRUE, eval=FALSE}
 # MERGE COMMON ASVs
 
 taxtable.new <- data.frame(matrix(ncol=ncol(taxtable)+1, nrow=0))
@@ -164,12 +167,14 @@ while(length(allseq) !=0 ){
 
   # Remove sequences already identified
   allseq <- allseq[!allseq %in% tempdf$sequence]
+  taxtable <- taxtable %>% filter(!sequence %in% tempdf$sequence)
   
   # Follow progress of computation
-  if(length(allseq)%%100==0){ print(length(allseq)) }
+  if(length(allseq)%%100==0){ cat(length(allseq), "-", nrow(taxtable), "\n") }
   
   i=i+1
 }
+
 
 # Save
 # saveRDS(taxtable.new, "~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/01_Merge-Datasets/taxtable_merged.rds")
@@ -179,8 +184,15 @@ while(length(allseq) !=0 ){
 Let's do a few sanity checks.
 
 ```{r sanity-check}
-# Sanity check
-taxtable.new <- readRDS(file.path(path, "data/analysis-combined/01_Merge-Datasets/taxtable_merged.rds"))
+# Import saved taxtable.new
+# taxtable.new <- readRDS(file.path(path, "data/analysis-combined/01_Merge-Datasets/taxtable_merged.rds"))
+
+# check size of taxtable.new
+print(nrow(taxtable.new)) # 51,132 ASVs
+# we have 1513 rows more than the original table, why?
+table(taxtable.new$sequence %in% taxtable$sequence)
+# all the sequences in new table can be found in the original table. That must mean duplicates must have been created.
+
 # check that the shortest sequence of each ASV can be found in the other sequences
 taxtable.new %>%
   group_by(ASV) %>%
@@ -189,15 +201,14 @@ taxtable.new %>%
   count(verif)
 # Only TRUEs!! =)
 
-# check that ASVs with several sequence have the same taxa assigned to them
+# check that ASVs with several sequences have the same taxa assigned to them
 test <- taxtable.new %>%
   group_by(ASV) %>%
   # if several sequences for the ASV, replace NA values by the known Genus of other sequences
   fill(Genus, .direction="downup") %>%
-  filter(n_distinct(Genus)>1) %>%
+  filter(n_distinct(Class)>1) %>%
   arrange(nchar(sequence)) %>%
-  arrange(ASV) %>%
-  mutate(seqlength=nchar(sequence))
+  arrange(ASV)
 
 # Keep only 1 sequence per ASV (the shortest one)
 taxtable.new %>%
@@ -210,6 +221,30 @@ test <- taxtable.new %>%
   select(author, ASV)
 ```
 
+
+Now we can infer some taxa.
+
+```{r}
+# Import saved taxtable.new
+taxtable.new <- readRDS(file.path(path, "data/analysis-combined/01_Merge-Datasets/taxtable_merged.rds"))
+
+
+taxtable.new <- taxtable.new %>%
+  group_by(ASV) %>%
+  # if several sequences for the ASV, replace NA values by the known Genus of other sequences
+  # fill(Class, .direction="downup") %>%
+  fill(Order, .direction="downup") %>%
+  fill(Family, .direction="downup") %>%
+  fill(Genus, .direction="downup")
+
+# Sanity check
+taxtable.new %>%
+  group_by(ASV) %>%
+  filter(n_distinct(Class)>1) %>%
+  arrange(nchar(sequence)) %>%
+  arrange(ASV) %>%
+  relocate(ASV)
+```
 
 
 

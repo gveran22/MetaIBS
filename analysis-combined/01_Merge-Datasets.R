@@ -151,7 +151,7 @@ taxtable.new <- readRDS(file.path(path, "data/analysis-combined/01_Merge-Dataset
 # check that the shortest sequence of each ASV can be found in the other sequences
 taxtable.new %>%
   group_by(ASV) %>%
-  mutate(verif = str_detect(sequence, sequence[which.min(nchar(sequence))])) %>%
+  mutate(verif = str_detect(string=sequence, pattern=sequence[which.min(nchar(sequence))])) %>%
   ungroup() %>%
   count(verif)
 # Only TRUEs!! =)
@@ -161,7 +161,10 @@ test <- taxtable.new %>%
   group_by(ASV) %>%
   # if several sequences for the ASV, replace NA values by the known Genus of other sequences
   fill(Genus, .direction="downup") %>%
-  filter(n_distinct(Genus)>1)
+  filter(n_distinct(Genus)>1) %>%
+  arrange(nchar(sequence)) %>%
+  arrange(ASV) %>%
+  mutate(seqlength=nchar(sequence))
 
 # Keep only 1 sequence per ASV (the shortest one)
 taxtable.new %>%
@@ -172,3 +175,11 @@ taxtable.new %>%
 # See common ASVs between datasets (authors)
 test <- taxtable.new %>%
   select(author, ASV)
+
+
+
+
+
+
+
+
