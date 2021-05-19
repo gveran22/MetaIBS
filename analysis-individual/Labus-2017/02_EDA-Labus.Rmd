@@ -543,23 +543,29 @@ heatmp.labus <- plotHeatmaps(dlist = dist.labus, fontsize = 8)
 ## REPRODUCE PLOTS FROM PAPER ##
 ################################
 
-```{r reproduce-plots, eval = TRUE, echo = TRUE, fig.height = 6, fig.width = 10}
+First, let's reproduce figure 1A. They performed a PCoA on the unweighted Unifrac distance.
+
+```{r reproduce-fig1A, eval = TRUE, echo = TRUE, fig.height = 6, fig.width = 10}
 #___________________________________________________________________
 # FIGURE 1A
 set.seed(785)
-UniF.test = UniFrac(physeq, weighted=FALSE, normalized=T) # unweighted Unifrac dist
+UniF.test = UniFrac(physeq.labus, weighted=FALSE, normalized=T) # unweighted Unifrac dist
 
-UniF.PCoA <- ordinate(physeq, "PCoA", distance = UniF.test) # PCoA on unweighted unifrac dist
-plot_ordination(physeq, UniF.PCoA, color="host_disease")
+UniF.PCoA <- ordinate(physeq.labus, "PCoA", distance = UniF.test) # PCoA on unweighted unifrac dist
+# plot_ordination(physeq.labus, UniF.PCoA, color="host_disease")
 
 # Plotting the first 3 dimensions of the PCoA
 xyz <- as.matrix(UniF.PCoA$vectors[,1:3])
 test.plot <- plot_ly(x=xyz[,1], y=xyz[,2], z=xyz[,3], type="scatter3d",
-                       mode="markers", color=sample_data(physeq)$host_disease, colors = c("blue", "red"))%>%
+                       mode="markers", color=sample_data(physeq.labus)$host_disease, colors = c("blue", "red"))%>%
   layout(title = "PCoA in 3D with unweighted Unifrac distance")
 test.plot
+```
 
 
+Now let's try to reproduce figure 1B. It's a hierarchical clustering using average linkage on the unweighted UniFrac.
+
+```{r reproduce-fig1B, fig.height = 6, fig.width = 10}
 #___________________________________________________________________
 # FIGURE 1B
 
@@ -572,12 +578,12 @@ color_leaf<<-function(n){
         a=attributes(n)
         
         # deduce the line in the original data, to get the corresponding disease status
-        line=match(attributes(n)$label, rownames(metadata_table))
-        disease=metadata_table[line, "host_disease"];
+        line=match(attributes(n)$label, rownames(sample_data(physeq.labus)))
+        disease=sample_data(physeq.labus)[line, "host_disease"];
             if(disease=="Healthy"){col_disease="blue"};if(disease=="IBS"){col_disease="red"}
         
         #Modification of leaf attribute
-        attr(n,"nodePar") <- c(a$nodePar, list(cex=1.5, lab.cex=0.6, pch=20, col=col_disease, lab.font=1, lab.cex=0.1))
+        attr(n,"nodePar") <- c(a$nodePar, list(cex=1.5, lab.cex=0.6, pch=20, col=col_disease, lab.font=1, lab.cex=1))
         }
     return(n)
 }
@@ -591,42 +597,4 @@ legend('topleft',
      col = c("blue", "red"), 
      pch = c(20,20), bty = "n",  pt.cex = 1.5, cex = 1, 
      text.col = "black", horiz = FALSE, inset = c(0, 0.1))
-```
-
-```{r}
-# Function that will allow to color the leaves of the tree according to sample type (biopsy vs stool)
-color_leaf<<-function(n){
-    if(is.leaf(n)){
-        # take the current attributes
-        a=attributes(n)
-        
-        # deduce the line in the original data, to get the corresponding sampleType status
-        line=match(attributes(n)$label, metadata_table$Run)
-        disease=metadata_table[line, "host_disease"];
-            if(disease=="Healthy"){col_disease="blue"};if(disease=="IBS"){col_disease="red"}
-        
-        #Modification of leaf attribute
-        attr(n,"nodePar") <- c(a$nodePar, list(cex=1.5, lab.cex=0.6, pch=20, col=col_disease, lab.font=1, lab.cex=1))
-        }
-    return(n)
-}
-
-```
-
-```{r, fig.height = 5, fig.width = 3}
-hc.ward <- hclust(no_glom.dist$Canb, method = "ward.D") #clustering 
-dend.ward <- as.dendrogram(hc.ward) # Make into dendograms
-
-dend.ward <- dendrapply(dend.ward, color_leaf) # Apply the color attributes to the dendograms
-
-jpeg("/Users/scarcy/Desktop/Praktikum/Thesis/hclust_labus.jpg", height = 2000, width = 1000, res = 200)
-plot(dend.ward , main="Hierarchical clustering on Canberra distance (ward linkage)", horiz = TRUE, leaflab = "none",
-     edgePar = list(lwd = 2))
-axis(side = 1, lwd = 4)
-legend(4, 50, 
-     legend = c("Healthy" , "IBS"), 
-     col = c("blue", "red"), 
-     pch = c(20,20), bty = "n",  pt.cex = 1.5, cex = 1, 
-     text.col = "black", horiz = FALSE, inset = c(0, 0.1))
-dev.off()
 ```
