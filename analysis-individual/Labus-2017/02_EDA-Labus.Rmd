@@ -373,23 +373,28 @@ saveRDS(physeq.clr, file.path(path, "data/analysis-individual/Labus-2017/02_EDA-
 ## COMPUTE DISTANCES ##
 #######################
 
-```{r dist-thesis, fig.width = 15, fig.height = 4}
+### 1. UniFrac, Aitchison, Bray-Curtis and Canberra
+
+First, let's look at these four distances of interest.
+
+```{r dist-functions, fig.width = 15, fig.height = 4}
 #____________________________________________________________________________________
 # Measure distances
-Distances <- function(){
+getDistances <- function(){
   set.seed(123) # for unifrac, need to set a seed
-  glom.UniF <-  UniFrac(physeq.rel, weighted=TRUE, normalized=TRUE) # weighted unifrac
-  glom.ait <- distance(physeq.clr, method = 'euclidean') # aitchison
-  glom.bray <- distance(physeq.CSN, method = "bray") # bray-curtis
-  glom.can <- distance(subset_samples(physeq.NZcomp, sample_names(physeq.NZcomp) != 'SRR5245605'),
-                       method = "canberra") # canberra
+  glom.UniF <- UniFrac(physeq.rel, weighted=TRUE, normalized=TRUE) # weighted unifrac
+  glom.ait <- phyloseq::distance(physeq.clr, method = 'euclidean') # aitchison
+  glom.bray <- phyloseq::distance(physeq.CSN, method = "bray") # bray-curtis
+  glom.can <- phyloseq::distance(physeq.NZcomp, method = "canberra") # canberra
   dist.list <- list("UniF" = glom.UniF, "Ait" = glom.ait, "Canb" = glom.can, "Bray" = glom.bray)
   
   return(dist.list)
 }
-#subset_samples(physeq.clr, sample_names(physeq.clr) != 'SRR5245605')
 
-DistancesPlot <- function(d){
+
+#____________________________________________________________________________________
+# Plot in 2D the distances
+plotDistances2D <- function(dlist, ordination="MDS"){
   plist <- NULL
   plist <- vector("list", 4)
   names(plist) <- c("Weighted Unifrac", "Aitchison", "Bray-Curtis", "Canberra")
@@ -397,25 +402,25 @@ DistancesPlot <- function(d){
   print("Unifrac")
   # Weighted UniFrac
   set.seed(123)
-  iMDS.UniF <- ordinate(physeq.rel, "MDS", distance=d$UniF)
+  iMDS.UniF <- ordinate(physeq.rel, ordination, distance=dlist$UniF)
   plist[[1]] <- plot_ordination(physeq.rel, iMDS.UniF, color="host_disease")
   
   print("Aitchison")
   # Aitchison
   set.seed(123)
-  iMDS.Ait <- ordinate(physeq.clr, "MDS", distance=d$Ait)
+  iMDS.Ait <- ordinate(physeq.clr, ordination, distance=dlist$Ait)
   plist[[2]] <- plot_ordination(physeq.clr, iMDS.Ait, color="host_disease")
   
   print("Bray")
   # Bray-Curtis
   set.seed(123)
-  iMDS.Bray <- ordinate(physeq.CSN, "MDS", distance=d$Bray)
+  iMDS.Bray <- ordinate(physeq.CSN, ordination, distance=dlist$Bray)
   plist[[3]] <- plot_ordination(physeq.CSN, iMDS.Bray, color="host_disease")
   
   print("Canberra")
   # Canberra
   set.seed(123)
-  iMDS.Can <- ordinate(physeq.NZcomp, "MDS", distance=d$Can)
+  iMDS.Can <- ordinate(physeq.NZcomp, ordination, distance=dlist$Can)
   plist[[4]] <- plot_ordination(physeq.NZcomp, iMDS.Can, color="host_disease")
   
   # Creating a dataframe to plot everything
@@ -424,163 +429,37 @@ DistancesPlot <- function(d){
   
   return(plot.df)
 }
+```
 
-dist.thesis <- Distances()
-plot.df <- DistancesPlot(dist.thesis)
-plot.df$author <- "Labus"
 
-p1 <- ggplot(plot.df[plot.df$distance == "Weighted Unifrac",], aes(Axis.1, Axis.2, color=host_disease))+
-  geom_point(size=12, alpha=0.4)  + scale_color_manual(values = c('blue', 'red'))+
-  facet_grid(author~distance, scales='free')+
+Now let's plot!
+
+```{r dist-run}
+# Get the distances & the plot data
+dist.labus <- getDistances()
+plot.df <- plotDistances2D(dist.labus)
+
+# Plot
+ggplot(plot.df, aes(Axis.1, Axis.2, color=host_disease))+
+  geom_point(size=6, alpha=0.5)  + scale_color_manual(values = c('blue', 'red'))+
+  facet_wrap(distance~., scales='free', nrow=1)+
   theme_bw()+
-  theme(axis.title = element_blank(),
-        #axis.title.x = element_text(size = 40),
-        axis.text = element_text(size = 30),
-        legend.text = element_text(size = 40),
-        legend.title = element_text(size = 40),
-        strip.background = element_rect(fill = "white", size = 3),
-        panel.border = element_rect(size = 2),
-        #strip.text.x = element_text(size = 50, margin = margin(1,0,1,0, "cm")),
-        strip.text.x = element_blank(),
-        strip.text.y = element_text(size = 70, margin = margin(0,1,0,1, "cm")),
-        #axis.line = element_line(size = 1, arrow = arrow(length = unit(0.1, "inches")))
-        )+
+  theme(strip.text.x = element_text(size=20))+
   labs(color="Disease")
 
-p2 <- ggplot(plot.df[plot.df$distance != "Weighted Unifrac",], aes(Axis.1, Axis.2, color=host_disease))+
-  geom_point(size=12, alpha=0.4)  + scale_color_manual(values = c('blue', 'red'))+
-  facet_wrap(~distance, scales='free', nrow = 1)+
-  guides(color = FALSE)+
-  theme_bw()+
-  theme(axis.text = element_text(size = 30),
-        axis.title.y = element_text(size = 40),
-        axis.title.x = element_blank(),
-        strip.background = element_rect(fill = "white", size = 1),
-        panel.border = element_rect(size = 2),
-        #strip.text = element_text(size = 50, margin = margin(1,0,1,0, "cm")),
-        strip.text.x = element_blank(),
-        #axis.line = element_line(size = 1, arrow = arrow(length = unit(0.1, "inches")))
-        )
-
-library(ggplot2)
-library(ggpubr)
-
-jpeg("/Users/scarcy/Desktop/Praktikum/Thesis/dist_Labus_02.jpeg", height = 800, width = 4000, res = 100)
-ggarrange(p2, p1, ncol = 2, widths = c(2,1))
-dev.off()
-```
-
-```{r}
-# Function that will allow to color the leaves of the tree according to sample type (biopsy vs stool)
-color_leaf<<-function(n){
-    if(is.leaf(n)){
-        # take the current attributes
-        a=attributes(n)
-        
-        # deduce the line in the original data, to get the corresponding sampleType status
-        line=match(attributes(n)$label, metadata_table$Run)
-        disease=metadata_table[line, "host_disease"];
-            if(disease=="Healthy"){col_disease="blue"};if(disease=="IBS"){col_disease="red"}
-        
-        #Modification of leaf attribute
-        attr(n,"nodePar") <- c(a$nodePar, list(cex=1.5, lab.cex=0.6, pch=20, col=col_disease, lab.font=1, lab.cex=1))
-        }
-    return(n)
-}
-
-```
-
-```{r, fig.height = 5, fig.width = 3}
-hc.ward <- hclust(no_glom.dist$Canb, method = "ward.D") #clustering 
-dend.ward <- as.dendrogram(hc.ward) # Make into dendograms
-
-dend.ward <- dendrapply(dend.ward, color_leaf) # Apply the color attributes to the dendograms
-
-jpeg("/Users/scarcy/Desktop/Praktikum/Thesis/hclust_labus.jpg", height = 2000, width = 1000, res = 200)
-plot(dend.ward , main="Hierarchical clustering on Canberra distance (ward linkage)", horiz = TRUE, leaflab = "none",
-     edgePar = list(lwd = 2))
-axis(side = 1, lwd = 4)
-legend(4, 50, 
-     legend = c("Healthy" , "IBS"), 
-     col = c("blue", "red"), 
-     pch = c(20,20), bty = "n",  pt.cex = 1.5, cex = 1, 
-     text.col = "black", horiz = FALSE, inset = c(0, 0.1))
-dev.off()
+# ggsave(file.path(path.plots, "distances4_MDS.jpg"), height = 4, width = 15)
 ```
 
 
-```{r dist-functions, eval = TRUE, echo = TRUE}
-#____________________________________________________________________________________
-# Measure distances
-Distances <- function(physeq_obj){
-  set.seed(123) # for unifrac, need to set a seed
-  glom.UniF <-  UniFrac(physeq_obj, weighted=TRUE, normalized=TRUE) # weighted unifrac
-  glom.ait <- distance(subset_samples(physeq.clr, sample_names(physeq.clr) != 'SRR5245605'), method = 'euclidean') # aitchison
-  glom.bray <- distance(physeq_obj, method = "bray") # bray-curtis
-  glom.jac <- distance(physeq_obj, method = "jaccard") # jaccard
-  glom.can <- distance(physeq_obj, method = "canberra") # canberra
-  dist.list <- list("UniF" = glom.UniF, "Ait" = glom.ait, "Canb" = glom.can, "Bray" = glom.bray, "Jac" = glom.jac)
-  
-  return(dist.list)
-}
 
-#____________________________________________________________________________________
-# Plot 2D ordination
-MDS_2D <- function(physeq_obj, ait_dist){
-  
-  plist <- NULL
-  plist <- vector("list", length(dist_methods)+1) # save each plot to a list
-  names(plist) <- dist_methods # save the name of each method
-  names(plist)[17] <- "aitchison" # save the name of aitchison
-  
-  # Loop through all distance methods
-  for(i in dist_methods){
-    # Calculate distance matrix
-    #print(i)
-    set.seed(123) # in case the distance method needs a rooted tree (weighted unifrac)
-    iDist <- phyloseq::distance(physeq_obj, method=i)
-    # Calculate ordination
-    set.seed(123)
-    iMDS  <- ordinate(physeq_obj, "MDS", distance=iDist)
-    ## Make plot
-    # Don't carry over previous plot (if error, p will be blank)
-    p <- NULL
-    # Create plot, store as temporary variable, p
-    p <- plot_ordination(physeq_obj, iMDS, color="host_disease")
-    # Add title to each plot
-    p <- p + ggtitle(paste("MDS using distance method ", i, sep=""))
-    # Save the graphic to the plot list
-    plist[[i]] = p
-  }
-  
-  # Add aitchison
-  iMDS  <- ordinate(physeq_obj, "MDS", distance=ait_dist)
-  p <- NULL
-  p <- plot_ordination(physeq_obj, iMDS, color="host_disease")
-  p <- p + ggtitle("MDS using distance method Aitchison")
-  plist[[17]] = p
-  
-  # Creating a dataframe to plot everything
-  plot.df = ldply(plist, function(x) x$data)
-  names(plot.df)[1] <- "distance"
-  
-  # Plot
-  p.alldist <- ggplot(plot.df, aes(Axis.1, Axis.2, color=host_disease))+
-    geom_point(size=5, alpha=0.5)  + scale_color_manual(values = c('blue', 'red'))+
-    facet_wrap(~distance, scales='free')+
-    theme(strip.text = element_text(size = 40),
-          legend.text = element_text(size = 20),
-          axis.text.x = element_text(size = 20),
-          axis.text.y = element_text(size = 20))+
-    geom_text_repel(data=plot.df %>% filter(Run == 'SRR5245605'), # Filter data first
-                    aes(label='SRR5245605'), size = 5, nudge_y = -0.1, nudge_x = -0.1)
+### 2. Plot in 3D
 
-  return(p.alldist)
-}
+For better visualization, we will also take a glance at reduction to 3D.
 
+```{r 3D-function, eval = TRUE, echo = TRUE}
 #____________________________________________________________________________________
 # Plot 3D ordination
-MDS_3D <- function(d, name_dist){
+plotDistances3D <- function(d, name_dist){
   
   # Reset parameters
   mds.3D <- NULL
@@ -588,24 +467,14 @@ MDS_3D <- function(d, name_dist){
   fig.3D <- NULL
   
   # Reduce distance matrix to 3 dimensions
-  set.seed(123) # to get the same dimensionality reduction at each run
+  set.seed(123)
   mds.3D <- metaMDS(d, method="MDS", k=3, trace = 0)
-  xyz <- scores(mds.3D, display="sites") # pull out the x y z coordinates
+  xyz <- scores(mds.3D, display="sites") # pull out the (x,y,z) coordinates
   
-  if(name_dist == 'Aitchison'){
-    fig.3D <- plot_ly(x=xyz[,1], y=xyz[,2], z=xyz[,3], type='scatter3d', mode='markers',
-                      color=sample_data(subset_samples(physeq.rel, sample_names(physeq.rel) != 'SRR5245605'))$host_disease,
-                      colors = c('blue', 'red')) %>%
+  # Plot
+  fig.3D <- plot_ly(x=xyz[,1], y=xyz[,2], z=xyz[,3], type="scatter3d", mode="markers",
+                    color=sample_data(physeq.labus)$host_disease, colors = c("blue", "red"))%>%
     layout(title = paste('MDS in 3D with', name_dist, 'distance', sep = ' '))
-  }
-  
-  else{
-    fig.3D <- plot_ly(x=xyz[,1], y=xyz[,2], z=xyz[,3], type='scatter3d',
-                       mode='markers', color=sample_data(physeq.rel)$host_disease, colors = c('blue', 'red')) %>%
-      add_trace(x=xyz['SRR5245605',1], y=xyz['SRR5245605',2], z=xyz['SRR5245605',3],
-            type='scatter3d', mode='text', text = 'SRR5245605', textfont = list(color = 'blue')) %>%
-      layout(title = paste('MDS in 3D with', name_dist, 'distance', sep = ' '))
-  }
   
   return(fig.3D)
 }
@@ -613,40 +482,15 @@ MDS_3D <- function(d, name_dist){
 ```
 
 
-```{r no-glom1, fig.height = 20, fig.width = 30}
-# Get the distances
-no_glom.dist <- Distances(physeq_obj = physeq.rel)
+Now let's plot!
 
-# Get the 2D ordination plots
-no_glom.2D.alldist <- MDS_2D(physeq.rel, no_glom.dist$Ait)
-no_glom.2D.alldist + theme(title = element_text(size = 30))
-
+```{r 3D-plot, fig.width = 8, fig.height = 5}
+plotDistances3D(dist.labus$UniF, "UniFrac")
+plotDistances3D(dist.labus$Ait, "Aitchison")
+plotDistances3D(dist.labus$Canb, "Canberra")
+plotDistances3D(dist.labus$Bray, "Bray-Curtis")
 ```
 
-
-```{r save-distances, eval = FALSE, echo = FALSE}
-getwd()
-
-write.csv(as.matrix(no_glom.dist$UniF), file = "dist_wunifrac.csv", row.names = TRUE)
-write.csv(as.matrix(no_glom.dist$Bray), file = "dist_brayCurtis.csv", row.names = TRUE)
-write.csv(as.matrix(no_glom.dist$Ait), file = "dist_aitchison.csv", row.names = TRUE)
-write.csv(as.matrix(no_glom.dist$Canb), file = "dist_canberra.csv", row.names = TRUE)
-```
-
-
-
-```{r no-glom2, fig.height = 6, fig.width = 10, message = FALSE, warning = FALSE}
-# Get 3D MDS plots
-no_glom.3D.UniF <- MDS_3D(no_glom.dist$UniF, 'weighted Unifrac')
-no_glom.3D.Ait <- MDS_3D(no_glom.dist$Ait, 'Aitchison')
-no_glom.3D.Jac <- MDS_3D(no_glom.dist$Jac, 'Jaccard')
-no_glom.3D.Can <- MDS_3D(no_glom.dist$Canb, 'Canberra')
-
-no_glom.3D.UniF
-no_glom.3D.Ait
-no_glom.3D.Jac
-no_glom.3D.Can
-```
 
 
 
@@ -828,4 +672,40 @@ legend('topleft',
      text.col = "black", horiz = FALSE, inset = c(0, 0.1))
 ```
 
+```{r}
+# Function that will allow to color the leaves of the tree according to sample type (biopsy vs stool)
+color_leaf<<-function(n){
+    if(is.leaf(n)){
+        # take the current attributes
+        a=attributes(n)
+        
+        # deduce the line in the original data, to get the corresponding sampleType status
+        line=match(attributes(n)$label, metadata_table$Run)
+        disease=metadata_table[line, "host_disease"];
+            if(disease=="Healthy"){col_disease="blue"};if(disease=="IBS"){col_disease="red"}
+        
+        #Modification of leaf attribute
+        attr(n,"nodePar") <- c(a$nodePar, list(cex=1.5, lab.cex=0.6, pch=20, col=col_disease, lab.font=1, lab.cex=1))
+        }
+    return(n)
+}
 
+```
+
+```{r, fig.height = 5, fig.width = 3}
+hc.ward <- hclust(no_glom.dist$Canb, method = "ward.D") #clustering 
+dend.ward <- as.dendrogram(hc.ward) # Make into dendograms
+
+dend.ward <- dendrapply(dend.ward, color_leaf) # Apply the color attributes to the dendograms
+
+jpeg("/Users/scarcy/Desktop/Praktikum/Thesis/hclust_labus.jpg", height = 2000, width = 1000, res = 200)
+plot(dend.ward , main="Hierarchical clustering on Canberra distance (ward linkage)", horiz = TRUE, leaflab = "none",
+     edgePar = list(lwd = 2))
+axis(side = 1, lwd = 4)
+legend(4, 50, 
+     legend = c("Healthy" , "IBS"), 
+     col = c("blue", "red"), 
+     pch = c(20,20), bty = "n",  pt.cex = 1.5, cex = 1, 
+     text.col = "black", horiz = FALSE, inset = c(0, 0.1))
+dev.off()
+```
