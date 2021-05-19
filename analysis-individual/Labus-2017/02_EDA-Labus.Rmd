@@ -203,53 +203,57 @@ ggplot(class.table, aes(x = reorder(Sample, Sample, function(x) mean(class.table
 ```
 
 
+### 3. Firmicutes/Bacteroidota ratio
 
-
-```{r plot-log-ratio, fig.height = 3, fig.width=7}
+```{r plot-log-ratio, fig.height = 5, fig.width=3}
 # Extract abundance of only Bacteroidota and Firmicutes
-bacter <- phylum.table[phylum.table[,'Phylum'] == 'Bacteroidota', c('Sample', 'Abundance',
-                                                                    'host_disease', 'host_subtype', 'Phylum')]
-bacter <- bacter[order(bacter$Sample),] # order by sample name
-firmi <- phylum.table[phylum.table[,'Phylum'] == 'Firmicutes', c('Sample', 'Abundance',
-                                                                 'host_disease', 'host_subtype', 'Phylum')]
-firmi <- firmi[order(firmi$Sample),] # order by sample name
+bacter <- phylum.table %>%
+  filter(Phylum == "Bacteroidota") %>%
+  select(c('Sample', 'Abundance', 'host_disease', 'host_subtype', 'Phylum', 'host_age', 'host_sex', 'host_bmi')) %>%
+  arrange(Sample)
+
+firmi <- phylum.table %>%
+  filter(Phylum == "Firmicutes") %>%
+  select(c('Sample', 'Abundance', 'host_disease', 'host_subtype', 'Phylum', 'host_age', 'host_sex', 'host_bmi')) %>%
+  arrange(Sample)
 
 # Calculate log2 ratio Firmicutes/Bacteroidota
-ratio_FB <- data.table('Sample' = bacter$Sample,
+ratio.FB <- data.frame('Sample' = bacter$Sample,
                        'host_disease' = bacter$host_disease,
                        'host_subtype' = bacter$host_subtype,
                        'Bacteroidota' = bacter$Abundance,
-                       'Firmicutes' = firmi$Abundance)
-ratio_FB[,"Log_ratio_FB"] <- log2(ratio_FB[,"Firmicutes"] / ratio_FB[,"Bacteroidota"])
+                       'Firmicutes' = firmi$Abundance,
+                       'host_age' = bacter$host_age,
+                       'host_sex' = bacter$host_sex,
+                       'host_bmi' = bacter$host_bmi)
+ratio.FB$logRatioFB <- log2(ratio.FB$Firmicutes / ratio.FB$Bacteroidota)
 
 # Plot log2 ratio Firmicutes/Bacteroidota
-par(mar = c(3, 10, 3, 10))
-boxplot(data = ratio_FB, Log_ratio_FB ~ host_subtype, ylab = "Log2 Ratio Abundance", xlab = "", main = "Firmicutes to Bacteroidota ratio")
+ggplot(ratio.FB, aes(x = host_disease, y = logRatioFB))+
+  geom_boxplot(outlier.shape = NA)+
+  geom_jitter(width=0.1)+
+  labs(x = "",  y = 'Log2(Firmicutes/Bacteroidota)', title = "Firmicutes:Bacteroidota ratio")+
+  theme_cowplot()
+
+# Per IBS subtype
+ggplot(ratio.FB, aes(x = host_subtype, y = logRatioFB))+
+  geom_boxplot(outlier.shape = NA)+
+  geom_jitter(width=0.1)+
+  labs(x = "",  y = 'Log2(Firmicutes/Bacteroidota)', title = "")+
+  theme_cowplot()
 ```
 
 
-```{r statistics-phyla, eval = FALSE, echo = FALSE, include = FALSE}
-# Nb reads per sample
-median(sample_sums(physeq))
-min(sample_sums(physeq))
-max(sample_sums(physeq))
+```{r export-plots-1, eval = FALSE, echo = FALSE}
+# Save path to plots
+path.plots <- file.path(path, "data/analysis-individual/PLOTS/plots-Labus-EDA")
 
-table(tax_table(physeq)[,3])
-mean(phylum.table[phylum.table[,'Phylum'] == 'Bacteroidota', 'Abundance'])
-mean(phylum.table[phylum.table[,'Phylum'] == 'Firmicutes' & phylum.table[,'host_disease'] == 'IBS', 'Abundance'])
-mean(class.table[class.table[,'Class'] == 'Bacilli', 'Abundance'])
-```
-
-
-```{r export-plots-1, eval = FALSE, echo = FALSE, include = FALSE}
-# check working directory
-getwd()
-
-jpeg("./Plots/plot_phylum_absAbundance.jpg", width = 4000, height = 2000)
-plot_bar(physeq, fill = "Phylum") + facet_wrap("host_disease", scales="free") +
+# Absolute abundance phylum
+jpeg(file.path(path.plots, "absAbundance_phylum.jpg"), width = 4000, height = 2000)
+plot_bar(physeq.labus, fill = "Phylum") + facet_wrap("host_disease", scales="free") +
   theme(axis.text.x = element_text(size = 30, angle = -90),
         axis.text.y = element_text(size = 30),
-        legend.text = element_text(size = 70),
+        legend.text = element_text(size = 50),
         axis.title = element_text(size = 50),
         title = element_text(size = 70),
         strip.text = element_text(size = 50))+
@@ -257,54 +261,44 @@ plot_bar(physeq, fill = "Phylum") + facet_wrap("host_disease", scales="free") +
   ylim(0, 7000)
 dev.off()
 
-jpeg("./Plots/plot_phylum_relAbundance.jpg", width = 4000, height = 2000)
+# Relative abundances
+jpeg(file.path(path.plots, "relAbundance_phylum.jpg"), width = 4000, height = 2000)
 ggplot(phylum.table, aes(x = Sample, y = Abundance, fill = Phylum))+
   facet_wrap(~ host_disease, scales = "free") + # scales = "free" removes empty lines
   geom_bar(stat = "identity") +
   theme(axis.text.x = element_text(size = 30, angle = -90),
         axis.text.y = element_text(size = 30),
-        legend.text = element_text(size = 70),
+        legend.text = element_text(size = 50),
         axis.title = element_text(size = 50),
         title = element_text(size = 70),
         strip.text = element_text(size = 50))+
   labs(x = "Samples", y = "Relative abundance", title = "Labus dataset (2017)")
 dev.off()
 
-jpeg("./Plots/plot_class_relAbundance.jpg", width = 4000, height = 2000)
+jpeg(file.path(path.plots, "relAbundance_class.jpg"), width = 4000, height = 2000)
 ggplot(class.table, aes(x = Sample, y = Abundance, fill = Class))+
   facet_wrap(~ host_disease, scales = "free") + # scales = "free" removes empty lines
   geom_bar(stat = "identity") +
   theme(axis.text.x = element_text(size = 30, angle = -90),
         axis.text.y = element_text(size = 30),
-        legend.text = element_text(size = 70),
+        legend.text = element_text(size = 50),
         axis.title = element_text(size = 50),
         title = element_text(size = 70),
         strip.text = element_text(size = 50))+
   labs(x = "Samples", y = "Relative abundance", title = "Labus dataset (2017)")
 dev.off()
 
-jpeg("./Plots/Log2Ratio_FirmBact.jpg", width = 1500, height = 2000)
-ggplot(ratio_FB, aes(x = host_disease, y = Log_ratio_FB))+
-  geom_boxplot(outlier.size = 4, lwd = 3)+
-  labs(x = "",  y = 'Log2 Firmicutes/Bacteroidota Abundance Ratio', title = "Labus dataset (2017)")+
+# Firmicutes:Bacteroidota log ratio
+jpeg(file.path(path.plots, "ratioFB.jpg"), width = 1500, height = 2000)
+ggplot(ratio.FB, aes(x = host_disease, y = logRatioFB))+
+  geom_boxplot(outlier.size = 0, lwd = 3)+
+  geom_jitter(size = 10, width=0.1)+
+  labs(x = "",  y = 'Log2(Firmicutes/Bacteroidota)', title = "Labus dataset (2017)")+
   theme_classic()+
   theme(axis.text = element_text(size = 50),
         legend.text = element_text(size = 50),
         axis.title = element_text(size = 50),
         title = element_text(size = 50))
-dev.off()
-
-jpeg("./Plots/Log2Ratio_FirmBact_subtypes.jpg", width = 1500, height = 2000)
-ggplot(ratio_FB, aes(x = host_subtype, y = Log_ratio_FB))+
-  geom_boxplot(outlier.size = 4, lwd = 3)+
-  labs(x = "",  y = 'Log2 Firmicutes/Bacteroidota Abundance Ratio', title = "Labus dataset (2017)")+
-  theme_classic()+
-  theme(axis.text = element_text(size = 50),
-        axis.text.x = element_text(angle = 45, vjust = 0.5),
-        legend.text = element_text(size = 50),
-        axis.title = element_text(size = 50),
-        title = element_text(size = 50))+
-  ylim(-3, 10)
 dev.off()
 ```
 
