@@ -498,124 +498,45 @@ plotDistances3D(dist.labus$Bray, "Bray-Curtis")
 ## HIERARCHICAL CLUSTERING ##
 #############################
 
-```{r hierarchical-clust, fig.width = 10, fig.width = 7}
-Heatmaps <- function(dist_list, fontsize){
-  # Weighted Unifrac
-  heatmp.UniF <- pheatmap(as.matrix(dist_list$UniF), 
-                          clustering_distance_rows = dist_list$UniF,
-                          clustering_distance_cols = dist_list$UniF,
+```{r hierarchical-clust, fig.width = 25, fig.width = 7}
+# For heatmaps: have group color
+matcol <- data.frame(group = sample_data(physeq.labus)[,"host_disease"])
+
+
+# Function to get heatmap from the distances computed
+plotHeatmaps <- function(dlist, fontsize){
+  
+  # Initialize variables
+  i=1
+  plist <- vector("list", 4)
+  names(plist) <- names(dlist)
+  
+  # Loop through distances
+  for(d in dlist){
+    plist[[i]] <- pheatmap(as.matrix(d), 
+                          clustering_distance_rows = d,
+                          clustering_distance_cols = d,
                           fontsize = fontsize,
                           fontsize_col = fontsize-5,
                           fontsize_row = fontsize-5,
-                          annotation_col = mat_col,
-                          annotation_row = mat_col,
-                          annotation_colors = list(group = c('Healthy' = 'blue', 'IBS' = 'red'),
-                                                   subtype = c('HC' = 'blue',
-                                                               'IBS-D' = '#CC0033', 'IBS-C' = '#990000', 'IBS-M' = '#FF0099',
-                                                               'IBS-unspecified' = '#FF6666', 'IBS-A' = '#FF0099')),
+                          annotation_col = matcol,
+                          annotation_row = matcol,
+                          annotation_colors = list(host_disease = c('Healthy' = 'blue', 'IBS' = 'red')),
                           cluster_rows = T,
                           cluster_cols = T,
-                          clustering_method = 'complete', #hierarchical method
-                          main = 'Weighted unifrac distance')
-
-  # Aitchison
-  heatmp.Ait <- pheatmap(as.matrix(dist_list$Ait), 
-                         clustering_distance_rows = dist_list$Ait,
-                         clustering_distance_cols = dist_list$Ait,
-                         fontsize = fontsize,
-                         fontsize_col = fontsize-5,
-                         fontsize_row = fontsize-5,
-                         # border_color = NA,
-                         cluster_rows = T,
-                         cluster_cols = T,
-                         clustering_method = "complete", #hierarchical method
-                         annotation_col = mat_col,
-                         annotation_row = mat_col,
-                         annotation_colors = list(group = c('Healthy' = 'blue', 'IBS' = 'red'),
-                                                   subtype = c('HC' = 'blue',
-                                                               'IBS-D' = '#CC0033', 'IBS-C' = '#990000', 'IBS-M' = '#FF0099',
-                                                               'IBS-unspecified' = '#FF6666', 'IBS-A' = '#FF0099')),
-                         main = "Aitchison distance")
+                          clustering_method = 'complete', # hc method
+                          main = names(dlist)[i]) # have name of distance as title
+    i <- i+1
+  }
   
-  # Bray-Curtis
-  heatmp.Bray <- pheatmap(as.matrix(dist_list$Bray), 
-                         clustering_distance_rows = dist_list$Bray,
-                         clustering_distance_cols = dist_list$Bray,
-                         fontsize = fontsize,
-                         fontsize_col = fontsize-5,
-                         fontsize_row = fontsize-5,
-                         # border_color = NA,
-                         cluster_rows = T,
-                         cluster_cols = T,
-                         clustering_method = "complete", #hierarchical method
-                         annotation_col = mat_col,
-                         annotation_row = mat_col,
-                         annotation_colors = list(group = c('Healthy' = 'blue', 'IBS' = 'red'),
-                                                   subtype = c('HC' = 'blue',
-                                                               'IBS-D' = '#CC0033', 'IBS-C' = '#990000', 'IBS-M' = '#FF0099',
-                                                               'IBS-unspecified' = '#FF6666', 'IBS-A' = '#FF0099')),
-                         main = "Bray-Curtis distance")
-  
-  # Canberra
-  heatmp.Canb <- pheatmap(as.matrix(dist_list$Canb), 
-                         clustering_distance_rows = dist_list$Canb,
-                         clustering_distance_cols = dist_list$Canb,
-                         fontsize = fontsize,
-                         fontsize_col = fontsize-5,
-                         fontsize_row = fontsize-5,
-                         # border_color = NA,
-                         cluster_rows = T,
-                         cluster_cols = T,
-                         clustering_method = "complete", #hierarchical method
-                         annotation_col = mat_col,
-                         annotation_row = mat_col,
-                         annotation_colors = list(group = c('Healthy' = 'blue', 'IBS' = 'red'),
-                                                   subtype = c('HC' = 'blue',
-                                                               'IBS-D' = '#CC0033', 'IBS-C' = '#990000', 'IBS-M' = '#FF0099',
-                                                               'IBS-unspecified' = '#FF6666', 'IBS-A' = '#FF0099')),
-                         main = "Canberra distance")
-  
-  return(list("UniF" = heatmp.UniF, "Ait" = heatmp.Ait, "Bray" = heatmp.Bray, "Canb" = heatmp.Canb))
+  return(plist)
 }
 
 
 # Get the heatmaps
-no_glom.dist$Canb <- distance(subset_samples(physeq.rel, sample_names(physeq.rel) != 'SRR5245605'), method = "canberra") # remove the outlier in the canberra distance
-no_glom.heatmaps <- Heatmaps(dist_list = no_glom.dist, fontsize = 8)
+heatmp.labus <- plotHeatmaps(dlist = dist.labus, fontsize = 8)
 ```
 
-
-
-```{r export-plots-2, eval = FALSE, echo = FALSE}
-# MDS 2D all distances
-jpeg("./Plots/AllDistances_MDS.jpg", width = 3000, height = 2000, res = 90)
-no_glom.2D.alldist +
-  theme(axis.text.x = element_text(size = 20),
-        legend.text = element_text(size = 50),
-        axis.title = element_text(size = 50),
-        title = element_text(size = 70),
-        strip.text = element_text(size = 50))+
-  labs(title = "Labus dataset (2017)")
-dev.off()
-
-# Heatmaps
-jpeg("./Plots/Heatmap_Aitchison.jpg", width = 1400, height = 1000, res = 200)
-no_glom.heatmaps$Ait
-dev.off()
-
-jpeg("./Plots/Heatmap_UniF.jpg", width = 1400, height = 1000, res = 200)
-no_glom.heatmaps$UniF
-dev.off()
-
-jpeg("./Plots/Heatmap_BrayCurtis.jpg", width = 1400, height = 1000, res = 200)
-no_glom.heatmaps$Bray
-dev.off()
-
-jpeg("./Plots/Heatmap_Canberra.jpg", width = 1400, height = 1000, res = 200)
-no_glom.heatmaps$Can
-dev.off()
-
-```
 
 
 ################################
