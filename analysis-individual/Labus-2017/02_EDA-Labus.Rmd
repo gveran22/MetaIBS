@@ -18,7 +18,7 @@ knitr::opts_chunk$set(fig.width = 15, fig.height = 5, warning=FALSE, message=FAL
 ## IMPORT ##
 ############
 
-## Librairies
+### 1. Librairies
 
 ```{r library-import}
 library(phyloseq) # for phyloseq object
@@ -32,32 +32,9 @@ library("coda") # Aitchison distance
 library("coda.base") # Aitchison distance
 library("vegan") # NMDS
 library(pheatmap) # for heatmap
-
-
-# library(Biostrings) # to manage dna sequences as strings
-# library(seqTools) # analyse read length in fastq file
-# library(phyloseq) # for phyloseq object
-# library(ggplot2) # for plots
-# library(ggrepel)
-# library(data.table)
-# library(plyr)
-# library(dplyr)
-# 
-# library("doParallel")
-# library("foreach")
-# library("DECIPHER") # for phylogenetic tree
-# library("phangorn")
-# 
-# library("plotly") # plot 3D
-# 
-# library("microbiome") # for centered log-ratio
-# library("coda") # Aitchison distance
-# library("coda.base") # Aitchison distance
-# library("vegan") # NMDS
-# library(pheatmap) # for heat map
 ```
 
-## Data
+### 2. Data
 
 ```{r import-data}
 # Set path
@@ -85,28 +62,10 @@ plot_tree(physeq.labus, color = "host_disease", ladderize="left")
 #__________________________________________________________________________
 
 # Import phyloseq objects for computing distances
-physeq.rel <- readRDS(file.path(path, "data/analysis-individual/Zhuang-2018/02_EDA-Zhuang/physeq_relative.rds"))
-physeq.clr <- readRDS(file.path(path, "data/analysis-individual/Zhuang-2018/02_EDA-Zhuang/physeq_clr.rds"))
-physeq.CSN <- readRDS(file.path(path, "data/analysis-individual/Zhuang-2018/02_EDA-Zhuang/physeq_CSN.rds"))
-physeq.NZcomp <- readRDS(file.path(path, "data/analysis-individual/Zhuang-2018/02_EDA-Zhuang/physeq_NZcomp.rds"))
-```
-
-```{r import-for-pdf, echo = FALSE}
-physeq <- readRDS("/Users/scarcy/Desktop/Praktikum/Data/OutputPhangorn/physeq_labus.rds")
-physeq.rel <- readRDS("/Users/scarcy/Desktop/Praktikum/Data/Labus_2017/Rproject_DataAnalysis/physeq_relative.rds")
-physeq.clr <- readRDS("/Users/scarcy/Desktop/Praktikum/Data/Labus_2017/Rproject_DataAnalysis/physeq_clr.rds")
-metadata_table <- readRDS("/Users/scarcy/Desktop/Praktikum/Data/Labus_2017/metadata_final.rds")
-
-saveRDS(physeq, "/Users/scarcy/Desktop/Praktikum/Data/Labus_2017/Rproject_DataAnalysis/physeq.rds")
-# Distance methods
-dist_methods <- unlist(distanceMethodList)
-dist_methods <- dist_methods[-which(dist_methods=="ANY")] # Remove the user-defined distance
-dist_methods <- dist_methods[-c(1,15,18)] #remove unweighted unifrac, mountford, chao (not gonna work on pseudocounts)
-dist_methods <- dist_methods[1:16] #keep only the 16 first methods (remove the beta diversity distances)
-
-# For heatmaps: have group color
-mat_col <- data.frame(group = metadata_table[,"host_disease"], subtype = metadata_table[,"host_subtype"])
-rownames(mat_col) <- rownames(metadata_table)
+physeq.rel <- readRDS(file.path(path, "data/analysis-individual/Labus-2017/02_EDA-Labus/physeq_relative.rds"))
+physeq.clr <- readRDS(file.path(path, "data/analysis-individual/Labus-2017/02_EDA-Labus/physeq_clr.rds"))
+physeq.CSN <- readRDS(file.path(path, "data/analysis-individual/Labus-2017/02_EDA-Labus//physeq_CSN.rds"))
+physeq.NZcomp <- readRDS(file.path(path, "data/analysis-individual/Labus-2017/02_EDA-Labus/physeq_NZcomp.rds"))
 ```
 
 
@@ -126,7 +85,7 @@ metadata %>%
 # Age
 metadata %>%
   group_by(host_disease) %>%
-  summarize(mean=mean(host_age), sd=sd(host_age))
+  summarize(mean_age=mean(host_age), sd_age=sd(host_age))
 wilcox.test(metadata[metadata$host_disease == "IBS", ]$host_age,
             metadata[metadata$host_disease == "Healthy", ]$host_age)
 
@@ -139,7 +98,7 @@ chisq.test(data.frame("Female" = c(21,14),
 # BMI
 metadata %>%
   group_by(host_disease) %>%
-  summarize(mean=mean(na.omit(host_bmi)), sd=sd(na.omit(host_bmi)))
+  summarize(mean_bmi=mean(na.omit(host_bmi)), sd_bmi=sd(na.omit(host_bmi)))
 wilcox.test(metadata[metadata$host_disease == "IBS",]$host_bmi,
             metadata[metadata$host_disease == "Healthy", ]$host_bmi)
 ```
@@ -240,7 +199,8 @@ ggplot(ratio.FB, aes(x = host_subtype, y = logRatioFB))+
   geom_boxplot(outlier.shape = NA)+
   geom_jitter(width=0.1)+
   labs(x = "",  y = 'Log2(Firmicutes/Bacteroidota)', title = "")+
-  theme_cowplot()
+  theme_cowplot() +
+  theme(axis.text.x = element_text(angle=90, vjust=0.5, hjust=1))
 ```
 
 
