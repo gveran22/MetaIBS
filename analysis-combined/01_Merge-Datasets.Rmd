@@ -39,15 +39,15 @@ physeq.zeber <- readRDS(file.path(path, "phyloseq-objects/physeq_zeber.rds"))
 physeq.zhu <- readRDS(file.path(path, "phyloseq-objects/physeq_zhu.rds"))
 physeq.zhuang <- readRDS(file.path(path, "phyloseq-objects/physeq_zhuang.rds"))
 
-datasets <- list("fukui" = physeq.fukui,
-                 "hugerth" = physeq.hugerth,
+datasets <- list("Fukui" = physeq.fukui,
+                 "Hugerth" = physeq.hugerth,
                  "labus" = physeq.labus,
-                 "lopresti" = physeq.lopresti,
-                 "nagel" = physeq.nagel,
-                 "pozuelo" = physeq.pozuelo,
-                 "zeber" = physeq.zeber,
-                 "zhu" = physeq.zhu,
-                 "zhuang" = physeq.zhuang)
+                 "LoPresti" = physeq.lopresti,
+                 "Nagel" = physeq.nagel,
+                 "Pozuelo" = physeq.pozuelo,
+                 "Zeber-Lubecka" = physeq.zeber,
+                 "Zhu" = physeq.zhu,
+                 "Zhuang" = physeq.zhuang)
 ```
 
 
@@ -247,5 +247,80 @@ taxtable.new %>%
 ```
 
 
+
+################
+# VENN DIAGRAM #
+################
+
+```{r venn-diagram}
+# Libraries
+library(VennDiagram)
+library(RColorBrewer)
+
+# Build lists
+authors.V1_V2 <- c("LoPresti", "Fukui", "Zeber-Lubecka")
+authors.V3_V4 <- c("LoPresti", "Labus", "Zhuang", "Hugerth", "Zeber-Lubecka")
+authors.V4 <- c("Pozuelo", "Zhu", "Nagel", "Hugerth", "Zhuang")
+
+commonASV <- function(x){
+  temp <- list()
+  for(author in x){
+    temp[[author]] <- taxtable.new[taxtable.new$author == author, "ASV"]
+  }
+  return(temp)
+}
+
+venn.V1_V2 <- commonASV(authors.V1_V2)
+venn.V3_V4 <- commonASV(authors.V3_V4)
+venn.V4 <- commonASV(authors.V4)
+
+# Plot
+plotVenn <- function(vennList, vregion){
+  venn.diagram(
+          x = vennList,
+          category.names = names(vennList),
+          filename = paste('./plots/01_Merge-Datasets/', vregion, '.png', sep=""),
+          output=FALSE,
+          main=paste("Datasets sequencing", vregion, "regions"),
+          
+          # Output features
+          imagetype="png",
+          height = 1000,
+          width = 1000,
+          resolution = 300,
+          compression = "lzw",
+          
+          # Circles
+          lwd = 2,
+          lty = 'blank',
+          fill = brewer.pal(length(vennList), "Pastel2"),
+          
+          # Numbers
+          cex = .6,
+          
+          # Set names
+          cat.cex = .8,
+          cat.fontface = "bold",
+          cat.default.pos = "outer"
+  )
+}
+
+plotVenn(venn.V1_V2, "V1-V2")
+plotVenn(venn.V3_V4, "V3-V4")
+plotVenn(venn.V4, "V4")
+
+
+```
+
+
+
+
+##########################
+# MERGE PHYLOSEQ OBJECTS #
+##########################
+
+```{r}
+taxtable.new
+```
 
 
