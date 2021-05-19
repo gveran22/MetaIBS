@@ -145,49 +145,64 @@ wilcox.test(metadata[metadata$host_disease == "IBS",]$host_bmi,
 ```
 
 
+################
+## ABUNDANCES ##
+################
 
-######################################
-## ABSOLUTE AND RELATIVE ABUNDANCES ##
-######################################
-```{r plot-abundances, echo = TRUE, fig.height = 6}
-# Relative abundance for Phylum
-phylum.table <- physeq %>%
+### 1. Absolute abundances
+
+```{r plot-absolute-abundance, fig.width=10, fig.height = 5}
+# Plot Phylum
+plot_bar(physeq.labus, fill = "Phylum") + facet_wrap("host_disease", scales="free") +
+  theme(axis.text.x = element_text(size = 8))+
+  labs(x = "Samples", y = "Absolute abundance", title = "Labus dataset (2017)") +
+  ylim(0,7000)
+
+# Plot Class
+plot_bar(physeq.labus, fill = "Class")+ facet_wrap("host_disease", scales="free") +
+  theme(axis.text.x = element_text(size = 8))+
+  labs(x = "Samples", y = "Absolute abundance", title = "Labus dataset (2017)")+
+  ylim(0,7000)
+```
+
+**Sequencing depth** characteristics of the Labus dataset:  
+- minimum of `r min(sample_sums(physeq.labus))` total count per sample  
+- median: `r median(sample_sums(physeq.labus))` total count per sample  
+- maximum of `r max(sample_sums(physeq.labus))` total count per sample  
+
+### 2. Relative abundances
+
+```{r plot-relative-abundances, fig.width=10, fig.height = 5}
+# Agglomerate to phylum & class levels
+phylum.table <- physeq.labus %>%
   tax_glom(taxrank = "Phylum") %>%                     # agglomerate at phylum level
   transform_sample_counts(function(x) {x/sum(x)} ) %>% # Transform to rel. abundance
   psmelt()                                             # Melt to long format
 
-# Relative abundance for Class
-class.table <- physeq %>%
-  tax_glom(taxrank = "Class") %>%                     # agglomerate at class level
-  transform_sample_counts(function(x) {x/sum(x)} ) %>% # Transform to rel. abundance
-  psmelt()                                             # Melt to long format
+class.table <- physeq.labus %>%
+  tax_glom(taxrank = "Class") %>%
+  transform_sample_counts(function(x) {x/sum(x)} ) %>%
+  psmelt()
 
 
-# Plot Phylum
-plot_bar(physeq, fill = "Phylum") + facet_wrap("host_disease", scales="free") +
-  theme(axis.text.x = element_text(size = 8))+
-  labs(x = "Samples", y = "Total read count", title = "Labus dataset (2017)")+
-  ylim(0, 7000)
-
-ggplot(phylum.table, aes(x = Sample, y = Abundance, fill = Phylum))+
+# Plot relative abundances
+ggplot(phylum.table, aes(x = reorder(Sample, Sample, function(x) mean(phylum.table[Sample == x & Phylum == 'Firmicutes', 'Abundance'])),
+                         y = Abundance, fill = Phylum))+
   facet_wrap(~ host_disease, scales = "free") + # scales = "free" removes empty lines
   geom_bar(stat = "identity") +
   theme(axis.text.x = element_text(size = 8, angle = -90))+
   labs(x = "Samples", y = "Relative abundance", title = "Labus dataset (2017)")
 
-# Plot Class
-plot_bar(physeq, fill = "Class")+ facet_wrap("host_disease", scales="free") +
-  theme(axis.text.x = element_text(size = 8))+
-  labs(x = "Samples", y = "Total read count", title = "Labus dataset (2017)")+
-  ylim(0, 7000)
-
-ggplot(class.table, aes(x = Sample, y = Abundance, fill = Class))+
+ggplot(class.table, aes(x = reorder(Sample, Sample, function(x) mean(class.table[Sample == x & Phylum == 'Firmicutes', 'Abundance'])),
+                        y = Abundance, fill = Class))+
   facet_wrap(~ host_disease, scales = "free") + # scales = "free" removes empty lines
   geom_bar(stat = "identity") +
   theme(axis.text.x = element_text(size = 8, angle = -90))+
   labs(x = "Samples", y = "Relative abundance", title = "Labus dataset (2017)")
 
 ```
+
+
 
 
 ```{r plot-log-ratio, fig.height = 3, fig.width=7}
