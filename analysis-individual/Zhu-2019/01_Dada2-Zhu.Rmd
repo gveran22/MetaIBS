@@ -41,7 +41,7 @@ PRJNA566284.
 
 ```{r, quality-check, echo=TRUE, results="hide"}
 # Save the path to the directory containing the fastq zipped files
-path <- "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Zhu-2019/01_Dada2-Zhu"
+path <- "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Zhu-2019"
 #list.files(path) # check we are in the right directory
 
 # fastq filenames have format: SAMPLENAME.fastq.gz
@@ -144,7 +144,7 @@ primerHits <- function(primer, fn) {
 }
 
 # Get a table to know how many times the U515 and E786 primers are found in the reads of each sample
-for (i in 6:10){
+for (i in 1:29){
   cat("SAMPLE", sample.names[i], "with total number of", raw_stats[i,'reads'], "reads\n\n")
   x <- rbind(ForwardRead.FWDPrimer = sapply(FWD.orients, primerHits, fn = fnFs[[i]]),
              ForwardRead.REVPrimer = sapply(REV.orients, primerHits, fn = fnFs[[i]]),

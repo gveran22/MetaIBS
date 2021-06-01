@@ -17,43 +17,17 @@ knitr::opts_chunk$set(fig.width = 15, fig.height = 5, warning=FALSE, message=FAL
 ## IMPORT LIBRAIRIES ##
 #######################
 ```{r library-import, echo=FALSE}
-library(dada2) # manage fastq file
-
-library(ShortRead) # manage fastq file
-
-library(Biostrings) # to manage dna sequences as strings
-
-library(seqTools) # analyse read length in fastq file
-
 library(phyloseq) # for phyloseq object
-
-library(ggplot2) # for plots
-library(ggrepel)
-
-library(data.table)
-
+library(ggplot2)
+library(cowplot)
 library(plyr)
 library(dplyr)
-
-library("doParallel")
-
-library("foreach")
-
-library("DECIPHER") # for phylogenetic tree
-
-library("phangorn")
-
 library("plotly") # plot 3D
-
 library("microbiome") # for centered log-ratio
-
 library("coda") # Aitchison distance
-
 library("coda.base") # Aitchison distance
-
 library("vegan") # NMDS
-
-library(pheatmap) # for heat map
+library(pheatmap) # for heatmap
 ```
 
 
@@ -61,41 +35,45 @@ library(pheatmap) # for heat map
 ## IMPORT DATA ##
 #################
 
-XXXXXXX
-```{r TO-DELETE, eval = FALSE, echo = TRUE}
-# Import metadata
-metadata_table <- read.table("/Users/scarcy/Desktop/Praktikum/Data/Zhu_2019/ZhuSraRunTable.txt", header = TRUE, sep = ",")
-metadata_table <- metadata_table[, c("Run", "Age", "Sample.Name", "sex")]# Keep relevant data
-rownames(metadata_table) <- paste(metadata_table$Run) # have the same sample.names
-metadata_table$Sample.Name <- as.character(metadata_table$Sample.Name)
-colnames(metadata_table) <- c("Run", "host_age", "host_disease", "host_sex")
-metadata_table$host_disease[substr(metadata_table$host_disease, start = 1, stop = 2) == "N_"] <- "Healthy" # Replace with better names
-metadata_table$host_disease[substr(metadata_table$host_disease, start = 1, stop = 2) == "F_"] <- "IBS" # Replace with better names
-table(metadata_table$host_disease)
+## Data
 
-metadata_table$author <- "Zhu"
-metadata_table$sequencing_tech <- "Illumina MiSeq"
-metadata_table$variable_region <- "V4"
+```{r import-data}
+# Set path
+path <- "~/Projects/IBS_Meta-analysis_16S"
 
-saveRDS(metadata_table, "/Users/scarcy/Desktop/Praktikum/Data/Zhu_2019/metadata_final.rds")
+# Import phyloseq object
+physeq.zhu <- readRDS(file.path(path, "phyloseq-objects/physeq_zhu.rds"))
 
-# Import OTU table (rows: sample names // columns: sequence variants)
-seqtable.nochim <- readRDS("/Users/scarcy/Desktop/Praktikum/Data/Zhu_2019/ASVtable_final.rds")
-dim(seqtable.nochim) # should have 29 samples and 652 ASV
+# Sanity check
+physeq.zhu
 
-
-# Import Taxonomic table (rows: sequence variants // columns: Kingdom, Phylum, Class, ...)
-taxa <- readRDS("/Users/scarcy/Desktop/Praktikum/Data/Zhu_2019/taxa_final.rds")
-dim(taxa)
-
-# Remove unknown eukaryota
-seqtable.nochim <- seqtable.nochim[ , !(colnames(seqtable.nochim) %in% rownames(taxa[taxa[, 'Kingdom'] == 'Eukaryota',])) ]
-taxa <- taxa[taxa[, 'Kingdom'] == 'Bacteria',] # keep only bacteria
-
-dim(seqtable.nochim) # sanity check 648 OTUs
-dim(taxa)
+sample_data(physeq.zhu)
 ```
-XXXXXX
+
+Phylogenetic tree was computed with the package `phangorn`, and the script was run on a cluster. Let's check we have correctly generated a phylogenetic tree.
+
+```{r plot-tree, fig.height = 6, fig.width = 10}
+# Look at the tree
+plot_tree(physeq.zhu, color = "host_disease", ladderize="left")
+```
+
+
+```{r import-for-pdf, echo = FALSE}
+#__________________________________________________________________________
+#____________ THIS IS ONLY FOR (quicker) PDF/HTML OUTPUT __________________
+#__________________________________________________________________________
+
+# Import phyloseq objects for computing distances
+physeq.rel <- readRDS(file.path(path, "data/analysis-individual/Zhu-2019/02_EDA-Zhu/physeq_relative.rds"))
+physeq.clr <- readRDS(file.path(path, "data/analysis-individual/Zhu-2019/02_EDA-Zhu/physeq_clr.rds"))
+physeq.CSN <- readRDS(file.path(path, "data/analysis-individual/Zhu-2019/02_EDA-Zhu/physeq_CSN.rds"))
+physeq.NZcomp <- readRDS(file.path(path, "data/analysis-individual/Zhu-2019/02_EDA-Zhu/physeq_NZcomp.rds"))
+```
+
+
+
+
+
 
 ```{r}
 # Age
