@@ -181,6 +181,38 @@ saveRDS(physeq, "/Users/scarcy/Desktop/Praktikum/Data/Rproject_COMBINE/physeq_zh
 ######################################
 ## ABSOLUTE AND RELATIVE ABUNDANCES ##
 ######################################
+
+
+```{r plot-relative-abundances, fig.width=10, fig.height = 5}
+# Agglomerate to phylum & class levels
+phylum.table <- physeq.zhu %>%
+  tax_glom(taxrank = "Phylum") %>%                     # agglomerate at phylum level
+  transform_sample_counts(function(x) {x/sum(x)} ) %>% # Transform to rel. abundance
+  psmelt()                                             # Melt to long format
+
+class.table <- physeq.zhuang %>%
+  tax_glom(taxrank = "Class") %>%
+  transform_sample_counts(function(x) {x/sum(x)} ) %>%
+  psmelt()
+
+
+# Plot relative abundances
+ggplot(phylum.table, aes(x = reorder(Sample, Sample, function(x) mean(phylum.table[Sample == x & Phylum == 'Bacteroidota', 'Abundance'])),
+                         y = Abundance, fill = Phylum))+
+  facet_wrap(~ host_disease, scales = "free") + # scales = "free" removes empty lines
+  geom_bar(stat = "identity") +
+  theme(axis.text.x = element_text(size = 8, angle = -90))+
+  labs(x = "Samples", y = "Relative abundance", title = "Zhu dataset (2019)")
+
+ggplot(class.table, aes(x = Sample, y = Abundance, fill = Class))+
+  facet_wrap(~ host_disease, scales = "free") + # scales = "free" removes empty lines
+  geom_bar(stat = "identity") +
+  theme(axis.text.x = element_text(size = 8, angle = -90))+
+  labs(x = "Samples", y = "Relative abundance", title = "Zhuang dataset (2018)")
+
+```
+
+
 ```{r plot-abundances, echo = TRUE, fig.height = 6}
 # Relative abundance for Phylum
 phylum.table <- physeq %>%
