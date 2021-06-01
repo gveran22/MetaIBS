@@ -368,70 +368,98 @@ dev.off()
 ####################
 
 ```{r normalize-data, eval = FALSE, echo = TRUE}
-# REMOVE SAMPLES WITH LESS THAN 1000 COUNTS
-physeq_best <-  prune_samples(sample_sums(physeq)>=1000, physeq)
-physeq_best <- subset_taxa(physeq_best, !is.na(Phylum)) # remove the 1 NA Phyla
-physeq_best
+# Sanity check no sample with less than 500 total count
+table(sample_sums(physeq.zhu)<500) # all FALSE
 
 #____________________________________________________________________
 # PHYLOSEQ OBJECT WITH NON-ZERO COMPOSITIONS
-physeq.NZcomp <- physeq_best
-otu_table(physeq.NZcomp)[otu_table(physeq.NZcomp) == 0] <- 0.5
+physeq.NZcomp <- physeq.zhu
+otu_table(physeq.NZcomp)[otu_table(physeq.NZcomp) == 0] <- 0.5 # pseudocounts
 
-# check the 0 values have been replaced
-otu_table(physeq_best)[1:5,1:5]
-otu_table(physeq.NZcomp)[1:5,1:5]
+# Sanity check that 0 values have been replaced
+# otu_table(physeq.zhu)[1:5,1:5]
+# otu_table(physeq.NZcomp)[1:5,1:5]
 
 # transform into compositions
-physeq.NZcomp <- transform_sample_counts(physeq.NZcomp, function(x) x / sum(x) ) # divide each count by the total number of counts (per sample)
-sum(otu_table(physeq.NZcomp) < 0) # see how many negative values are present in the matrix
+physeq.NZcomp <- transform_sample_counts(physeq.NZcomp, function(x) x / sum(x) )
 table(rowSums(otu_table(physeq.NZcomp))) # check if there is any row not summing to 1
 
-# save the physeq.NZcomp object
-saveRDS(physeq.NZcomp, "/Users/scarcy/Desktop/Praktikum/Data/Zhu_2019/Rproject_DataAnalysis/physeq_NZcomp.rds")
+# Save object
+saveRDS(physeq.NZcomp, file.path(path, "data/analysis-individual/Zhu-2019/02_EDA-Zhu/physeq_NZcomp.rds"))
 
 #____________________________________________________________________
 # PHYLOSEQ OBJECT WITH RELATIVE COUNT (BETWEEN 0 AND 1)
-physeq.rel <- physeq_best
+physeq.rel <- physeq.zhu
 physeq.rel <- transform_sample_counts(physeq.rel, function(x) x / sum(x) ) # divide each count by the total number of counts (per sample)
 
 # check the counts are all relative
-otu_table(physeq)[1:5, 1:5]
-otu_table(physeq.rel)[1:5, 1:5]
+# otu_table(physeq.zhu)[1:5, 1:5]
+# otu_table(physeq.rel)[1:5, 1:5]
 
 # sanity check
-sum(otu_table(physeq.rel) < 0) # see how many negative values are present in the matrix
 table(rowSums(otu_table(physeq.rel))) # check if there is any row not summing to 1
 
 # save the physeq.rel object
-saveRDS(physeq.rel, "/Users/scarcy/Desktop/Praktikum/Data/Zhu_2019/Rproject_DataAnalysis/physeq_relative.rds")
+saveRDS(physeq.rel, file.path(path, "data/analysis-individual/Zhu-2019/02_EDA-Zhu/physeq_relative.rds"))
 
 #____________________________________________________________________
 # PHYLOSEQ OBJECT WITH COMMON-SCALE NORMALIZATION
-physeq.CSN <- physeq_best
-min(sample_sums(physeq.CSN)) # sanity check
-physeq.CSN <- transform_sample_counts(physeq.CSN, function(x) (x*min(sample_sums(physeq.CSN))) / sum(x) ) # divide each count by the total number of counts (per sample)
+physeq.CSN <- physeq.zhu
+physeq.CSN <- transform_sample_counts(physeq.CSN, function(x) (x*min(sample_sums(physeq.CSN))) / sum(x) )
 
 # sanity check
-sum(otu_table(physeq.CSN) < 0) # see how many negative values are present in the matrix
-table(rowSums(otu_table(physeq.CSN))) # check if there is any row not summing to 1
+table(rowSums(otu_table(physeq.CSN))) # check that all rows are summing to the same total
 
 # save the physeq.CSN object
-saveRDS(physeq.CSN, "/Users/scarcy/Desktop/Praktikum/Data/Zhu_2019/Rproject_DataAnalysis/physeq_CSN.rds")
+saveRDS(physeq.CSN, file.path(path, "data/analysis-individual/Zhu-2019/02_EDA-Zhu/physeq_CSN.rds"))
 
 
 #____________________________________________________________________
 # PHYLOSEQ OBJECT WITH CENTERED LOG RATIO COUNT
-physeq.clr <- physeq_best
-physeq.clr <- transform(physeq.clr, "clr") # the function adds pseudocounts itself
+physeq.clr <- physeq.zhu
+physeq.clr <- microbiome::transform(physeq.zhu, "clr") # the function adds pseudocounts itself
 
 # Compare the otu tables in the original phyloseq object and the new one after CLR transformation
-otu_table(physeq_best)[1:5, 1:5] # should contain absolute counts
+otu_table(physeq.zhu)[1:5, 1:5] # should contain absolute counts
 otu_table(physeq.clr)[1:5, 1:5] # should all be relative
 
 # save the physeq.rel object
-saveRDS(physeq.clr, "/Users/scarcy/Desktop/Praktikum/Data/Zhu_2019/Rproject_DataAnalysis/physeq_clr.rds")
+saveRDS(physeq.clr, file.path(path, "data/analysis-individual/Zhu-2019/02_EDA-Zhu/physeq_clr.rds"))
 ```
+
+
+Make heatmap with ASVs
+```{r}
+# For color
+# matcol <- data.frame(group = sample_data(physeq.zhu)[,"host_disease"])
+# 
+# library(RColorBrewer)
+
+# pheatmap(log10(t(as.matrix(otu_table(physeq.NZcomp)))),
+#          color = colorRampPalette(rev(brewer.pal(n = 7, name = "RdYlBu")))(100),
+#          show_rownames = F,
+#          show_colnames = F,
+#          fontsize_col = 0.5,
+#          cluster_rows = T,
+#          cluster_cols = T,
+#          #cutree_rows = 5,
+#          #na_col = "grey",
+#          clustering_method = 'ward.D',
+#          annotation_col = matcol,
+#          annotation_colors = list(host_disease = c(Healthy = 'blue', IBS = 'red')),
+#          main = "Hierarchical clustering with ward linkage (top 100 most abundant OTUs)")
+
+sample_order <- matcol %>%
+  arrange(host_disease)
+
+plot_heatmap(physeq.CSN, sample.label="host_disease", method="MDS", distance="bray", low="#000033", high="#CCFF66",
+             sample.order=rownames(sample_order)) +
+  ggtitle("Heatmap on Zhu dataset with common scale normalization")+
+  theme(axis.text.y = element_blank())
+ggsave("../../data/analysis-individual/PLOTS/plots-Zhu-EDA/heatmap_ASVs.jpg", height=6, width=8, dpi=300)
+
+```
+
 
 
 
@@ -439,6 +467,95 @@ saveRDS(physeq.clr, "/Users/scarcy/Desktop/Praktikum/Data/Zhu_2019/Rproject_Data
 ## COMPUTE DISTANCES ##
 #######################
 
+
+```{r dist-functions, fig.width = 15, fig.height = 4}
+#____________________________________________________________________________________
+# Measure distances
+getDistances <- function(){
+  set.seed(123) # for unifrac, need to set a seed
+  glom.UniF <- UniFrac(physeq.rel, weighted=TRUE, normalized=TRUE) # weighted unifrac
+  glom.ait <- phyloseq::distance(physeq.clr, method = 'euclidean') # aitchison
+  glom.bray <- phyloseq::distance(physeq.CSN, method = "bray") # bray-curtis
+  glom.can <- phyloseq::distance(physeq.NZcomp, method = "canberra") # canberra
+  dist.list <- list("UniF" = glom.UniF, "Ait" = glom.ait, "Canb" = glom.can, "Bray" = glom.bray)
+  
+  return(dist.list)
+}
+
+
+#____________________________________________________________________________________
+# Plot in 2D the distances
+plotDistances2D <- function(dlist, ordination="MDS"){
+  plist <- NULL
+  plist <- vector("list", 4)
+  names(plist) <- c("Weighted Unifrac", "Aitchison", "Bray-Curtis", "Canberra")
+  
+  print("Unifrac")
+  # Weighted UniFrac
+  set.seed(123)
+  iMDS.UniF <- ordinate(physeq.rel, ordination, distance=dlist$UniF)
+  plist[[1]] <- plot_ordination(physeq.rel, iMDS.UniF, color="host_disease")
+  
+  print("Aitchison")
+  # Aitchison
+  set.seed(123)
+  iMDS.Ait <- ordinate(physeq.clr, ordination, distance=dlist$Ait)
+  plist[[2]] <- plot_ordination(physeq.clr, iMDS.Ait, color="host_disease")
+  
+  print("Bray")
+  # Bray-Curtis
+  set.seed(123)
+  iMDS.Bray <- ordinate(physeq.CSN, ordination, distance=dlist$Bray)
+  plist[[3]] <- plot_ordination(physeq.CSN, iMDS.Bray, color="host_disease")
+  
+  print("Canberra")
+  # Canberra
+  set.seed(123)
+  iMDS.Can <- ordinate(physeq.NZcomp, ordination, distance=dlist$Can)
+  plist[[4]] <- plot_ordination(physeq.NZcomp, iMDS.Can, color="host_disease")
+  
+  # Creating a dataframe to plot everything
+  plot.df = ldply(plist, function(x) x$data)
+  names(plot.df)[1] <- "distance"
+  
+  return(plot.df)
+}
+```
+
+
+Now let's plot!
+
+```{r dist-run}
+# Get the distances & the plot data
+dist.zhu <- getDistances()
+plot.df <- plotDistances2D(dist.zhu)
+
+# Plot
+ggplot(plot.df, aes(Axis.1, Axis.2, color=host_disease))+
+  geom_point(size=6, alpha=0.5)  + scale_color_manual(values = c('blue', 'red'))+
+  facet_wrap(distance~., scales='free', nrow=1)+
+  theme_bw()+
+  theme(strip.text.x = element_text(size=20))+
+  labs(color="Disease")
+
+path.plots <- file.path(path, "data/analysis-individual/PLOTS/plots-Zhu-EDA")
+ggsave(file.path(path.plots, "distances4_MDS(Family).jpg"), height = 4, width = 15)
+
+
+# Try again after aggregation
+physeq.rel <- tax_glom(physeq.rel, taxrank="Family")
+physeq.clr <- tax_glom(physeq.clr, taxrank="Family")
+physeq.CSN <- tax_glom(physeq.CSN, taxrank="Family")
+physeq.NZcomp <- tax_glom(physeq.NZcomp, taxrank="Family")
+
+```
+
+
+
+
+
+
+XXXXXX VERIFY XXXXX
 ```{r dist-thesis, fig.width = 15, fig.height = 4}
 #____________________________________________________________________________________
 # Measure distances
