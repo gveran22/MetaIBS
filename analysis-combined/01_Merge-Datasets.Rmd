@@ -41,7 +41,7 @@ physeq.zhuang <- readRDS(file.path(path, "phyloseq-objects/physeq_zhuang.rds"))
 
 datasets <- list("Fukui" = physeq.fukui,
                  "Hugerth" = physeq.hugerth,
-                 "labus" = physeq.labus,
+                 "Labus" = physeq.labus,
                  "LoPresti" = physeq.lopresti,
                  "Nagel" = physeq.nagel,
                  "Pozuelo" = physeq.pozuelo,
@@ -200,6 +200,12 @@ taxtable.new %>%
   ungroup() %>%
   count(verif)
 # Only TRUEs!! =)
+taxtable.new %>%
+  group_by(ASV) %>%
+  filter(sequence != sequence[which.min(nchar(sequence))]) %>%
+  mutate(verif = str_detect(string=sequence, pattern=sequence[which.min(nchar(sequence))])) %>%
+  ungroup() %>%
+  count(verif)
 
 # check that ASVs with several sequences have the same taxa assigned to them
 test <- taxtable.new %>%
@@ -270,16 +276,22 @@ commonASV <- function(x){
   return(temp)
 }
 
+
 venn.V1_V2 <- commonASV(authors.V1_V2)
 venn.V3_V4 <- commonASV(authors.V3_V4)
 venn.V4 <- commonASV(authors.V4)
 
 # Plot
-plotVenn <- function(vennList, vregion){
+plotVenn <- function(vennList, file.name, vregion){
+  cat <- data.frame(authors = c("LoPresti", "Labus", "Fukui", "Zhuang", "Hugerth", "Pozuelo", "Zhu", "Nagel", "Zeber-Lubecka"),
+                   vregion = c("V1-V3", "V3-V5", "V1-V2", "V3-V4", "V3-V4", "V4", "V4", "V4", "V2-V9")) %>%
+    unite("name", authors:vregion, sep=" (", remove=FALSE)
+  cat$name <- str_c(cat$name, ")")
+  
   venn.diagram(
           x = vennList,
-          category.names = names(vennList),
-          filename = paste('./plots/01_Merge-Datasets/', vregion, '.png', sep=""),
+          category.names = cat[cat$authors %in% names(vennList), ]$name,
+          filename = paste('./plots/01_Merge-Datasets/', file.name, '.png', sep=""),
           output=FALSE,
           main=paste("Datasets sequencing", vregion, "regions"),
           
@@ -305,10 +317,43 @@ plotVenn <- function(vennList, vregion){
   )
 }
 
-plotVenn(venn.V1_V2, "V1-V2")
-plotVenn(venn.V3_V4, "V3-V4")
-plotVenn(venn.V4, "V4")
+plotVenn(venn.V1_V2, "V1-V2", "V1-V2")
+plotVenn(venn.V3_V4, "V3-V4", "V3-V4")
+plotVenn(venn.V4, "V4", "V4")
+```
 
+
+```{r}
+vennOnDemand <- function(author_list, filename, v.region){
+  
+  # Get the common ASVs between these authors
+  venn.authors <- commonASV(author_list)
+  
+  # Plot vennDiagram
+  plotVenn(venn.authors, filename, v.region)
+  
+}
+
+vennOnDemand(c("LoPresti", "Pozuelo", "Nagel"), "test", "V3-V5")
+```
+
+
+GGupset
+```{r}
+library(ggupset)
+
+test <- taxtable.new %>%
+  select(c(author, ASV)) %>%
+  group_by(ASV) %>%
+  summarize(Datasets = list(unique(author))) %>%
+  filter(lengths(Datasets)>1)
+
+jpeg("./plots/01_Merge-Datasets/ggupset.jpg", width=3000, height=2000, res=400)
+ggplot(test, aes(x=Datasets))+
+    geom_bar() +
+    scale_x_upset()+
+  labs(y="# of common ASVs")
+dev.off()
 
 ```
 
