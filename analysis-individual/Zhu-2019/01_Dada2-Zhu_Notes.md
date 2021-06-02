@@ -22,7 +22,11 @@ Zhu (_Frontiers in Cellular and Infection Microbiology_, 2019) - [Identification
 - FWD - F515 - 5’ - GTGCCAGCMGCCGCGGTAA - 3’
 - REV - R806 - 5’ - GGACTACHVGGGTWTCTAAT - 3’
 - **Anomaly**: forward primer found in the _middle_ of >95% of forward reads (for all samples); but also found at the _end_ of reverse reads only in half of the samples. Reverse primer not found (even with more mismatch allowed).
-![Primer-Anomaly-Schematic](./plots-zhu/primer_anomaly.png)
+
+<p align="center">
+<img src="plots-zhu/primer_anomaly.png" width="400" title="Primer-Anomaly-Schematic">
+</p>
+
 
 ## Filtering
 - **primer removal**: fastq files deposited on the SRA/ENA databases don't contain Ilumina headers, which are needed to merge paired reads later on (if there is a different number of forward and reverse reads for each sample). Thus, primer sequences could not be removed.
