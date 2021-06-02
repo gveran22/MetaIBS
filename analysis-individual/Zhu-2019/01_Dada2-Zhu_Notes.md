@@ -24,7 +24,7 @@ Zhu (_Frontiers in Cellular and Infection Microbiology_, 2019) - [Identification
 - **Anomaly**: forward primer found in the _middle_ of >95% of forward reads (for all samples); but also found at the _end_ of reverse reads only in half of the samples. Reverse primer not found (even with more mismatch allowed).
 
 <p align="center">
-<img src="plots-zhu/primer_anomaly.png" width="400" title="Primer-Anomaly-Schematic">
+<img src="plots-zhu/primer_anomaly.png" width="500" title="Primer-Anomaly-Schematic">
 </p>
 
 
