@@ -110,6 +110,17 @@ subsetdf <- sradf %>%
   filter(fungal_overgrowth == "I do not have this condition") %>%
   filter(diabetes == "I do not have this condition")
 
+# Check age_category & bmi_category
+unique(subsetdf$age_cat)
+unique(subsetdf$bmi_cat)
+test <- subsetdf %>%
+  mutate(age_cat = ifelse(Age_years < 20, "teen",
+                          ifelse(Age_years %in% 20:29.9, "20s",
+                          ifelse(Age_years %in% 30:39.9, "30s",
+                          ifelse(Age_years %in% 40:49.9, "40s",
+                          ifelse(Age_years %in% 50:59.9, "50s",
+                          ifelse(Age_years %in% 60:70, "60s","NA")))))))
+
 # Split healthy & IBS samples
 healthyDF <- subsetdf %>%
   filter(subset_healthy == TRUE & 
@@ -118,99 +129,12 @@ healthyDF <- subsetdf %>%
 ibsDF <- subsetdf %>%
   filter(ibs == "Diagnosed by a medical professional (doctor, physician assistant)")
 
+# We have too many healthy samples, so we will randomly select ~630 healthy samples
+
 
 
 
 ######################################### TRYING OUT #########################################
-
-######
-# STRINGENT FILTERING
-stringent <- sradf %>%
-  ### MANDATORY FILTERS ###
-  filter(ibd == "I do not have this condition") %>%
-  filter(cdiff == "I do not have this condition") %>% # remove gut infections
-  filter(!gluten %in% unique(grep("diagnosed", sradf$gluten, value=TRUE))) %>% # celiac disease or gluten allergy
-  filter(antibiotic_history %in% c("I have not taken antibiotics in the past year.", "6 months")) %>%
-  ### OPTIONAL FILTERS ###
-  filter(fungal_overgrowth == "I do not have this condition") %>%
-  filter(subset_age == TRUE) %>%
-  filter(bmi_cat %in% c("Normal", "Overweight")) %>%
-  filter(diabetes == "I do not have this condition" &
-           lung_disease == "I do not have this condition" &
-           liver_disease == "I do not have this condition" &
-           kidney_disease == "I do not have this condition" &
-           clinical_condition == "I do not have this condition")
-
-table(stringent$ibs) # 331 IBS vs 3998 healthy
-
-
-# Mid-stringent FILTERING
-midstringent <- sradf %>%
-  ### MANDATORY FILTERS ###
-  filter(ibd == "I do not have this condition") %>%
-  filter(cdiff == "I do not have this condition") %>% # remove gut infections
-  filter(!gluten %in% unique(grep("diagnosed", sradf$gluten, value=TRUE))) %>% # celiac disease or gluten allergy
-  filter(antibiotic_history %in% c("I have not taken antibiotics in the past year.", "6 months")) %>%
-  ### OPTIONAL FILTERS ###
-  filter(fungal_overgrowth == "I do not have this condition") %>%
-  filter(subset_age == TRUE) %>%
-  filter(bmi_cat %in% c("Normal", "Overweight"))
-  # filter(diabetes == "I do not have this condition" &
-  #          lung_disease == "I do not have this condition" &
-  #          liver_disease == "I do not have this condition" &
-  #          kidney_disease == "I do not have this condition" &
-  #          clinical_condition == "I do not have this condition")
-table(midstringent$ibs) # 590 IBS vs 5517 healthy
-
-# Least stringent FILTERING
-lowstringent <- sradf %>%
-  ### MANDATORY FILTERS ###
-  filter(ibd == "I do not have this condition") %>%
-  filter(cdiff == "I do not have this condition") %>% # remove gut infections
-  filter(!gluten %in% unique(grep("diagnosed", sradf$gluten, value=TRUE))) %>% # celiac disease or gluten allergy
-  filter(antibiotic_history %in% c("I have not taken antibiotics in the past year.", "6 months")) %>%
-  ### OPTIONAL FILTERS ###
-  # filter(fungal_overgrowth == "I do not have this condition") %>%
-  filter(subset_age == TRUE)
-  # filter(bmi_cat %in% c("Normal", "Overweight"))
-# filter(diabetes == "I do not have this condition" &
-#          lung_disease == "I do not have this condition" &
-#          liver_disease == "I do not have this condition" &
-#          kidney_disease == "I do not have this condition" &
-#          clinical_condition == "I do not have this condition")
-table(lowstringent$ibs) # 993 IBS vs 7192 healthy
-
-######
-# Healthy patients?
-sradf %>%
-  filter(subset_healthy == TRUE) %>%
-  filter(gluten == "No") %>% # doesn't follow gluten-free diet
-  filter(fungal_overgrowth == "I do not have this condition" & cdiff == "I do not have this condition") %>% # remove gut infections
-  filter(lung_disease == "I do not have this condition" &
-           liver_disease == "I do not have this condition" &
-           kidney_disease == "I do not have this condition") %>%
-  filter(clinical_condition == "I do not have this condition")
-
-
-# IBS patients?
-sradf %>%
-  ### MANDATORY FILTERS ###
-  filter(ibs == "Diagnosed by a medical professional (doctor, physician assistant)") %>%
-  filter(ibd == "I do not have this condition") %>%
-  filter(cdiff == "I do not have this condition") %>% # remove gut infections
-  filter(!gluten %in% unique(grep("diagnosed", sradf$gluten, value=TRUE))) %>% # celiac disease or gluten allergy
-  filter(antibiotic_history %in% c("I have not taken antibiotics in the past year.", "6 months")) %>%
-  filter(fungal_overgrowth == "I do not have this condition") %>%
-  ### OPTIONAL FILTERS ###
-  filter(subset_age == TRUE) %>%
-  filter(bmi_cat %in% c("Normal", "Overweight")) %>%
-  # filter(diabetes == "I do not have this condition" &
-  #          lung_disease == "I do not have this condition" &
-  #          liver_disease == "I do not have this condition" &
-  #          kidney_disease == "I do not have this condition" &
-  #          clinical_condition == "I do not have this condition") %>%
-  dim
-######
 
 
 # Without any filter, there are 2153 IBS patients
