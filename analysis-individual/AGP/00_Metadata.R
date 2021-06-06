@@ -162,70 +162,17 @@ healthyDF <- subsetdf %>%
 ibsDF <- subsetdf %>%
   filter(ibs == "Diagnosed by a medical professional (doctor, physician assistant)")
 
-# We have too many healthy samples, so we will randomly select ~630 healthy samples
+# We have too many healthy samples, so we will randomly select ~645 healthy samples
+healthyDF <- healthyDF %>%
+  sample_n(size=nrow(ibsDF))
 
-
+# Verify there is an equal distribution in age & bmi
+t.test(healthyDF$host_age, ibsDF$host_age)
+t.test(healthyDF$host_bmi, ibsDF$host_bmi)
 
 
 ######################################### TRYING OUT #########################################
 
-
-# Without any filter, there are 2153 IBS patients
-# + no IBD + no C.diff infection + no celiac disease/gluten allergy + no ATB in the past 6 months : 1116
-
-# Additional optional filters:
-# + no fungal_overgrowth => 819 samples
-# ++ age between 20 and 69 => 722 samples
-# +++ BMI between 18-30 => 590 samples
-# ++++ remove other comorbidities (diabetes, lung disease, etc.) => 331 samples
-
-
-
-# Remove columns that will not be of use
-skip_columns <- c("SAMPLE_TYPE", "Organism",
-                  "BioProject",
-                  "center_name..exp.",
-                  "Center.Name",
-                  "Consent",
-                  "ENA.FIRST.PUBLIC..run.",
-                  "LibrarySelection",
-                  "LibrarySource",
-                  "Platform",
-                  "ReleaseDate",
-                  "sequencing_meth..exp.",
-                  "SRA.Study",
-                  "well_description..exp.",
-                  "run_prefix..exp.",
-                  "run_date..exp.",
-                  "Bytes",
-                  "DATASTORE.provider",
-                  "DATASTORE.region",
-                  "Title",
-                  "sample_plate..exp.",
-                  "target_gene..exp.",
-                  "target_subfragment..exp.",
-                  "exercise_location",
-                  "cosmetics_frequency",
-                  "pool_frequency",
-                  "last_travel",
-                  "Elevation",
-                  "contraceptive",
-                  "LATITUDE",
-                  "LONGITUDE",
-                  "fermented_plant_frequency",
-                  "dominant_hand",
-                  "livingwith",
-                  "flu_vaccine_date",
-                  "types_of_plants",
-                  "consume_animal_products_abx",
-                  "last_move",
-                  "age_corrected",
-                  "primer_plate..exp.",
-                  "well_id..exp.",
-                  "roommates_in_study",
-                  "collection_time")
-sradf <- sradf %>%
-  select(-all_of(skip_columns))
 
 
 
@@ -233,28 +180,6 @@ sradf <- sradf %>%
 
 
 
-
-###############
-# IBS SAMPLES #
-###############
-
-# Subset table to individuals with IBS medical diagnosis
-table(sradf$ibs) # 2895 "Diagnosed by a medical professional (doctor, physician assistant)"
-ibs.df <- sradf[grep("doctor", sradf$ibs),]
-dim(ibs.df) # 2895 patients
-table(ibs.df$bowel_movement_quality) 
-
-# Check it is only fecal samples
-table(ibs.df$Organism) # 2671 human gut metagenome
-table(ibs.df$SAMPLE_TYPE) # 2383 stool
-
-
-# Remove other conditions
-table(ibs.df$ibd) # 2445 "I do not have this condition"
-table(ibs.df$cdiff) # 2593 éI do not have this condition" remove C.difficile
-table(ibs.df$fungal_overgrowth) # 1907 "I do not have this condition"
-# remove diabetes??
-# remove lung_disease, liver_disease, kidney_disease??
 
 
 
