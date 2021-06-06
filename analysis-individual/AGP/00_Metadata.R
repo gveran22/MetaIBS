@@ -50,6 +50,25 @@ sradf <- sradf %>%
   filter(target_gene..exp. == "16S rRNA") %>% # 16s rRNA seq
   filter(SAMPLE_TYPE %in% c("feces", "Stool", "stool") & Organism %in% c("feces metagenome", "human gut metagenome", "gut metagenome")) # gut metagenome
 
+# Check that the "subset_healthy" corresponds to:
+# - ppl between 20-69 yo
+# - BMI between 18.5-30
+# - no antibiotic in past year
+# - no IBD
+# - no diabetes
+sradf %>%
+  # SUBSET_HEALTHY
+  filter(subset_healthy == TRUE) %>%
+  # SAME SUBSET
+  # filter(subset_age == TRUE) %>%
+  # filter(bmi_cat %in% c("Normal", "Overweight")) %>%
+  # filter(diabetes == "I do not have this condition") %>%
+  # filter(ibd == "I do not have this condition") %>%
+  # filter(antibiotic_history == "I have not taken antibiotics in the past year.") %>%
+  dim
+# 8,379 people labeled as 'healthy'
+
+
 # Reformat AGE & BMI columns
 sradf <- sradf %>%
   # AGE
@@ -63,37 +82,11 @@ sradf <- sradf %>%
   # BMI
   mutate(host_bmi = weight_kg / (height_m)**2)
 
-# Check that the "subset_healthy" corresponds to:
-# - ppl between 20-69 yo
-# - BMI between 18.5-30
-# - no antibiotic in past year
-# - no IBD
-# - no diabetes
-sradf %>%
-  # SUBSET_HEALTHY
-  filter(subset_healthy == TRUE) %>%
-  
-  # SAME SUBSET
-  # filter(subset_age == TRUE) %>%
-  # filter(bmi_cat %in% c("Normal", "Overweight")) %>%
-  # filter(diabetes == "I do not have this condition") %>%
-  # filter(ibd == "I do not have this condition") %>%
-  # filter(antibiotic_history == "I have not taken antibiotics in the past year.") %>%
-  
-  # MANUAL SUBSET
-  # filter(Age_years > 18 & Age_years < 70) %>%
-  # filter(bmi >= 16 & bmi <= 35) %>%
-  # filter(diabetes == "I do not have this condition") %>%
-  # filter(ibd == "I do not have this condition") %>%
-  # filter(antibiotic_history %in% c("I have not taken antibiotics in the past year.", "6 months")) %>%
-  dim
-# 8,379 people labeled as 'healthy'
-
 
 # Subset SRADF
 # - ppl between 18-69 yo
-# - BMI between 18.5-30
-# - no antibiotic in past year
+# - BMI between 16-35
+# - no antibiotic in past 6 months
 # - no IBD, Cdiff, celiac disease, fungal overgrowth
 # - no diabetes
 
@@ -154,13 +147,20 @@ subsetdf <- subsetdf %>%
   select(all_of(keep_columns))
 
 
+
+###########################
+# SELECT IBS & HC SAMPLES #
+###########################
+
 # Split healthy & IBS samples
 healthyDF <- subsetdf %>%
   filter(subset_healthy == TRUE & 
            ibs == "I do not have this condition")
+# 4722 "healthy"
 
 ibsDF <- subsetdf %>%
   filter(ibs == "Diagnosed by a medical professional (doctor, physician assistant)")
+# 645 IBS
 
 # We have too many healthy samples, so we will randomly select ~645 healthy samples
 healthyDF <- healthyDF %>%
@@ -170,10 +170,7 @@ healthyDF <- healthyDF %>%
 t.test(healthyDF$host_age, ibsDF$host_age)
 t.test(healthyDF$host_bmi, ibsDF$host_bmi)
 
-
-######################################### TRYING OUT #########################################
-
-
+# Merge back IBS & healthy samples within same df
 
 
 # Cleanup columns: bowel_movement_frequency, bowel_movement_quality
