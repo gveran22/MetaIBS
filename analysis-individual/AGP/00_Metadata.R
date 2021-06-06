@@ -29,7 +29,7 @@ sradf <- read.csv(file.path(path, "data/analysis-individual/AGP/SraRunTable.csv"
 paperdf <- read_tsv(file.path(path, "data/analysis-individual/AGP/correctedt2.tsv"))
 
 # Compare two tables
-dim(sradf) # 33,610 samples
+dim(sradf) # 34,552 samples
 dim(paperdf) # 17,854 samples
 
 # The paper was published in 2018, so it is possible that more samples have been added on the SRA since
@@ -50,10 +50,10 @@ sradf <- sradf %>%
   filter(target_gene..exp. == "16S rRNA") %>% # 16s rRNA seq
   filter(SAMPLE_TYPE %in% c("feces", "Stool", "stool") & Organism %in% c("feces metagenome", "human gut metagenome", "gut metagenome")) # gut metagenome
 
-# Reformat age & bmi columns
+# Reformat AGE & BMI columns
 sradf <- sradf %>%
   # AGE
-  mutate(Age_years = as.numeric(Age_years)) %>%
+  mutate(host_age = as.integer(as.numeric(age_corrected))) %>%
   # WEIGHT
   mutate(weight_kg = as.numeric(weight_kg)) %>%
   filter(is.na(weight_kg) | (weight_kg > 30 & weight_kg < 200)) %>%
@@ -61,7 +61,7 @@ sradf <- sradf %>%
   mutate(height_m = as.numeric(height_cm)*0.01) %>%
   filter(is.na(height_m) | (height_m > 1 & height_m < 2.5)) %>%
   # BMI
-  mutate(bmi = weight_kg / (height_m)**2)
+  mutate(host_bmi = weight_kg / (height_m)**2)
 
 # Check that the "subset_healthy" corresponds to:
 # - ppl between 20-69 yo
@@ -71,7 +71,7 @@ sradf <- sradf %>%
 # - no diabetes
 sradf %>%
   # SUBSET_HEALTHY
-  # filter(subset_healthy == TRUE) %>%
+  filter(subset_healthy == TRUE) %>%
   
   # SAME SUBSET
   # filter(subset_age == TRUE) %>%
@@ -81,13 +81,13 @@ sradf %>%
   # filter(antibiotic_history == "I have not taken antibiotics in the past year.") %>%
   
   # MANUAL SUBSET
-  filter(Age_years > 18 & Age_years < 70) %>%
-  filter(bmi >= 16 & bmi <= 35) %>%
-  filter(diabetes == "I do not have this condition") %>%
-  filter(ibd == "I do not have this condition") %>%
-  filter(antibiotic_history %in% c("I have not taken antibiotics in the past year.", "6 months")) %>%
+  # filter(Age_years > 18 & Age_years < 70) %>%
+  # filter(bmi >= 16 & bmi <= 35) %>%
+  # filter(diabetes == "I do not have this condition") %>%
+  # filter(ibd == "I do not have this condition") %>%
+  # filter(antibiotic_history %in% c("I have not taken antibiotics in the past year.", "6 months")) %>%
   dim
-# 8,353 people labeled as 'healthy'
+# 8,379 people labeled as 'healthy'
 
 
 # Subset SRADF
@@ -99,8 +99,8 @@ sradf %>%
 
 subsetdf <- sradf %>%
   # Demographics
-  filter(Age_years > 18 & Age_years < 70) %>%
-  filter(bmi >= 16 & bmi <= 35) %>%
+  filter(host_age >= 18 & host_age < 70) %>%
+  filter(host_bmi >= 16 & host_bmi <= 35) %>%
   # Drugs taken
   filter(antibiotic_history %in% c("I have not taken antibiotics in the past year.", "6 months")) %>%
   # Gut comorbidities/differential diagnoses
@@ -113,13 +113,18 @@ subsetdf <- sradf %>%
 # Check age_category & bmi_category
 unique(subsetdf$age_cat)
 unique(subsetdf$bmi_cat)
-test <- subsetdf %>%
-  mutate(age_cat = ifelse(Age_years < 20, "teen",
-                          ifelse(Age_years %in% 20:29.9, "20s",
-                          ifelse(Age_years %in% 30:39.9, "30s",
-                          ifelse(Age_years %in% 40:49.9, "40s",
-                          ifelse(Age_years %in% 50:59.9, "50s",
-                          ifelse(Age_years %in% 60:70, "60s","NA")))))))
+# There are some missing data in age & bmi categories, so we will re-define them
+subsetdf <- subsetdf %>%
+  mutate(age_cat = ifelse(host_age < 20, "teen",
+                          ifelse(host_age %in% 20:29, "20s",
+                          ifelse(host_age %in% 30:39, "30s",
+                          ifelse(host_age %in% 40:49, "40s",
+                          ifelse(host_age %in% 50:59, "50s",
+                          ifelse(host_age %in% 60:69, "60s","NA"))))))) %>%
+  mutate(bmi_cat = ifelse(host_bmi < 18.5, "Underweight",
+                          ifelse(host_bmi >= 18.5 & host_bmi < 25.0, "Normal",
+                          ifelse(host_bmi >= 25.0 & host_bmi < 30.0, "Overweight",
+                          ifelse(host_bmi >= 30.0, "Obese", "NA")))))
 
 # Split healthy & IBS samples
 healthyDF <- subsetdf %>%
