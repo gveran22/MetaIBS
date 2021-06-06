@@ -39,9 +39,9 @@ table(str_sub(sradf$ENA.FIRST.PUBLIC..run., end=4)) # latest sample from SRA met
 # => We will extract sample Runs from SRA metadata
 
 
-###################
+####################
 # CLEANUP METADATA #
-###################
+####################
 
 # For simplicity purposes, we will keep only samples and columns of interest
 
@@ -50,6 +50,19 @@ sradf <- sradf %>%
   filter(target_gene..exp. == "16S rRNA") %>% # 16s rRNA seq
   filter(SAMPLE_TYPE %in% c("feces", "Stool", "stool") & Organism %in% c("feces metagenome", "human gut metagenome", "gut metagenome")) # gut metagenome
 
+# Reformat age & bmi columns
+sradf <- sradf %>%
+  # AGE
+  mutate(Age_years = as.numeric(Age_years)) %>%
+  # WEIGHT
+  mutate(weight_kg = as.numeric(weight_kg)) %>%
+  filter(is.na(weight_kg) | (weight_kg > 30 & weight_kg < 200)) %>%
+  # HEIGHT
+  mutate(height_m = as.numeric(height_cm)*0.01) %>%
+  filter(is.na(height_m) | (height_m > 1 & height_m < 2.5)) %>%
+  # BMI
+  mutate(bmi = weight_kg / (height_m)**2)
+
 # Check that the "subset_healthy" corresponds to:
 # - ppl between 20-69 yo
 # - BMI between 18.5-30
@@ -57,16 +70,60 @@ sradf <- sradf %>%
 # - no IBD
 # - no diabetes
 sradf %>%
-  filter(subset_healthy == TRUE) %>%
+  # SUBSET_HEALTHY
+  # filter(subset_healthy == TRUE) %>%
+  
+  # SAME SUBSET
   # filter(subset_age == TRUE) %>%
   # filter(bmi_cat %in% c("Normal", "Overweight")) %>%
   # filter(diabetes == "I do not have this condition") %>%
   # filter(ibd == "I do not have this condition") %>%
   # filter(antibiotic_history == "I have not taken antibiotics in the past year.") %>%
+  
+  # MANUAL SUBSET
+  filter(Age_years > 18 & Age_years < 70) %>%
+  filter(bmi >= 16 & bmi <= 35) %>%
+  filter(diabetes == "I do not have this condition") %>%
+  filter(ibd == "I do not have this condition") %>%
+  filter(antibiotic_history %in% c("I have not taken antibiotics in the past year.", "6 months")) %>%
   dim
-# 11,261 people labeled as 'healthy'
+# 8,353 people labeled as 'healthy'
 
 
+# Subset SRADF
+# - ppl between 18-69 yo
+# - BMI between 18.5-30
+# - no antibiotic in past year
+# - no IBD, Cdiff, celiac disease, fungal overgrowth
+# - no diabetes
+
+subsetdf <- sradf %>%
+  # Demographics
+  filter(Age_years > 18 & Age_years < 70) %>%
+  filter(bmi >= 16 & bmi <= 35) %>%
+  # Drugs taken
+  filter(antibiotic_history %in% c("I have not taken antibiotics in the past year.", "6 months")) %>%
+  # Gut comorbidities/differential diagnoses
+  filter(ibd == "I do not have this condition") %>%
+  filter(cdiff == "I do not have this condition") %>%
+  filter(!gluten %in% unique(grep("diagnosed", sradf$gluten, value=TRUE))) %>%
+  filter(fungal_overgrowth == "I do not have this condition") %>%
+  filter(diabetes == "I do not have this condition")
+
+# Split healthy & IBS samples
+healthyDF <- subsetdf %>%
+  filter(subset_healthy == TRUE & 
+           ibs == "I do not have this condition")
+
+ibsDF <- subsetdf %>%
+  filter(ibs == "Diagnosed by a medical professional (doctor, physician assistant)")
+
+
+
+
+######################################### TRYING OUT #########################################
+
+######
 # STRINGENT FILTERING
 stringent <- sradf %>%
   ### MANDATORY FILTERS ###
@@ -123,7 +180,7 @@ lowstringent <- sradf %>%
 #          clinical_condition == "I do not have this condition")
 table(lowstringent$ibs) # 993 IBS vs 7192 healthy
 
-
+######
 # Healthy patients?
 sradf %>%
   filter(subset_healthy == TRUE) %>%
@@ -143,8 +200,8 @@ sradf %>%
   filter(cdiff == "I do not have this condition") %>% # remove gut infections
   filter(!gluten %in% unique(grep("diagnosed", sradf$gluten, value=TRUE))) %>% # celiac disease or gluten allergy
   filter(antibiotic_history %in% c("I have not taken antibiotics in the past year.", "6 months")) %>%
-  ### OPTIONAL FILTERS ###
   filter(fungal_overgrowth == "I do not have this condition") %>%
+  ### OPTIONAL FILTERS ###
   filter(subset_age == TRUE) %>%
   filter(bmi_cat %in% c("Normal", "Overweight")) %>%
   # filter(diabetes == "I do not have this condition" &
@@ -153,6 +210,8 @@ sradf %>%
   #          kidney_disease == "I do not have this condition" &
   #          clinical_condition == "I do not have this condition") %>%
   dim
+######
+
 
 # Without any filter, there are 2153 IBS patients
 # + no IBD + no C.diff infection + no celiac disease/gluten allergy + no ATB in the past 6 months : 1116
@@ -164,18 +223,7 @@ sradf %>%
 # ++++ remove other comorbidities (diabetes, lung disease, etc.) => 331 samples
 
 
-#____________________
-# Reformat age column
-sradf %>%
-  mutate(Age_years = replace(Age_years,
-                             Age_years %in% c("","LabControl test", unique(grep("Not", sradf$Age_years, value=TRUE, ignore.case=TRUE)), "Unspecified"),
-                             NA)) %>%
-  mutate(Age_years = as.numeric(Age_years)) %>%
-  filter(Age_years > 0 & Age_years < 70)
 
-
-
-#____________________
 # Remove columns that will not be of use
 skip_columns <- c("SAMPLE_TYPE", "Organism",
                   "BioProject",
@@ -224,12 +272,10 @@ sradf <- sradf %>%
 
 
 
-
 # Cleanup columns: bowel_movement_frequency, bowel_movement_quality
 
 
-table(sradf$acne_medication)
- 
+
 
 ###############
 # IBS SAMPLES #
