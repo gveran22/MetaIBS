@@ -126,6 +126,34 @@ subsetdf <- subsetdf %>%
                           ifelse(host_bmi >= 25.0 & host_bmi < 30.0, "Overweight",
                           ifelse(host_bmi >= 30.0, "Obese", "NA")))))
 
+# Keep only relevant columns for downstream analyses
+keep_columns <- c("Run",
+                  "pcr_primers..exp.",
+                  # "Assay.Type",
+                  # "Instrument",
+                  "host_age",
+                  "age_cat",
+                  "host_bmi",
+                  "bmi_cat",
+                  "country",
+                  "RACE",
+                  "exercise_frequency",
+                  "alcohol_frequency",
+                  "age_cat",
+                  "probiotic_frequency",
+                  "gluten",
+                  "bowel_movement_frequency",
+                  "bowel_movement_quality",
+                  "collection_season",
+                  "sibo",
+                  "lactose",
+                  "subset_healthy",
+                  "ibs",
+                  "lung_disease", "liver_disease", "kidney_disease", "clinical_condition")
+subsetdf <- subsetdf %>%
+  select(all_of(keep_columns))
+
+
 # Split healthy & IBS samples
 healthyDF <- subsetdf %>%
   filter(subset_healthy == TRUE & 
