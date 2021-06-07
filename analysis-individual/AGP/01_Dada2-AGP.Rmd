@@ -304,12 +304,24 @@ Sanity check before assigning taxonomy.
 getN <- function(x) sum(getUniques(x))
 
 # Table that will count number of reads for each process of interest (input reads, filtered reads, denoised reads, non chimera reads)
-track <- cbind(out1, out2[,2], sapply(seq_infered, getN), rowSums(seqtable.nochim),
-               lapply(rowSums(seqtable.nochim)*100/out1[,1], as.integer))
-
-# Assign column and row names
-colnames(track) <- c("input", "primer-filt", "quality-filt", "denoised", "nonchim", "%kept_input->output")
-rownames(track) <- gsub(".fastq", "", sample.names)
+rownames(out2) <- sapply(strsplit(rownames(out2), "_"), `[`, 1)
+track <- out2 %>%
+  as.data.frame() %>%
+  mutate(Run=rownames(out2)) %>%
+  rename("input"="reads.in",
+         "quality-filt"="reads.out") %>%
+  left_join(sapply(seq_infered, getN) %>%
+              as.data.frame %>% 
+              rename(denoised=".") %>%
+              mutate(Run=names(sapply(seq_infered, getN))),
+            by="Run") %>%
+  left_join(rowSums(seqtable.nochim) %>%
+              as.data.frame %>%
+              rename(nonchim=".") %>%
+              mutate(Run=rownames(seqtable.nochim)),
+            by="Run") %>%
+  relocate(Run) %>%
+  mutate("%kept_input->output"=as.integer(nonchim*100/input))
 
 # Show final table: for each row/sample, we have shown the initial number of reads, filtered reads, denoised reads, and non chimera reads
 track
