@@ -53,7 +53,7 @@ sample.names <- sapply(strsplit(basename(FNs), "_"), `[`, 1)
 show(sample.names[1:5]) # saves only the file name (without the path)
 
 # Look at quality of all files
-for (i in 1:100){ # 1:length(FNs)
+for (i in 1:4){ # 1:length(FNs)
   show(plotQualityProfile(FNs[i]))
 }
 
@@ -63,14 +63,14 @@ raw_stats <- data.frame('sample' = sample.names,
 min(raw_stats$reads)
 max(raw_stats$reads)
 mean(raw_stats$reads)
-hist(log10(raw_stats$reads))
+# hist(log10(raw_stats$reads))
 ```
 
 We will have a quick peak at the per base sequence content of the reads in some samples, to make sure there is no anomaly (i.e. all reads having the same sequence).
 
 ```{r per-base-seq-content, fig.width = 6, fig.height = 3}
 # Look at per base sequence content
-fseq <- seqTools::fastqq(FNs[10])
+fseq <- seqTools::fastqq(FNs[4])
 rc <- read_content(fseq)
 plot_read_content(rc) + labs(title = "Per base sequence content")
 plot_read_content(rc) + xlim(0,50) + labs(title = "Per base sequence content")
@@ -107,10 +107,13 @@ physeq <- readRDS("/Users/scarcy/Desktop/Praktikum/Data/AGP_2021/physeq_AGP.rds"
 Now, we will look whether the reads still contain the primers.
 
 ```{r primer-check, eval = TRUE, message=FALSE}
+# Import metadata, that contains the primer sequences
+metadata <- read.csv(file.path(path, "Metadata-AGP.csv"))
+table(metadata$pcr_primers..exp.)
+
 # V4
-FWD <- "GTGCCAGCMGCCGCGGTAA"  # 515F primer sequence
+FWD <- "GTGYCAGCMGCCGCGGTAA"  # 515F primer sequence
 REV <- "GGACTACHVGGGTWTCTAAT" # 806R primer sequence
-SEQBegin <- "TACGKA" # sequence at the beginning of all reads (what is it?!)
 
 # Function that, from the primer sequence, will return all combinations possible (complement, reverse complement, ...)
 allOrients <- function(primer) {
@@ -125,10 +128,8 @@ allOrients <- function(primer) {
 # Get all combinations of the primer sequences
 FWD.orients <- allOrients(FWD) # 515F
 REV.orients <- allOrients(REV) # 806R
-SEQBegin.orients <- allOrients(SEQBegin)
 FWD.orients # sanity check
 REV.orients
-SEQBegin.orients
 
 # Function that counts number of reads in which a sequence is found
 primerHits <- function(primer, fn) {
@@ -138,11 +139,10 @@ primerHits <- function(primer, fn) {
 }
 
 # Get a table to know how many times the 515F and 806R primers are found in the reads of each sample
-for (i in 1:5){
+for (i in 1:4){ # 1:length(FNs)
   cat("SAMPLE", sample.names[i], "with total number of", raw_stats[i,'reads'], "reads\n\n")
   x <-  rbind(ForwardPrimer = sapply(FWD.orients, primerHits, fn = FNs[[i]]), 
-              ReversePrimer = sapply(REV.orients, primerHits, fn = FNs[[i]]),
-              SeqBeginning = sapply(SEQBegin.orients, primerHits, fn = FNs[[i]]))
+              ReversePrimer = sapply(REV.orients, primerHits, fn = FNs[[i]]))
   print(x)
   cat("\n____________________________________________\n\n")
 }
