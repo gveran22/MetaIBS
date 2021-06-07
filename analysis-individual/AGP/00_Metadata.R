@@ -132,7 +132,6 @@ keep_columns <- c("Run",
                   "RACE",
                   "exercise_frequency",
                   "alcohol_frequency",
-                  "age_cat",
                   "probiotic_frequency",
                   "gluten",
                   "bowel_movement_frequency",
@@ -155,11 +154,13 @@ subsetdf <- subsetdf %>%
 # Split healthy & IBS samples
 healthyDF <- subsetdf %>%
   filter(subset_healthy == TRUE & 
-           ibs == "I do not have this condition")
+           ibs == "I do not have this condition") %>%
+  mutate(host_disease = "Healthy")
 # 4722 "healthy"
 
 ibsDF <- subsetdf %>%
-  filter(ibs == "Diagnosed by a medical professional (doctor, physician assistant)")
+  filter(ibs == "Diagnosed by a medical professional (doctor, physician assistant)") %>%
+  mutate(host_disease = "IBS")
 # 645 IBS
 
 # We have too many healthy samples, so we will randomly select ~645 healthy samples
@@ -169,15 +170,6 @@ healthyDF <- healthyDF %>%
 # Verify there is an equal distribution in age & bmi
 t.test(healthyDF$host_age, ibsDF$host_age)
 t.test(healthyDF$host_bmi, ibsDF$host_bmi)
-
-# Merge back IBS & healthy samples within same df
-
-
-# Cleanup columns: bowel_movement_frequency, bowel_movement_quality
-
-
-
-
 
 
 
