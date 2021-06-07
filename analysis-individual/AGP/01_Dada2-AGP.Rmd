@@ -175,6 +175,13 @@ out2 <- filterAndTrim(fwd = FNs, filt = filt2_samples,
                       minLen=150, # Discard reads shorter than 200 bp. This is done after trimming and truncation.
                       compress=TRUE, # Output files in gzip format
                       verbose=TRUE) # give a message saying the percentage of filtered sequences
+
+# Update list of filtered files
+# FNs_filt <- file.path(path, "filtered2", paste0(sample.names, "_filt.fastq.gz"))
+FNs_filt <- sort(list.files(file.path(path, "filtered2"), pattern=".fastq.gz", full.names = TRUE))
+sample.names_filt <- sapply(strsplit(basename(FNs_filt), "_"), `[`, 1)
+names(FNs_filt) <- sample.names_filt
+
 ```
 
 
@@ -209,7 +216,7 @@ for (i in 1:4){
 Now we will build the parametric error model, to be able to infer amplicon sequence variants (ASVs) later on.
 
 ```{r error-rate-estimate, eval = FALSE}
-err <- learnErrors(filt2_samples, multithread=TRUE, randomize=TRUE, verbose = 1)
+err <- learnErrors(FNs_filt, multithread=TRUE, randomize=TRUE, verbose = 1)
 ```
 
 The error rates for each possible transition (A→C, A→G, …) are shown. Points are the observed error rates for each consensus quality score. The black line shows the estimated error rates after convergence of the machine-learning algorithm. The red line shows the error rates expected under the nominal definition of the Q-score. Here the estimated error rates (black line) are a good fit to the observed rates (points), and the error rates drop with increased quality as expected.
@@ -231,13 +238,13 @@ De-replication is a common step in almost all modern ASV inference (or OTU picki
 
 ```{r infer-sample-composition, eval = FALSE}
 # Prepare empty vector for the infered sequences
-seq_infered <- vector("list", length(sample.names))
-names(seq_infered) <- sample.names # names of each row will be the sample names
+seq_infered <- vector("list", length(sample.names_filt))
+names(seq_infered) <- sample.names_filt # names of each row will be the sample names
 
-# Iterate through the 290 samples
-for(sampl in sample.names) {
+# Iterate through the 1242 samples
+for(sampl in sample.names_filt) {
   cat("Processing:", sampl, "\n") # print which sample is being processed
-  derep <- derepFastq(filt2_samples[[sampl]]) # dereplicate the reads in the sample
+  derep <- derepFastq(FNs_filt[[sampl]]) # dereplicate the reads in the sample
   seq_infered[[sampl]] <- dada(derep, err=err, multithread=TRUE) # default parameters
 }
 ```
@@ -259,7 +266,7 @@ We can now construct an amplicon sequence variant table (ASV) table, a higher-re
 # Make sequence table from the infered sequence variants
 seqtable <- makeSequenceTable(seq_infered)
 
-# We should have 290 samples (290 rows)
+# We should have 1242 samples (1242 rows)
 dim(seqtable)
 
 # Inspect distribution of sequence lengths
@@ -279,6 +286,8 @@ dim(seqtable.nochim)
 
 # Check how many reads we have after removing chimeras (we should keep the vast majority of the reads, like > 80%)
 sum(seqtable.nochim)/sum(seqtable)
+
+saveRDS(seqtable.nochim, "~/Desktop/Cluster/Dada2/seqtable_AGP.rds")
 ```
 
 
