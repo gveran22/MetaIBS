@@ -3,9 +3,10 @@ title: "Dada2_AGP2021"
 params:
   date: "!r Sys.Date()"
 output:
-  pdf_document: default
   html_document:
     df_print: paged
+    toc: true
+  pdf_document: default
 ---
 
 ```{r, include=FALSE}
@@ -29,6 +30,29 @@ library(plyr)
 library(dplyr)
 library(qckitfastq) # per base sequence content
 library(stringr)
+```
+
+
+```{r pdf-import, echo = FALSE}
+#_____________________________________________________________________
+#____________ THIS IS ONLY FOR (quicker) PDF OUTPUT __________________
+#_____________________________________________________________________
+path <- "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/AGP"
+
+# seq depth
+raw_stats <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/AGP/01_Dada2-AGP/raw_stats.rds")
+# out process
+out2 <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/AGP/01_Dada2-AGP/out2.rds")
+# quality profiles
+filt2_samples <- sort(list.files(file.path(path, "filtered2"), pattern=".fastq.gz", full.names = TRUE))
+# error rates
+err <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/AGP/01_Dada2-AGP/err.rds")
+# infered ASVs
+seq_infered <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/AGP/01_Dada2-AGP/seq_infered.rds")
+# taxa
+taxa <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/OutputTaxa/taxa_AGP.rds")
+# phyloseq object
+physeq <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/AGP/01_Dada2-AGP/physeq_AGP.rds")
 ```
 
 
@@ -58,8 +82,8 @@ for (i in 1:4){ # 1:length(FNs)
 }
 
 # Look at nb of reads per sample
-raw_stats <- data.frame('sample' = sample.names,
-                        'reads' = fastqq(FNs)@nReads)
+# raw_stats <- data.frame('sample' = sample.names,
+#                         'reads' = fastqq(FNs)@nReads)
 min(raw_stats$reads)
 max(raw_stats$reads)
 mean(raw_stats$reads)
@@ -76,28 +100,6 @@ plot_read_content(rc) + labs(title = "Per base sequence content")
 plot_read_content(rc) + xlim(0,50) + labs(title = "Per base sequence content")
 ```
 
-
-```{r pdf-import, echo = FALSE}
-#_____________________________________________________________________
-#____________ THIS IS ONLY FOR (quicker) PDF OUTPUT __________________
-#_____________________________________________________________________
-
-# out process
-out1 <- readRDS("/Users/scarcy/Desktop/Praktikum/Data/AGP_2021/Rproject_Dada2/out1.rds")
-out2 <- readRDS("/Users/scarcy/Desktop/Praktikum/Data/AGP_2021/Rproject_Dada2/out2.rds")
-raw_stats <- readRDS("/Users/scarcy/Desktop/Praktikum/Data/AGP_2021/Rproject_Dada2/raw_stats.rds")
-# look at quality
-filt1_samples <- sort(list.files(file.path(path, "filtered1"), pattern=".fastq.gz", full.names = TRUE))
-filt2_samples <- sort(list.files(file.path(path, "filtered2"), pattern=".fastq.gz", full.names = TRUE))
-# error rates
-err <- readRDS("/Users/scarcy/Desktop/Praktikum/Data/AGP_2021/Rproject_Dada2/err.rds")
-# infered sequences
-seq_infered <- readRDS("/Users/scarcy/Desktop/Praktikum/Data/AGP_2021/Rproject_Dada2/seq_infered.rds")
-# taxa
-taxa <- readRDS("/Users/scarcy/Desktop/Praktikum/Data/OutputTaxa/taxa_AGP.rds")
-# phyloseq object
-physeq <- readRDS("/Users/scarcy/Desktop/Praktikum/Data/AGP_2021/physeq_AGP.rds")
-```
 
 
 ########################
@@ -286,8 +288,6 @@ dim(seqtable.nochim)
 
 # Check how many reads we have after removing chimeras (we should keep the vast majority of the reads, like > 80%)
 sum(seqtable.nochim)/sum(seqtable)
-
-saveRDS(seqtable.nochim, "~/Desktop/Cluster/Dada2/seqtable_AGP.rds")
 ```
 
 
