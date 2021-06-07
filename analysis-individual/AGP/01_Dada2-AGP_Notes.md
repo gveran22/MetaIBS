@@ -41,11 +41,11 @@ IBS and healthy samples were selected out of the pool of >30,000 samples deposit
 
 ### c) Assign taxonomy
 Taxonomy assigned with Silva v138.
-- Bacteria - ....
-- Archaea - 0
-- Eukaryota - 0
+- Bacteria - 16,910
+- Archaea - 47
+- Eukaryota - 1,076
 
-All unassigned phyla were removed (n=...), samples below 500 total reads (n=...). The final ASV table contains **... sequence variants**.
+All unassigned phyla were removed (n=1740), samples below 500 total reads (n=51). The final ASV table contains **16,584 sequence variants**.
 
 ## Metadata
 - age
