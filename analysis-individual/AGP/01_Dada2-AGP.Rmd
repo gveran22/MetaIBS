@@ -352,7 +352,6 @@ rownames(taxa.print) <- NULL # Removing sequence rownames for display only
 head(taxa.print)
 
 table(taxa.print[,1]) # Show the different kingdoms
-taxa.print[taxa.print[,1] == 'Eukaryota',2] # the eukaryota are either Euglenozoa, or unknown
 
 table(taxa.print[,2]) # Show the different phyla
 table(is.na(taxa.print[,2])) # is there any NA phyla?
@@ -371,31 +370,16 @@ The preprocessing will be easier to do with ASV, taxonomic and metadata tables c
 ```{r phyloseq-preprocess, echo=TRUE, eval=FALSE}
 #_________________________
 # Import metadata
-metadata_table <- read.table("/Users/scarcy/Desktop/Praktikum/Data/AGP_2021/AGPSraRunTable.txt", header = TRUE, sep = ",")
+metadata <- read.csv(file.path(path, "Metadata-AGP.csv"))
 
 # Keep relevant covariates
-sampledf <- metadata_table[, c("Run", "Sample.Name", "Collection_Date")]
+sampledf <- metadata %>%
+  select(-"pcr_primers..exp.")
 rownames(sampledf) <- sampledf$Run
-
-sampledf$Sample.Name <- as.character(sampledf$Sample.Name)
-
-# Simplify data
-sampledf$Collection <- "1st" # add column to specify if sample is from first or 2nd collection
-sampledf[gsub('.*(?=.{2}$)', '', sampledf$Sample.Name, perl=T) == '.2', 'Collection'] <- "2nd"
-
-sampledf$host_disease <- "Healthy" # add column for host_disease
-sampledf[substr(sampledf$Sample.Name, 1, 2) == "MO", 'host_disease'] <- "IBS"
-sampledf[, 'Sample.Name'] <- gsub("MO", "IBS", sampledf[, 'Sample.Name']) # replace 'MO' by 'IBS' in the sample.names
-sampledf$Sample.Name <- gsub("\\.2$", "", sampledf[, 'Sample.Name']) # remove the '.2' at the end of some of the sample.names (indicating it is the 2nd collection)
-
-colnames(sampledf) <- c("Run", "host_ID", "collection_date", "Collection", "host_disease")
 
 sampledf$author <- "AGP"
 sampledf$sequencing_tech <- "Illumina"
 sampledf$variable_region <- "V4"
-
-# Remove .fastq extension in seqtable.nochim
-rownames(seqtable.nochim) <- gsub(".fastq", "", rownames(seqtable.nochim))
 
 #_________________________
 # Create phyloseq object
@@ -408,6 +392,8 @@ physeq <- prune_samples(sample_sums(physeq)>=500, physeq)
 # Remove taxa that are eukaryota, or have unassigned Phyla
 physeq <- subset_taxa(physeq, Kingdom != "Eukaryota")
 physeq <- subset_taxa(physeq, !is.na(Phylum))
+physeq <- filter_taxa(physeq, function(x) sum(x > 0) > 0, TRUE) # keep ASVs present in at least 1 sample
+physeq.filt <- filter_taxa(physeq, function(x) sum(x > 0) >= 2, TRUE)
 ```
 
 
@@ -415,27 +401,27 @@ physeq <- subset_taxa(physeq, !is.na(Phylum))
 
 ```{r save, eval=FALSE}
 # Save to disk
-saveRDS(out1, "/Users/scarcy/Desktop/Praktikum/Data/AGP_2021/Rproject_Dada2/out1.rds")
-saveRDS(out2, "/Users/scarcy/Desktop/Praktikum/Data/AGP_2021/Rproject_Dada2/out2.rds")
-saveRDS(err, "/Users/scarcy/Desktop/Praktikum/Data/AGP_2021/Rproject_Dada2/err.rds")
-saveRDS(seq_infered, "/Users/scarcy/Desktop/Praktikum/Data/AGP_2021/Rproject_Dada2/seq_infered.rds")
+saveRDS(raw_stats, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/AGP/01_Dada2-AGP/raw_stats.rds")
+saveRDS(out2, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/AGP/01_Dada2-AGP/out2.rds")
+saveRDS(err, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/AGP/01_Dada2-AGP/err.rds")
+saveRDS(seq_infered, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/AGP/01_Dada2-AGP/seq_infered.rds")
 
 
-saveRDS(otu_table(physeq), "/Users/scarcy/Desktop/Praktikum/Data/AGP_2021/Rproject_Dada2/ASVtable_final.rds") # ASV table
-saveRDS(tax_table(physeq), "/Users/scarcy/Desktop/Praktikum/Data/AGP_2021/Rproject_Dada2/taxa_final.rds") # taxa table
-saveRDS(sample_data(physeq), "/Users/scarcy/Desktop/Praktikum/Data/AGP_2021/Rproject_Dada2/metadata_final.rds") # metadata table
-write.csv(sample_data(physeq), "/Users/scarcy/Desktop/Praktikum/Data/AGP_2021/Rproject_Dada2/AGPMetadata.csv")
+saveRDS(otu_table(physeq), "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/AGP/01_Dada2-AGP/ASVtable_final.rds") # ASV table
+saveRDS(tax_table(physeq), "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/AGP/01_Dada2-AGP/taxa_final.rds") # taxa table
+saveRDS(sample_data(physeq), "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/AGP/01_Dada2-AGP/metadata_final.rds") # metadata table
+write.csv(sample_data(physeq), "~/Projects/IBS_Meta-analysis_16S/analysis-individual/AGP/Metadata-AGP.csv")
 
-saveRDS(physeq, "/Users/scarcy/Desktop/Praktikum/Data/AGP_2021/physeq_AGP.rds") # phyloseq object
-
+saveRDS(physeq, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/AGP/01_Dada2-AGP/physeq_AGP.rds") # phyloseq object
+saveRDS(physeq.filt, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/AGP/01_Dada2-AGP/physeq(ASVfilt)_AGP.rds")
 
 # Save nb of reads per sample before / after dada2 pipeline
-nb.reads <- readRDS("/Users/scarcy/Desktop/Praktikum/Data/nb_reads.rds")
-nb.reads[1:290, 'AGP_before'] <- fastqq(FNs)@nReads
-nb.reads[1:290, 'AGP_after'] <- rowSums(seqtable.nochim)
+nb.reads <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/nb_reads.rds")
+nb.reads[1:1191, 'AGP_before'] <- fastqq(FNs)@nReads
+nb.reads[1:1191, 'AGP_after'] <- rowSums(seqtable.nochim)
 median(na.omit(nb.reads$AGP_before)) # sanity check
 median(na.omit(nb.reads$AGP_after)) # sanity check
-saveRDS(nb.reads, "/Users/scarcy/Desktop/Praktikum/Data/nb_reads.rds")
+saveRDS(nb.reads, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/nb_reads.rds")
 ```
 
 
@@ -443,7 +429,7 @@ saveRDS(nb.reads, "/Users/scarcy/Desktop/Praktikum/Data/nb_reads.rds")
 
 ```{r plot, fig.width = 10}
 # Absolute abundance
-plot_bar(physeq, fill = "Phylum")+ facet_wrap("host_disease", scales="free") + theme(axis.text.x = element_blank())
+# plot_bar(physeq, fill = "Phylum")+ facet_wrap("host_disease", scales="free") + theme(axis.text.x = element_blank()) # long to compute
 
 # Relative abundance for Phylum
 phylum.table <- physeq %>%
@@ -455,7 +441,7 @@ ggplot(phylum.table, aes(x = reorder(Sample, Sample, function(x) mean(phylum.tab
                          y = Abundance, fill = Phylum))+
   facet_wrap(~ host_disease, scales = "free") + # scales = "free" removes empty lines
   geom_bar(stat = "identity") +
-  theme(axis.text.x = element_text(size = 5, angle = -90))+
+  theme(axis.text.x = element_blank())+
   labs(x = "Samples", y = "Relative abundance")
 
 ```
