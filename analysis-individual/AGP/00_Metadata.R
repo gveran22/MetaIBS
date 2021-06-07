@@ -174,3 +174,64 @@ t.test(healthyDF$host_bmi, ibsDF$host_bmi)
 
 
 
+# Merge back IBS & healthy samples within same df
+# Do re-formatting of some columns for clarification/simplicity
+metadata <- bind_rows(healthyDF, ibsDF) %>%
+  # Probiotic frequency
+  mutate(probiotic_frequency=replace(probiotic_frequency, probiotic_frequency %in% c("Not provided", "Unspecified"), "Unknown")) %>%
+  # Gluten consumption (NB: celiac disease was excluded)
+  mutate(gluten=replace(gluten, gluten == "No", "I eat gluten"),
+         gluten=replace(gluten, gluten == "I do not eat gluten because it makes me feel bad", "I don't eat gluten"),
+         gluten=replace(gluten, gluten %in% c("Not provided", "Unspecified"), "Unknown")) %>%
+  # Bowel movement
+  mutate(bowel_movement_frequency=replace(bowel_movement_frequency, bowel_movement_frequency %in% c("","Not provided","Unspecified"), "Unknown")) %>%
+  mutate(bowel_movement_quality=replace(bowel_movement_quality,
+                                        bowel_movement_quality %in% c("",grep("know", unique(metadata$bowel_movement_quality), value=TRUE), "Unspecified", "Not provided"),
+                                        "Unknown"),
+         bowel_movement_quality=replace(bowel_movement_quality,
+                                        bowel_movement_quality %in% grep("constipated", unique(metadata$bowel_movement_quality), value=TRUE),
+                                        "Constipated"),
+         bowel_movement_quality=replace(bowel_movement_quality,
+                                        bowel_movement_quality %in% grep("diarrhea", unique(metadata$bowel_movement_quality), value=TRUE),
+                                        "Diarrhea"),
+         bowel_movement_quality=replace(bowel_movement_quality,
+                                        bowel_movement_quality %in% grep("normal", unique(metadata$bowel_movement_quality), value=TRUE),
+                                        "Normal")) %>%
+  # Small intestinal bacterial overgrowth (sibo)
+  mutate(sibo=replace(sibo, sibo %in% c("", "Diagnosed by an alternative medicine practitioner", "Not provided", "Self-diagnosed", "Unspecified"), "Unknown"),
+         sibo=replace(sibo, sibo=="Diagnosed by a medical professional (doctor, physician assistant)", "SIBO"),
+         sibo=replace(sibo, sibo=="I do not have this condition", "Normal")) %>%
+  # Lactose
+  mutate(lactose=replace(lactose, lactose %in% c("", "Not provided", "Unspecified"), "Unknown"),
+         lactose=replace(lactose, lactose %in% c("FALSE", "No"), "Normal"),
+         lactose=replace(lactose, lactose %in% c("TRUE", "Yes"), "Lactose intolerant")) %>%
+  # Lung, liver, kidney diseases
+  mutate(lung_disease=replace(lung_disease, lung_disease=="Diagnosed by a medical professional (doctor, physician assistant)", "Lung disease"),
+         lung_disease=replace(lung_disease, lung_disease=="I do not have this condition", "Normal"),
+         lung_disease=replace(lung_disease, !lung_disease %in% c("Lung disease", "Normal"), "Unknown")) %>%
+  mutate(liver_disease=replace(liver_disease, liver_disease=="Diagnosed by a medical professional (doctor, physician assistant)", "Liver disease"),
+         liver_disease=replace(liver_disease, liver_disease=="I do not have this condition", "Normal"),
+         liver_disease=replace(liver_disease, !liver_disease %in% c("Liver disease", "Normal"), "Unknown")) %>%
+  mutate(kidney_disease=replace(kidney_disease, kidney_disease=="Diagnosed by a medical professional (doctor, physician assistant)", "Kidney disease"),
+         kidney_disease=replace(kidney_disease, kidney_disease=="I do not have this condition", "Normal"),
+         kidney_disease=replace(kidney_disease, !kidney_disease %in% c("Kidney disease", "Normal"), "Unknown")) %>%
+  mutate(clinical_condition=replace(clinical_condition, clinical_condition=="Diagnosed by a medical professional (doctor, physician assistant)", "Clinical condition"),
+         clinical_condition=replace(clinical_condition, clinical_condition=="I do not have this condition", "Normal"),
+         clinical_condition=replace(clinical_condition, !clinical_condition %in% c("Clinical condition", "Normal"), "Unknown")) %>%
+  
+  # Remove useless columns
+  select(-c(ibs, subset_healthy)) %>%
+  relocate(host_disease, .before=host_age)
+  
+
+
+########
+# SAVE #
+########
+
+# Export the list of Runs to download
+write.table(metadata$Run, "./data/analysis-individual/AGP/original/list_files.txt", sep="\t",
+            row.names=FALSE, col.names=FALSE, quote=FALSE)
+
+# Export the metadata table
+write.csv(metadata, "./data/analysis-individual/AGP/Metadata-AGP.csv")
