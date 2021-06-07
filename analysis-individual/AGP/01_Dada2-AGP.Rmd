@@ -156,38 +156,7 @@ for (i in 1:4){ # 1:length(FNs)
 
 ### 1. Primer removal
 
-The reads indeed contain the reverse primer. We could not find the forward primer, but we need to give a _primer.fwd_ parameter to the function 'removePrimers', so we will give the 'TACGKA' sequence that we found at the beginning of all the reads.
-We will keep only reads containing the reverse primer, and then remove the primer!
-
-```{r primer-filter, eval = FALSE, echo = TRUE}
-# KEEP READS WITH PRIMER AND REMOVE PRIMER
-# Place filtered files in a filtered/ subdirectory
-filt1_samples <- file.path(path, "filtered1", paste0(sample.names, "_filt.fastq.gz"))
-# Assign names for the filtered fastq.gz files
-names(filt1_samples) <- sample.names
-
-# Filter first to take out primer
-out1 <- removePrimers(fn = FNs, fout = filt1_samples,
-                      primer.fwd = 'TACGKA', # sequence found at the beginning of all reads
-                      primer.rev = REV.orients['RevComp'], # revcomp of the reverse primer, found at the end of the reads
-                      trim.fwd = TRUE,
-                      trim.rev = TRUE,
-                      orient = FALSE, # keep the reads in their original orientation
-                      compress = TRUE, verbose = TRUE)
-```
-
-```{r primer-filter-check}
-# Primer removal
-out1[1:5,]
-
-# Quality profile after primer removal
-for (i in 1:4){
-  show(plotQualityProfile(filt1_samples[i]))
-}
-```
-
-We can see that the reads length has quite reduced (from ~300bp to ~250bp). Looking at the fastq files, the reverse primer was not at the very end of the reads, it was followed by the Golay barcode and other specific sequences described in the methods of the article (we can notably recognize the reverse complement of the full specific sequences 5’-{CAAGCAGAAGACGGCATACGAGAT} {Golay barcode} {AGTCAGTCAGCC} {reverse primer}-3').
-
+The reads do not contain any primer. We will go forward directly with the quality filtering.
 
 
 ### 2. Quality filtering
@@ -200,13 +169,25 @@ filt2_samples <- file.path(path, "filtered2", paste0(sample.names, "_filt.fastq.
 # Assign names for the filtered fastq.gz files
 names(filt2_samples) <- sample.names
 
-out2 <- filterAndTrim(fwd = filt1_FNs, filt = filt2_samples,
+out2 <- filterAndTrim(fwd = FNs, filt = filt2_samples,
                       maxEE=4, # reads with more than 4 expected errors (sum(10e(-Q/10))) are discarded
                       truncQ=10, # Truncate reads at the first instance of a quality score less than or equal to truncQ.
-                      minLen=200, # Discard reads shorter than 200 bp. This is done after trimming and truncation.
+                      minLen=150, # Discard reads shorter than 200 bp. This is done after trimming and truncation.
                       compress=TRUE, # Output files in gzip format
                       verbose=TRUE) # give a message saying the percentage of filtered sequences
 ```
+
+
+About ~35 samples had a large number of reads but none of them passed the quality filter. Let's inspect quickly the quality profile of some of them.
+
+```{r}
+for (i in 195:234){ # printing 2 samples before & after the "abnormal samples", that actually passed the quality filter (as comparison)
+  show(plotQualityProfile(FNs[i]))
+}
+```
+
+The quality profile of these discarded samples show some abnormalities, and reads were also shorter than 150bp. It is not surprising none of the reads passed the quality filtering.
+
 
 Let's look at the output filtered fastq files as sanity check.
 
