@@ -3,8 +3,10 @@ title: "AGP_DataAnalysis"
 output:
   html_document:
     df_print: paged
-    toc: true
+    toc: yes
   pdf_document: default
+  html_notebook:
+    toc: yes
 ---
 
 ```{r, include=FALSE}
@@ -22,6 +24,7 @@ knitr::opts_chunk$set(fig.width = 15, fig.height = 5, warning=FALSE, message=FAL
 
 ```{r library-import}
 library(phyloseq) # for phyloseq object
+library(Biostrings)
 library(ggplot2)
 library(cowplot)
 library(tidyverse)
@@ -67,6 +70,8 @@ physeq.rel <- readRDS(file.path(path, "data/analysis-individual/AGP/02_EDA-AGP/p
 physeq.clr <- readRDS(file.path(path, "data/analysis-individual/AGP/02_EDA-AGP/physeq_clr.rds"))
 physeq.CSN <- readRDS(file.path(path, "data/analysis-individual/AGP/02_EDA-AGP/physeq_CSN.rds"))
 physeq.NZcomp <- readRDS(file.path(path, "data/analysis-individual/AGP/02_EDA-AGP/physeq_NZcomp.rds"))
+
+plot.df <- readRDS(file.path(path, "data/analysis-individual/AGP/02_EDA-AGP/plot-distances.rds"))
 ```
 
 
@@ -127,7 +132,7 @@ Looking at it more closely, there is a high proportion of Proteobacteria compare
 
 [1]: https://github.com/knightlab-analyses/bloom-analyses
 
-```{r}
+```{r bloom-sequences}
 # Import bloom sequences
 bloom <- readDNAStringSet(file.path(path, "data/analysis-individual/AGP/newbloom.all.fna"))
 
@@ -391,11 +396,13 @@ plotDistances2D <- function(dlist, ordination="MDS"){
 
 Now let's plot!
 
-```{r dist-run}
+```{r dist-run-1, echo=TRUE, eval=FALSE}
 # Get the distances & the plot data
 dist.agp <- getDistances()
 plot.df <- plotDistances2D(dist.agp)
+```
 
+```{r dist-run-2}
 # Plot
 ggplot(plot.df, aes(Axis.1, Axis.2, color=host_disease))+
   geom_point(size=2, alpha=0.5)  + scale_color_manual(values = c('blue', 'red'))+
@@ -405,7 +412,10 @@ ggplot(plot.df, aes(Axis.1, Axis.2, color=host_disease))+
   labs(color="Disease")
 
 # ggsave(file.path(path.plots, "distances4_MDS.jpg"), height = 4, width = 15)
+```
 
+
+```{r tong, echo=FALSE, eval=FALSE, include=FALSE}
 # Share with Tong
 plot_ordination(physeq.CSN,
                 ordinate(physeq.CSN, "PCoA", distance=dist.agp$Bray),
@@ -413,6 +423,7 @@ plot_ordination(physeq.CSN,
   theme_bw()
 ggsave(file.path(path.plots, "PCoA_bray.jpg"), height = 5, width = 7)
 ```
+
 
 
 ### 2. Plot in 3D
@@ -497,75 +508,7 @@ plotHeatmaps <- function(dlist, fontsize){
 
 
 # Get the heatmaps
-heatmp.zhuang <- plotHeatmaps(dlist = dist.zhuang, fontsize = 8)
+heatmp.agp <- plotHeatmaps(dlist = dist.agp, fontsize = 8)
 ```
-
-
-
-
-################################
-## REPRODUCE PLOTS FROM PAPER ##
-################################
-
-
-First, let's reproduce figure 1A. They performed a hierarchical clustering with UPGMA on the bray-curtis distance.
-
-```{r reproduce-fig1A, fig.width = 10, fig.height = 5}
-# ___________________________________________________________________________________________________________
-# FIGURE 1A
-
-# Hierarchical clustering on Bray-Curtis distance
-hc.average <- hclust(dist.zhuang$Bray, method = "average") # UPGMA = average
-
-# Make into dendogram
-dend.average <- as.dendrogram(hc.average)
-
-# Function that will allow to color the leaves of the tree according to disease type (healthy vs IBS)
-color_leaf<<-function(n){
-    if(is.leaf(n)){
-        # take the current attributes
-        a=attributes(n)
-        
-        # deduce the line in the original data, to get the corresponding disease status
-        line=match(attributes(n)$label, sample_names(physeq.filt))
-        disease=sample_data(physeq.filt)[line, "host_disease"];
-            if(disease=="Healthy"){col_disease="blue"};if(disease=="IBS"){col_disease="red"}
-        
-        #Modification of leaf attribute
-        attr(n,"nodePar") <- c(a$nodePar, list(cex=1.5, lab.cex=0.6, pch=20, col=col_disease, lab.font=1, lab.cex=1))
-        }
-    return(n)
-}
-
-# Apply the color attributes to the dendograms
-dend.average <- dendrapply(dend.average, color_leaf)
-
-# Plot
-par(mar=c(3,2,3,7), xpd=TRUE)
-plot(dend.average , main="Hierarchical clustering: UPGMA", horiz = T)
-legend(x = 35,
-     legend = c("Healthy" , "IBS"), 
-     col = c("blue", "red"), 
-     pch = c(20,20), bty = "n",  pt.cex = 1.5, cex = 1, 
-     text.col = "black", horiz = FALSE, inset = c(0, 0.1))
-
-```
-
-
-Now let's try to reproduce figure 1B. It's a PCoA of microbiome composition based on UniFrac.
-
-```{r reproduce-fig1B, fig.width = 6, fig.height = 5}
-# ___________________________________________________________________________________________________________
-# FIGURE 1B
-set.seed(123)
-fig.1B <- ordinate(physeq.rel, "PCoA", "unifrac", weighted=TRUE)
-plot_ordination(physeq.rel, fig.1B, color="host_disease", shape = "host_disease")+
-  geom_point(size=5, alpha=0.5) +
-  scale_color_manual(values = c('blue', 'red'))+ scale_shape_manual(values = c(17,16))+
-  theme_classic()+
-  ggtitle("PCoA on weighted-UniFrac distance")
-
-```
-
 
 
