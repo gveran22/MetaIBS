@@ -71,7 +71,8 @@ physeq.clr <- readRDS(file.path(path, "data/analysis-individual/AGP/02_EDA-AGP/p
 physeq.CSN <- readRDS(file.path(path, "data/analysis-individual/AGP/02_EDA-AGP/physeq_CSN.rds"))
 physeq.NZcomp <- readRDS(file.path(path, "data/analysis-individual/AGP/02_EDA-AGP/physeq_NZcomp.rds"))
 
-plot.df <- readRDS(file.path(path, "data/analysis-individual/AGP/02_EDA-AGP/plot-distances.rds"))
+dist.agp <- readRDS(file.path(path, "data/analysis-individual/AGP/02_EDA-AGP/distances.rds"))
+plot.df <- readRDS(file.path(path, "data/analysis-individual/AGP/02_EDA-AGP/plot_distances.rds"))
 ```
 
 
