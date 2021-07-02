@@ -74,3 +74,46 @@ suppDF <- paper_supp %>%
          host_sex=replace(host_sex, host_sex=="M", "male"))
 knitr::kable(suppDF, caption = "Supplementary data table")
 ```
+
+
+
+################
+# MERGE TABLES #
+################
+
+Let's merge tables to get a metadata table we will use for downstream analyses.
+
+```{r create-metadata-df}
+# MERGE TABLES
+clean.df <- left_join(sraDF, suppDF, by=c("host_ID", "time_point")) %>%
+  # Fill in the few NAs (covariates missing for a few 2nd time points)
+  group_by(host_ID) %>%
+  fill(host_subtype, .direction="down") %>%
+  fill(host_sex, .direction="down") %>%
+  fill(host_age, .direction="down") %>%
+  fill(host_bmi, .direction="down") %>%
+  fill(host_disease, .direction="down") %>%
+  ungroup() %>%
+  # Add some covariates
+  mutate(sample_type = "sigmoid") %>%
+  rename(Collection = "time_point") %>%
+  mutate(Collection=replace(Collection, Collection=="1", "1st"),
+         Collection=replace(Collection, Collection=="2", "2nd"))
+knitr::kable(clean.df, caption = "Final metadata table")
+```
+
+
+#################
+# SAVE METADATA #
+#################
+
+```{r save-data, echo=TRUE, eval=FALSE}
+# Export metadata table
+write.csv(clean.df, file.path(path, "data/analysis-individual/Mars-2020/00_Metadata-Mars/modif_metadata(R).csv"))
+
+# Export the list of Runs to download
+write.table(clean.df$Run, file.path(path, "data/analysis-individual/Mars-2020/original/list_files.txt"),
+            sep="\t", row.names=FALSE, col.names=FALSE, quote=FALSE)
+```
+
+
