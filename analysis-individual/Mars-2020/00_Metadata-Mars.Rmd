@@ -38,3 +38,39 @@ head(paper_supp)
 
 ```
 
+##################
+# CLEANUP TABLES #
+##################
+
+Let's keep only the necessary information in the tables.
+
+```{r cleanup-metadata}
+# CLEANUP SRADF
+sraDF <- sra_metadata %>%
+  filter(Assay.Type == "AMPLICON") %>%
+  select(all_of(c("Run", "title"))) %>%
+  separate(col=title, into=c("host_ID", "time_point"), sep="v", remove=TRUE)
+knitr::kable(sraDF, caption = "SRA metadata table")
+
+# CLEANUP PAPER SUPP
+suppDF <- paper_supp %>%
+  # Keep relevant columns
+  rename(host_subtype = "Cohort",
+         study_ID = "Study ID",
+         time_point = "Time point",
+         host_sex = "Gender",
+         host_age = "Age",
+         host_bmi = "BMI") %>%
+  select(all_of(c("host_subtype", "study_ID", "time_point", "host_sex", "host_age", "host_bmi"))) %>%
+  mutate(time_point = as.character(time_point)) %>%
+  # Get host_ID
+  separate(col=study_ID, into=c("void", "host_ID"), sep=4, remove=TRUE) %>%
+  select(-void) %>%
+  # Add host_disease
+  mutate(host_disease=gsub("IBS.*", "IBS", host_subtype)) %>%
+  mutate(host_subtype=replace(host_subtype, host_subtype=="Healthy", "HC")) %>%
+  # Rename host_sex
+  mutate(host_sex=replace(host_sex, host_sex=="F", "female"),
+         host_sex=replace(host_sex, host_sex=="M", "male"))
+knitr::kable(suppDF, caption = "Supplementary data table")
+```
