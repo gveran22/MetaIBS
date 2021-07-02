@@ -50,7 +50,7 @@ sraDF <- sra_metadata %>%
   filter(Assay.Type == "AMPLICON") %>%
   select(all_of(c("Run", "title"))) %>%
   separate(col=title, into=c("host_ID", "time_point"), sep="v", remove=TRUE)
-knitr::kable(sraDF, caption = "SRA metadata table")
+head(sraDF)
 
 # CLEANUP PAPER SUPP
 suppDF <- paper_supp %>%
@@ -72,7 +72,7 @@ suppDF <- paper_supp %>%
   # Rename host_sex
   mutate(host_sex=replace(host_sex, host_sex=="F", "female"),
          host_sex=replace(host_sex, host_sex=="M", "male"))
-knitr::kable(suppDF, caption = "Supplementary data table")
+head(suppDF)
 ```
 
 
@@ -99,7 +99,7 @@ clean.df <- left_join(sraDF, suppDF, by=c("host_ID", "time_point")) %>%
   rename(Collection = "time_point") %>%
   mutate(Collection=replace(Collection, Collection=="1", "1st"),
          Collection=replace(Collection, Collection=="2", "2nd"))
-knitr::kable(clean.df, caption = "Final metadata table")
+head(clean.df)
 ```
 
 
