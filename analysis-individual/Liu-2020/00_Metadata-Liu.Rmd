@@ -18,7 +18,6 @@ knitr::opts_chunk$set(warning=FALSE, message=FALSE,
 
 ## 1. Libraries
 ```{r import-libraries}
-library("readxl")
 library(data.table)
 library(tidyverse)
 ```
@@ -30,4 +29,41 @@ path <- "~/Projects/IBS_Meta-analysis_16S"
 # Metadata table downloaded from the SRA
 sra_metadata <- read.csv(file.path(path, "data/analysis-individual/Liu-2020/LiuSraRunTable.txt"), header=TRUE, sep = ",")
 head(sra_metadata)
+```
+
+
+##################
+# CLEANUP TABLE #
+##################
+
+```{r cleanup-metadata}
+clean.df <- sra_metadata %>%
+  # Select relevant columns
+  select(all_of(c("Run","Isolation_source", "sex", "AGE", "BMI", "Bristol", "IBS_SSS", "Collection_date"))) %>%
+  # Reformat DF
+  rename(host_subtype = Isolation_source,
+         host_sex = sex,
+         host_age = AGE,
+         host_bmi = BMI,
+         collection_date = Collection_date) %>%
+  mutate(host_disease = replace(host_subtype, host_subtype=="HC", "Healthy")) %>%
+  mutate(sample_type = "stool") %>%
+  relocate(host_disease, .after=Run) %>%
+  relocate(host_subtype, .after=IBS_SSS)
+
+head(clean.df)
+```
+
+
+#################
+# SAVE METADATA #
+#################
+
+```{r save-data, echo=TRUE, eval=FALSE}
+# Export metadata table
+write.csv(clean.df, file.path(path, "data/analysis-individual/Liu-2020/00_Metadata-Liu/modif_metadata(R).csv"))
+
+# Export the list of Runs to download
+write.table(clean.df$Run, file.path(path, "data/analysis-individual/Liu-2020/original/list_files.txt"),
+            sep="\t", row.names=FALSE, col.names=FALSE, quote=FALSE)
 ```
