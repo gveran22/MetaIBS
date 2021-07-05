@@ -444,6 +444,11 @@ clean.df %>%
 #################
 
 ```{r save-data, echo=TRUE, eval=FALSE}
+# Save the metadata
 write.table(clean.df, file.path(path, "data/analysis-individual/Hugerth-2019/00_Metadata-Hugerth/modif_metadata(R).csv"))
+
+# Export the list of Runs to download
+write.table(clean.df$Run, file.path(path, "data/analysis-individual/Hugerth-2019/original/list_files.txt"),
+            sep="\t", row.names=FALSE, col.names=FALSE, quote=FALSE)
 ```
 
