@@ -22,11 +22,11 @@ path <- "~/Projects/IBS_Meta-analysis_16S"
 
 # This csv file was downloaded from the SRA
 # with the accession number PRJEB11419
-sradf <- read.csv(file.path(path, "data/analysis-individual/AGP/SraRunTable.csv"))
+sradf <- read.csv(file.path(path, "data/analysis-individual/AGP/00_Metadata_AGP/SraRunTable.csv"))
 
 # This tsv file was downloaded from the figshare
 # link shared by the paper from McDonald et al., 2018
-paperdf <- read_tsv(file.path(path, "data/analysis-individual/AGP/correctedt2.tsv"))
+paperdf <- read_tsv(file.path(path, "data/analysis-individual/AGP/00_Metadata_AGP/correctedt2.tsv"))
 
 # Compare two tables
 dim(sradf) # 34,552 samples
