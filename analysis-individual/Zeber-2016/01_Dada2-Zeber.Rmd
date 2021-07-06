@@ -10,7 +10,7 @@ output:
 
 ```{r, include=FALSE}
 knitr::opts_chunk$set(fig.width = 3.5, fig.height = 3, warning=FALSE, message=FALSE,
-                      root.dir = "/Users/scarcy/Desktop/Praktikum/Data/Zeber-Lubecka_2016/")
+                      root.dir = "~/Projects/IBS_Meta-analysis_16S")
 ```
 
 
@@ -40,7 +40,7 @@ First, we import the fastq files containing the raw reads. The samples were down
 
 ```{r quality-check, echo=TRUE, results="hide"}
 # Save the path to the directory containing the fastq zipped files
-path <- "/Users/scarcy/Desktop/Praktikum/Data/Zeber-Lubecka_2016/"
+path <- "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Zeber-2016"
 list.files(path) # check we are in the right directory
 
 # fastq filenames have format: SAMPLENAME.fastq.gz
@@ -50,7 +50,7 @@ show(FNs[1:5])
 
 # Extract sample names, assuming filenames have format: SAMPLENAME.fastq.gz
 sample.names <- sapply(strsplit(basename(FNs), "_"), `[`, 1)
-show(sample.names) # saves only the file name (without the path)
+show(sample.names[1:5]) # saves only the file name (without the path)
 
 # Look at quality of all files
 for (i in 1:4){
@@ -81,18 +81,18 @@ plot_read_content(rc) + labs(title = "Per base sequence content")
 #_____________________________________________________________________
 
 # out process
-out <- readRDS("/Users/scarcy/Desktop/Praktikum/Data/Zeber-Lubecka_2016/Rproject_Dada2/out.rds")
+out <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Zeber-2016/01_Dada2-Zeber/out.rds")
 # look at quality
 filt_samples <- sort(list.files(file.path(path, "filtered"), pattern=".fastq.gz", full.names = TRUE))
 # error rates
-err <- readRDS("/Users/scarcy/Desktop/Praktikum/Data/Zeber-Lubecka_2016/Rproject_Dada2/error_rates.rds")
-err_new <- readRDS("/Users/scarcy/Desktop/Praktikum/Data/Zeber-Lubecka_2016/Rproject_Dada2/error_rates_modified.rds")
+err <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Zeber-2016/01_Dada2-Zeber/error_rates.rds")
+err_new <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Zeber-2016/01_Dada2-Zeber/error_rates_modified.rds")
 # infered sequences
-seq_infered <- readRDS("/Users/scarcy/Desktop/Praktikum/Data/Zeber-Lubecka_2016/Rproject_Dada2/seq_infered.rds")
+seq_infered <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Zeber-2016/01_Dada2-Zeber/seq_infered.rds")
 # taxa
-taxa <- readRDS("/Users/scarcy/Desktop/Praktikum/Data/OutputTaxa/taxa_zeber.rds")
+taxa <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/OutputTaxa/taxa_zeber.rds")
 # physeq
-physeq <- readRDS("/Users/scarcy/Desktop/Praktikum/Data/Zeber-Lubecka_2016/physeq_zeber.rds")
+physeq <- readRDS("~/Projects/IBS_Meta-analysis_16S/phyloseq-objects/physeq_zeber.rds")
 ```
 
 
@@ -355,15 +355,15 @@ physeq <- subset_taxa(physeq, !is.na(Phylum))
 
 ```{r save, eval=FALSE}
 # Save to disk
-saveRDS(out, "/Users/scarcy/Desktop/Praktikum/Data/Zeber-Lubecka_2016/Rproject_Dada2/out.rds")
-saveRDS(err, "/Users/scarcy/Desktop/Praktikum/Data/Zeber-Lubecka_2016/Rproject_Dada2/error_rates.rds")
-saveRDS(err_new, "/Users/scarcy/Desktop/Praktikum/Data/Zeber-Lubecka_2016/Rproject_Dada2/error_rates_modified.rds")
-saveRDS(seq_infered, "/Users/scarcy/Desktop/Praktikum/Data/Zeber-Lubecka_2016/Rproject_Dada2/seq_infered.rds")
+saveRDS(out, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Zeber-2016/01_Dada2-Zeber/out.rds")
+saveRDS(err, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Zeber-2016/01_Dada2-Zeber/error_rates.rds")
+saveRDS(err_new, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Zeber-2016/01_Dada2-Zeber/error_rates_modified.rds")
+saveRDS(seq_infered, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Zeber-2016/01_Dada2-Zeber/seq_infered.rds")
 
-saveRDS(otu_table(physeq), "/Users/scarcy/Desktop/Praktikum/Data/Zeber-Lubecka_2016/Rproject_Dada2/ASVtable_final.rds") # ASV table
-saveRDS(tax_table(physeq), "/Users/scarcy/Desktop/Praktikum/Data/Zeber-Lubecka_2016/Rproject_Dada2/taxa_final.rds") # taxa table
-saveRDS(sample_data(physeq), "/Users/scarcy/Desktop/Praktikum/Data/Zeber-Lubecka_2016/Rproject_Dada2/metadata_final.rds") # metadata table
-write.csv(sample_data(physeq), "/Users/scarcy/Desktop/Praktikum/Data/Zeber-Lubecka_2016/Rproject_Dada2/ZeberMetadata.csv")
+saveRDS(otu_table(physeq), "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Zeber-2016/01_Dada2-Zeber/ASVtable_final.rds") # ASV table
+saveRDS(tax_table(physeq), "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Zeber-2016/01_Dada2-Zeber/taxa_final.rds") # taxa table
+saveRDS(sample_data(physeq), "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Zeber-2016/01_Dada2-Zeber/metadata_final.rds") # metadata table
+write.csv(sample_data(physeq), "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Zeber-2016/01_Dada2-Zeber/ZeberMetadata.csv")
 
 saveRDS(physeq, "/Users/scarcy/Desktop/Praktikum/Data/Zeber-Lubecka_2016/physeq_zeber.rds") # phyloseq object
 
