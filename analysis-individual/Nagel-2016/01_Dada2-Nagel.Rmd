@@ -10,7 +10,7 @@ output:
 
 ```{r, include=FALSE}
 knitr::opts_chunk$set(fig.width = 3.5, fig.height = 3, warning=FALSE, message=FALSE,
-                      root.dir = "/Users/scarcy/Desktop/Praktikum/Data/Nagel_2016")
+                      root.dir = "~/Projects/IBS_Meta-analysis_16S/")
 ```
 
 
@@ -35,23 +35,23 @@ library(stringr)
 #_____________________________________________________________________
 #____________ THIS IS ONLY FOR (quicker) PDF OUTPUT __________________
 #_____________________________________________________________________
-path <- "/Users/scarcy/Desktop/Praktikum/Data/Nagel_2016/"
+path <- "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Nagel-2016/"
 # out process
-out1 <- readRDS("/Users/scarcy/Desktop/Praktikum/Data/Nagel_2016/Rproject_Dada2/out1.rds")
-out2 <- readRDS("/Users/scarcy/Desktop/Praktikum/Data/Nagel_2016/Rproject_Dada2/out2.rds")
+out1 <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Nagel-2016/out1.rds")
+out2 <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Nagel-2016/out2.rds")
 # look at quality
 trim_samples <- sort(list.files(file.path(path, "original_trim"), pattern=".fastq.gz", full.names = TRUE))
 filt1_samples <- sort(list.files(file.path(path, "filtered1"), pattern=".fastq.gz", full.names = TRUE))
 filt2_samples <- sort(list.files(file.path(path, "filtered2"), pattern=".fastq.gz", full.names = TRUE))
 # error rates
-err <- readRDS("/Users/scarcy/Desktop/Praktikum/Data/Nagel_2016/Rproject_Dada2/errorRates.rds")
-err_new <- readRDS("/Users/scarcy/Desktop/Praktikum/Data/Nagel_2016/Rproject_Dada2/errorRates_modif.rds")
+err <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Nagel-2016/errorRates.rds")
+err_new <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Nagel-2016/errorRates_modif.rds")
 # infered sequences
-seq_infered <- readRDS("/Users/scarcy/Desktop/Praktikum/Data/Nagel_2016/Rproject_Dada2/seq_infered.rds")
+seq_infered <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Nagel-2016/seq_infered.rds")
 # taxa
-taxa <- readRDS("/Users/scarcy/Desktop/Praktikum/Data/OutputTaxa/taxa_nagel.rds")
+taxa <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/OutputTaxa/taxa_nagel.rds")
 # phyloseq object
-physeq <- readRDS("/Users/scarcy/Desktop/Praktikum/Data/Nagel_2016/physeq_nagel.rds")
+physeq <- readRDS("~/Projects/IBS_Meta-analysis_16S/phyloseq-objects/physeq_nagel.rds")
 ```
 
 
@@ -64,7 +64,7 @@ First, we import the fastq files containing the raw reads. The samples were shar
 
 ```{r quality-check, echo=TRUE, results="hide", fig.height=3, fig.width=4}
 # Save the path to the directory containing the fastq zipped files
-path <- "/Users/scarcy/Desktop/Praktikum/Data/Nagel_2016/"
+path <- "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/"
 #list.files(path) # check we are in the right directory
 
 # fastq filenames have format: SAMPLENAME.fastq
@@ -416,7 +416,7 @@ The preprocessing will be easier to do with ASV, taxonomic and metadata tables c
 ```{r phyloseq-preprocess, echo=TRUE, eval=FALSE}
 #_________________________
 # Import metadata
-metadata_table <- read.table("/Users/scarcy/Desktop/Praktikum/Data/Nagel_2016/Nagel_metadata.csv", header = TRUE, sep = ",")
+metadata_table <- read.table("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Nagel_metadata.csv", header = TRUE, sep = ",")
 colnames(metadata_table)
 
 # Keep relevant data
@@ -447,19 +447,19 @@ physeq <- subset_taxa(physeq, !is.na(Phylum))
 
 ```{r save, eval=FALSE}
 # Save to disk
-saveRDS(out1, "/Users/scarcy/Desktop/Praktikum/Data/Nagel_2016/Rproject_Dada2/out1.rds")
-saveRDS(out2, "/Users/scarcy/Desktop/Praktikum/Data/Nagel_2016/Rproject_Dada2/out2.rds")
-saveRDS(err, "/Users/scarcy/Desktop/Praktikum/Data/Nagel_2016/Rproject_Dada2/errorRates.rds")
-saveRDS(err_new, "/Users/scarcy/Desktop/Praktikum/Data/Nagel_2016/Rproject_Dada2/errorRates_modif.rds")
-saveRDS(seq_infered, "/Users/scarcy/Desktop/Praktikum/Data/Nagel_2016/Rproject_Dada2/seq_infered.rds")
+saveRDS(out1, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Nagel-2016/out1.rds")
+saveRDS(out2, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Nagel-2016/out2.rds")
+saveRDS(err, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Nagel-2016/errorRates.rds")
+saveRDS(err_new, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Nagel-2016/errorRates_modif.rds")
+saveRDS(seq_infered, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Nagel-2016/seq_infered.rds")
 
 
-saveRDS(otu_table(physeq), "/Users/scarcy/Desktop/Praktikum/Data/Nagel_2016/Rproject_Dada2/ASVtable_final.rds") # ASV table
-saveRDS(tax_table(physeq), "/Users/scarcy/Desktop/Praktikum/Data/Nagel_2016/Rproject_Dada2/taxa_final.rds") # taxa table
-saveRDS(sample_data(physeq), "/Users/scarcy/Desktop/Praktikum/Data/Nagel_2016/Rproject_Dada2/metadata_final.rds") # metadata table
-write.csv(sample_data(physeq), "/Users/scarcy/Desktop/Praktikum/Data/Nagel_2016/Rproject_Dada2/NagelMetadata.csv")
+saveRDS(otu_table(physeq), "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Nagel-2016/ASVtable_final.rds") # ASV table
+saveRDS(tax_table(physeq), "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Nagel-2016/taxa_final.rds") # taxa table
+saveRDS(sample_data(physeq), "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Nagel-2016/metadata_final.rds") # metadata table
+write.csv(sample_data(physeq), "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Nagel-2016/NagelMetadata.csv")
 
-saveRDS(physeq, "/Users/scarcy/Desktop/Praktikum/Data/Nagel_2016/physeq_nagel.rds") # phyloseq object
+saveRDS(physeq, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/physeq_nagel.rds") # phyloseq object
 
 # Save nb of reads per sample before / after dada2 pipeline
 nb.reads <- readRDS("/Users/scarcy/Desktop/Praktikum/Data/nb_reads.rds")
