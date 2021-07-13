@@ -3,8 +3,9 @@ title: "Dada2_Mars"
 params:
   date: "!r Sys.Date()"
 output:
-  html_document: default
+  html_document:
     df_print: paged
+    toc: true
 ---
 
 ```{r, include=FALSE}
@@ -40,8 +41,8 @@ PRJNA566284.
 
 ```{r, quality-check, echo=TRUE, results="hide"}
 # Save the path to the directory containing the fastq zipped files
-path <- "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Zhu-2019"
-#list.files(path) # check we are in the right directory
+path <- "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Mars-2020"
+# list.files(path) # check we are in the right directory
 
 # fastq filenames have format: SAMPLENAME.fastq.gz
 # Saves the whole directory path to each file name
@@ -88,22 +89,22 @@ plot_read_content(rcR1) + labs(title = "Per base sequence content - Reverse read
 #__________________________________________________________________________
 
 # out process
-out2 <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Zhu-2019/01_Dada2-Zhu/out2.rds")
+out2 <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Mars-2020/01_Dada2-Mars/out2.rds")
 # quality profiles
 FWD.filt2_samples <- file.path(path, "filtered2", paste0(sample.names, "_1_filt.fastq.gz")) # FWD reads
 REV.filt2_samples <- file.path(path, "filtered2", paste0(sample.names, "_2_filt.fastq.gz")) # REV reads
 # error rates
-errF <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Zhu-2019/01_Dada2-Zhu/errF.rds")
-errR <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Zhu-2019/01_Dada2-Zhu/errR.rds")
+errF <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Mars-2020/01_Dada2-Mars/errF.rds")
+errR <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Mars-2020/01_Dada2-Mars/errR.rds")
 # infered sequences
-dadaFs <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Zhu-2019/01_Dada2-Zhu/infered_seq_F.rds")
-dadaRs <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Zhu-2019/01_Dada2-Zhu/infered_seq_R.rds")
+dadaFs <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Mars-2020/01_Dada2-Mars/infered_seq_F.rds")
+dadaRs <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Mars-2020/01_Dada2-Mars/infered_seq_R.rds")
 # mergers
-mergers <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Zhu-2019/01_Dada2-Zhu/mergers.rds")
+mergers <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Mars-2020/01_Dada2-Mars/mergers.rds")
 # taxa
-taxa <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/OutputTaxa/taxa_zhu.rds")
+taxa <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/OutputTaxa/taxa_Mars.rds")
 # phyloseq object
-physeq <- readRDS("~/Projects/IBS_Meta-analysis_16S/phyloseq-objects/physeq_zhu.rds")
+physeq <- readRDS("~/Projects/IBS_Meta-analysis_16S/phyloseq-objects/physeq_Mars.rds")
 ```
 
 
@@ -367,7 +368,7 @@ The preprocessing will be easier to do with ASV, taxonomic and metadata tables c
 ```{r phyloseq-object, echo=TRUE, eval=FALSE}
 #_________________________
 # Import metadata
-metadata_table <- read.table("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Zhu-2019/ZhuSraRunTable.txt", header = TRUE, sep = ",")
+metadata_table <- read.table("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Mars-2020/MarsSraRunTable.txt", header = TRUE, sep = ",")
 colnames(metadata_table)
 
 # Keep relevant data
@@ -380,7 +381,7 @@ sampledf$host_disease <- as.character(sampledf$host_disease)
 sampledf$host_disease[substr(sampledf$host_disease, start = 1, stop = 2) == "N_"] <- "Healthy" # Replace with better names
 sampledf$host_disease[substr(sampledf$host_disease, start = 1, stop = 2) == "F_"] <- "IBS" # Replace with better names
 
-sampledf$author <- "Zhu"
+sampledf$author <- "Mars"
 sampledf$sequencing_tech <- "Illumina"
 sampledf$variable_region <- "V4"
 
@@ -402,27 +403,27 @@ physeq <- subset_taxa(physeq, !is.na(Phylum))
 
 ```{r, eval=FALSE}
 # Save to disk
-saveRDS(out2, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Zhu-2019/01_Dada2-Zhu/out2.rds")
-saveRDS(errF, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Zhu-2019/01_Dada2-Zhu/errF.rds")
-saveRDS(errR, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Zhu-2019/01_Dada2-Zhu/errR.rds")
-saveRDS(dadaFs, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Zhu-2019/01_Dada2-Zhu/infered_seq_F.rds")
-saveRDS(dadaRs, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Zhu-2019/01_Dada2-Zhu/infered_seq_R.rds")
-saveRDS(mergers, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Zhu-2019/01_Dada2-Zhu/mergers.rds")
+saveRDS(out2, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Mars-2020/01_Dada2-Mars/out2.rds")
+saveRDS(errF, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Mars-2020/01_Dada2-Mars/errF.rds")
+saveRDS(errR, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Mars-2020/01_Dada2-Mars/errR.rds")
+saveRDS(dadaFs, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Mars-2020/01_Dada2-Mars/infered_seq_F.rds")
+saveRDS(dadaRs, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Mars-2020/01_Dada2-Mars/infered_seq_R.rds")
+saveRDS(mergers, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Mars-2020/01_Dada2-Mars/mergers.rds")
 
-saveRDS(otu_table(physeq), "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Zhu-2019/01_Dada2-Zhu/ASVtable_final.rds") # ASV table
-saveRDS(tax_table(physeq), "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Zhu-2019/01_Dada2-Zhu/taxa_final.rds") # taxa table
-saveRDS(sample_data(physeq), "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Zhu-2019/01_Dada2-Zhu/metadata_final.rds") # metadata table
-write.csv(sample_data(physeq), "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Zhu-2019/01_Dada2-Zhu/ZhuMetadata.csv")
+saveRDS(otu_table(physeq), "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Mars-2020/01_Dada2-Mars/ASVtable_final.rds") # ASV table
+saveRDS(tax_table(physeq), "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Mars-2020/01_Dada2-Mars/taxa_final.rds") # taxa table
+saveRDS(sample_data(physeq), "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Mars-2020/01_Dada2-Mars/metadata_final.rds") # metadata table
+write.csv(sample_data(physeq), "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Mars-2020/01_Dada2-Mars/MarsMetadata.csv")
 
-saveRDS(physeq, "~/Projects/IBS_Meta-analysis_16S/phyloseq-objects/physeq_zhu.rds") # phyloseq object
+saveRDS(physeq, "~/Projects/IBS_Meta-analysis_16S/phyloseq-objects/physeq_Mars.rds") # phyloseq object
 
 
 # Save nb of reads per sample before / after dada2 pipeline
 nb.reads <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/nb_reads.rds")
-nb.reads[1:29, 'Zhu_before'] <- fastqq(fnFs)@nReads
-nb.reads[1:29, 'Zhu_after'] <- rowSums(seqtable.nochim)
-median(na.omit(nb.reads$Zhu_before)) # sanity check
-median(na.omit(nb.reads$Zhu_after)) # sanity check
+nb.reads[1:29, 'Mars_before'] <- fastqq(fnFs)@nReads
+nb.reads[1:29, 'Mars_after'] <- rowSums(seqtable.nochim)
+median(na.omit(nb.reads$Mars_before)) # sanity check
+median(na.omit(nb.reads$Mars_after)) # sanity check
 saveRDS(nb.reads, "~/Projects/IBS_Meta-analysis_16S/data/nb_reads.rds")
 ```
 
