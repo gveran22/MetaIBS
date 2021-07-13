@@ -117,8 +117,8 @@ Now, we will look whether the reads still contain the primers. Primer sequences 
 
 ```{r primer-check, eval = TRUE, message=FALSE}
 # V4
-FWD <- "GTGCCAGCMGCCGCGGTAA"  # U515 forward primer sequence
-REV <- "GGACTACHVGGGTWTCTAAT" # E786 reverse primer sequence (in reality, it's the sequence of 5'-806-786-3')
+FWD <- "GTGCCAGCMGCCGCGGTAA"  # F515 forward primer sequence
+REV <- "GGACTACHVGGGTWTCTAAT" # R806 reverse primer sequence 
 
 # Function that, from the primer sequence, will return all combinations possible (complement, reverse complement, ...)
 allOrients <- function(primer) {
@@ -131,8 +131,8 @@ allOrients <- function(primer) {
 }
 
 # Get all combinations of the primer sequences
-FWD.orients <- allOrients(FWD) # U515
-REV.orients <- allOrients(REV) # E786
+FWD.orients <- allOrients(FWD) # F515
+REV.orients <- allOrients(REV) # R786
 FWD.orients # sanity check
 REV.orients
 
@@ -144,7 +144,7 @@ primerHits <- function(primer, fn) {
 }
 
 # Get a table to know how many times the U515 and E786 primers are found in the reads of each sample
-for (i in 1:29){
+for (i in 1:72){
   cat("SAMPLE", sample.names[i], "with total number of", raw_stats[i,'reads'], "reads\n\n")
   x <- rbind(ForwardRead.FWDPrimer = sapply(FWD.orients, primerHits, fn = fnFs[[i]]),
              ForwardRead.REVPrimer = sapply(REV.orients, primerHits, fn = fnFs[[i]]),
