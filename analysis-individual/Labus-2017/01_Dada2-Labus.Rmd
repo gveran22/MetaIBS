@@ -3,9 +3,9 @@ title: "Dada2_Labus2017"
 params:
   date: "!r Sys.Date()"
 output:
-  pdf_document: default
   html_document:
     df_print: paged
+    toc: true
 ---
 
 
@@ -198,17 +198,31 @@ Then, we perform a quality filtering of the reads.
 
 ```{r filter-trim, eval = FALSE, echo = TRUE}
 # Place filtered files in a filtered/ subdirectory
-filt2_samples <- file.path(path, "filtered2", paste0(sample.names, "_filt.fastq.gz"))
-# Assign names for the filtered fastq.gz files
-names(filt2_samples) <- sample.names
+# filt2_samples <- file.path(path, "filtered2", paste0(sample.names, "_filt.fastq.gz"))
+# # Assign names for the filtered fastq.gz files
+# names(filt2_samples) <- sample.names
+
+filt_test <- file.path(path, "filt_test", paste0(sample.names, "_filt.fastq.gz"))
+names(filt_test) <- sample.names
 
 # Filter
-out2 <- filterAndTrim(fwd = filt1_FNs, filt = filt2_samples,
-                      maxEE=4, # reads with more than 4 expected errors (sum(10e(-Q/10))) are discarded
+out2 <- filterAndTrim(fwd = filt1_samples, filt = filt_test, # filt = filt2_samples,
+                      maxEE=3, # reads with more than 4 expected errors (sum(10e(-Q/10))) are discarded
                       truncQ=10, # Truncate reads at the first instance of a quality score less than or equal to truncQ.
-                      minLen = 200, # Discard reads shorter than 200 bp. This is done after trimming and truncation.
+                      minLen=150, # Discard reads shorter than 200 bp. This is done after trimming and truncation.
                       compress=TRUE, # Output files in gzip format
                       verbose=TRUE) # give a message saying the percentage of filtered sequences
+
+test <- out2 %>%
+  as.data.frame() %>%
+  mutate(percent = reads.out*100 / reads.in) %>%
+  select(percent)
+mean(test$percent)
+
+out2 %>%
+  as.data.frame() %>%
+  filter(reads.out > 1000)
+
 ```
 
 Let's look at the output filtered fastq files as sanity check.

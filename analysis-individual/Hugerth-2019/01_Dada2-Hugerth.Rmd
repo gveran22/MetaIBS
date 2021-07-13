@@ -3,9 +3,9 @@ title: "Dada2_Hugherth2020"
 params:
   date: "!r Sys.Date()"
 output:
-  pdf_document: default
   html_document:
     df_print: paged
+    toc: true
 ---
 
 ```{r, include=FALSE}
@@ -49,7 +49,7 @@ fnFs <- sort(list.files(file.path(path, "original"), pattern="_1.fastq.gz", full
 fnRs <- sort(list.files(file.path(path, "original"), pattern="_2.fastq.gz", full.names = TRUE)) # reverse
 show(fnFs[1:5])
 show(fnRs[1:5])
-#length(fnFs) # should be 747
+#length(fnFs) # should be 607
 
 # Extract sample names, assuming filenames have format: SAMPLENAME.fastq.gz
 sample.names <- sapply(strsplit(basename(fnFs), "_"), `[`, 1)
@@ -231,28 +231,36 @@ Then, we perform a quality filtering of the reads.
 
 ```{r filter-trim, eval = FALSE, echo = TRUE}
 # Place filtered files in a filtered/ subdirectory
-FWD.filt2_samples <- file.path(path, "filtered2", paste0(sample.names, "_1_filt.fastq.gz")) # FWD reads
-REV.filt2_samples <- file.path(path, "filtered2", paste0(sample.names, "_2_filt.fastq.gz")) # REV reads
-# Assign names for the filtered fastq.gz files
-names(FWD.filt2_samples) <- sample.names
-names(REV.filt2_samples) <- sample.names
+# FWD.filt2_samples <- file.path(path, "filtered2", paste0(sample.names, "_1_filt.fastq.gz")) # FWD reads
+# REV.filt2_samples <- file.path(path, "filtered2", paste0(sample.names, "_2_filt.fastq.gz")) # REV reads
+# # Assign names for the filtered fastq.gz files
+# names(FWD.filt2_samples) <- sample.names
+# names(REV.filt2_samples) <- sample.names
+
+FWD.filt_test <- file.path(path, "filtest", paste0(sample.names, "_1_filt.fastq.gz")) # FWD reads
+REV.filt_test <- file.path(path, "filtest", paste0(sample.names, "_2_filt.fastq.gz")) # REV reads
+names(FWD.filt_test) <- sample.names
+names(REV.filt_test) <- sample.names
 
 # Create matrix that will count the reads input & reads output (after quality filter)
 out2 <- NULL
-out2 <- matrix(0L, nrow=length(747), ncol=2)
+out2 <- matrix(0L, nrow=length(607), ncol=2)
 colnames(out2) <- c("reads.in", "reads.out")
 
 
 # Quality filter
-for (i in 1:747){
+for (i in 1:607){
+  
+  # Follow computation
+  if(i%%10 == 0){print(i)}
   
   tryCatch({
     out <- NULL # initialize
-    out <- filterAndTrim(fwd = filt1_fnFs[i], filt = FWD.filt2_samples[i],
-                        rev = filt1_fnRs[i], filt.rev = REV.filt2_samples[i],
-                        maxEE=4, # reads with more than 4 expected errors (sum(10e(-Q/10))) are discarded
+    out <- filterAndTrim(fwd = FWD.filt1_samples[i], filt = FWD.filt_test[i], # filt = FWD.filt2_samples[i],
+                        rev = REV.filt1_samples[i], filt.rev = REV.filt_test[i], # filt.rev = REV.filt2_samples[i],
+                        maxEE=3, # reads with more than 4 expected errors (sum(10e(-Q/10))) are discarded
                         truncQ=10, # Truncate reads at the first instance of a quality score less than or equal to truncQ.
-                        minLen = 200, # Discard reads shorter than 200 bp. This is done after trimming and truncation.
+                        minLen = 150, # Discard reads shorter than 200 bp. This is done after trimming and truncation.
                         matchIDs = TRUE, # match forward & reverse reads (discard reads that don't have their pair)
                         multithread = TRUE,
                         compress=TRUE, # Output files in gzip format
@@ -268,6 +276,17 @@ for (i in 1:747){
 
 # Remove first row that only has 0
 out2 <- out2[-1,]
+
+test <- out2 %>%
+  as.data.frame() %>%
+  mutate(percent = reads.out*100 / reads.in) %>%
+  select(percent)
+mean(test$percent)
+
+out2 %>%
+  as.data.frame() %>%
+  filter(reads.out > 1000)
+
 
 # 3 files had an error, which ones?
 setdiff(sample.names, sub("_.*", "", rownames(out2)))

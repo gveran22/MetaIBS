@@ -6,7 +6,6 @@ output:
   html_document:
     df_print: paged
     toc: true
-  pdf_document: default
 ---
 
 ```{r, include=FALSE}
@@ -167,22 +166,36 @@ Then, we perform a quality filtering of the reads.
 
 ```{r quality-filter, eval = FALSE, echo = TRUE}
 # Place filtered files in a filtered/ subdirectory
-filt2_samples <- file.path(path, "filtered2", paste0(sample.names, "_filt.fastq.gz"))
-# Assign names for the filtered fastq.gz files
-names(filt2_samples) <- sample.names
+# filt2_samples <- file.path(path, "filtered2", paste0(sample.names, "_filt.fastq.gz"))
+# # Assign names for the filtered fastq.gz files
+# names(filt2_samples) <- sample.names
 
-out2 <- filterAndTrim(fwd = FNs, filt = filt2_samples,
-                      maxEE=4, # reads with more than 4 expected errors (sum(10e(-Q/10))) are discarded
-                      truncQ=10, # Truncate reads at the first instance of a quality score less than or equal to truncQ.
+filt_test <- file.path(path, "filt_test", paste0(sample.names, "_filt.fastq.gz"))
+names(filt_test) <- sample.names
+
+out2 <- filterAndTrim(fwd = FNs, filt = filt_test, # filt = filt2_samples,
+                      maxEE=3, # reads with more than 4 expected errors (sum(10e(-Q/10))) are discarded
+                      truncQ=15, # Truncate reads at the first instance of a quality score less than or equal to truncQ.
                       minLen=150, # Discard reads shorter than 200 bp. This is done after trimming and truncation.
                       compress=TRUE, # Output files in gzip format
                       verbose=TRUE) # give a message saying the percentage of filtered sequences
 
+test <- out2 %>%
+  as.data.frame() %>%
+  mutate(percent = reads.out*100 / reads.in) %>%
+  select(percent)
+mean(test$percent)
+
+out2 %>%
+  as.data.frame() %>%
+  filter(reads.out > 1000)
+
+
 # Update list of filtered files
-# FNs_filt <- file.path(path, "filtered2", paste0(sample.names, "_filt.fastq.gz"))
-FNs_filt <- sort(list.files(file.path(path, "filtered2"), pattern=".fastq.gz", full.names = TRUE))
-sample.names_filt <- sapply(strsplit(basename(FNs_filt), "_"), `[`, 1)
-names(FNs_filt) <- sample.names_filt
+## FNs_filt <- file.path(path, "filtered2", paste0(sample.names, "_filt.fastq.gz"))
+# FNs_filt <- sort(list.files(file.path(path, "filtered2"), pattern=".fastq.gz", full.names = TRUE))
+# sample.names_filt <- sapply(strsplit(basename(FNs_filt), "_"), `[`, 1)
+# names(FNs_filt) <- sample.names_filt
 
 ```
 

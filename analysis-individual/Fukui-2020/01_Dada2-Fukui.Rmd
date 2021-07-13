@@ -6,7 +6,6 @@ output:
   html_document:
     df_print: paged
     toc: true
-  pdf_document: default
 ---
 
 ```{r, include=FALSE}
@@ -178,22 +177,37 @@ Then, we perform a quality filtering of the reads.
 
 ```{r filter-trim, eval = FALSE, echo = TRUE}
 # Place filtered files in a filtered/ subdirectory
-FWD.filt2_samples <- file.path(path, "filtered2", paste0(sample.names, "_1_filt.fastq.gz")) # FWD reads
-REV.filt2_samples <- file.path(path, "filtered2", paste0(sample.names, "_2_filt.fastq.gz")) # REV reads
-# Assign names for the filtered fastq.gz files
-names(FWD.filt2_samples) <- sample.names
-names(REV.filt2_samples) <- sample.names
+# FWD.filt2_samples <- file.path(path, "filtered2", paste0(sample.names, "_1_filt.fastq.gz")) # FWD reads
+# REV.filt2_samples <- file.path(path, "filtered2", paste0(sample.names, "_2_filt.fastq.gz")) # REV reads
+# # Assign names for the filtered fastq.gz files
+# names(FWD.filt2_samples) <- sample.names
+# names(REV.filt2_samples) <- sample.names
+
+FWD.filt_test <- file.path(path, "filtest", paste0(sample.names, "_1_filt.fastq.gz")) # FWD reads
+REV.filt_test <- file.path(path, "filtest", paste0(sample.names, "_2_filt.fastq.gz")) # REV reads
+names(FWD.filt_test) <- sample.names
+names(REV.filt_test) <- sample.names
 
 # Filter
-out2 <- filterAndTrim(fwd = fnFs, filt = FWD.filt2_samples,
-                     rev = fnRs, filt.rev = REV.filt2_samples,
+out2 <- filterAndTrim(fwd = fnFs, filt = FWD.filt_test, # filt = FWD.filt2_samples,
+                     rev = fnRs, filt.rev = REV.filt_test, # filt.rev = REV.filt2_samples,
                      trimLeft = c(25,25), # trim primers
-                     maxEE=4, # reads with more than 4 expected errors (sum(10e(-Q/10))) are discarded
-                     truncQ=10, # Truncate reads at the first instance of a quality score less than or equal to truncQ.
-                     minLen = 200, # Discard reads shorter than 200 bp. This is done after trimming and truncation.
+                     maxEE=3, # reads with more than 4 expected errors (sum(10e(-Q/10))) are discarded
+                     truncQ=15, # Truncate reads at the first instance of a quality score less than or equal to truncQ.
+                     minLen = 150, # Discard reads shorter than 200 bp. This is done after trimming and truncation.
                      compress=TRUE, # Output files in gzip format
                      multithread = TRUE,
                      verbose=TRUE) # give a message saying the percentage of filtered sequences
+
+test <- out2 %>%
+  as.data.frame() %>%
+  mutate(percent = reads.out*100 / reads.in) %>%
+  select(percent)
+mean(test$percent)
+
+out2 %>%
+  as.data.frame() %>%
+  filter(reads.out > 1000)
 ```
 
 

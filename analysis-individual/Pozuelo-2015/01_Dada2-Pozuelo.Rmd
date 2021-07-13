@@ -3,14 +3,14 @@ title: "Dada2_Pozuelo2015"
 params:
   date: "!r Sys.Date()"
 output:
-  pdf_document: default
   html_document:
     df_print: paged
+    toc: true
 ---
 
 ```{r, include=FALSE}
 knitr::opts_chunk$set(fig.width = 3.5, fig.height = 3, warning=FALSE, message=FALSE,
-                      root.dir = "/Users/scarcy/Desktop/Praktikum/Data/Pozuelo_2015/")
+                      root.dir = "~/Projects/IBS_Meta-analysis_16S/")
 ```
 
 
@@ -40,7 +40,7 @@ First, we import the fastq files containing the raw reads. The samples were down
 
 ```{r quality-check, echo=TRUE}
 # Save the path to the directory containing the fastq zipped files
-path <- "/Users/scarcy/Desktop/Praktikum/Data/Pozuelo_2015/"
+path <- "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Pozuelo-2015"
 #list.files(path) # check we are in the right directory
 
 # fastq filenames have format: SAMPLENAME.fastq.gz
@@ -82,20 +82,20 @@ plot_read_content(rc) + xlim(0,50) + labs(title = "Per base sequence content")
 #_____________________________________________________________________
 
 # out process
-out1 <- readRDS("/Users/scarcy/Desktop/Praktikum/Data/Pozuelo_2015/Rproject_Dada2/out1.rds")
-out2 <- readRDS("/Users/scarcy/Desktop/Praktikum/Data/Pozuelo_2015/Rproject_Dada2/out2.rds")
-raw_stats <- readRDS("/Users/scarcy/Desktop/Praktikum/Data/Pozuelo_2015/Rproject_Dada2/raw_stats.rds")
+out1 <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Pozuelo-2015/Rproject_Dada2/out1.rds")
+out2 <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Pozuelo-2015/Rproject_Dada2/out2.rds")
+raw_stats <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Pozuelo-2015/Rproject_Dada2/raw_stats.rds")
 # look at quality
 filt1_samples <- sort(list.files(file.path(path, "filtered1"), pattern=".fastq.gz", full.names = TRUE))
 filt2_samples <- sort(list.files(file.path(path, "filtered2"), pattern=".fastq.gz", full.names = TRUE))
 # error rates
-err <- readRDS("/Users/scarcy/Desktop/Praktikum/Data/Pozuelo_2015/Rproject_Dada2/err.rds")
+err <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Pozuelo-2015/Rproject_Dada2/err.rds")
 # infered sequences
-seq_infered <- readRDS("/Users/scarcy/Desktop/Praktikum/Data/Pozuelo_2015/Rproject_Dada2/seq_infered.rds")
+seq_infered <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Pozuelo-2015/Rproject_Dada2/seq_infered.rds")
 # taxa
 taxa <- readRDS("/Users/scarcy/Desktop/Praktikum/Data/OutputTaxa/taxa_pozuelo.rds")
 # phyloseq object
-physeq <- readRDS("/Users/scarcy/Desktop/Praktikum/Data/Pozuelo_2015/physeq_pozuelo.rds")
+physeq <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Pozuelo-2015/physeq_pozuelo.rds")
 ```
 
 
@@ -195,16 +195,29 @@ Then, we perform a quality filtering of the reads.
 
 ```{r quality-filter, eval = FALSE, echo = TRUE}
 # Place filtered files in a filtered/ subdirectory
-filt2_samples <- file.path(path, "filtered2", paste0(sample.names, "_filt.fastq.gz"))
-# Assign names for the filtered fastq.gz files
-names(filt2_samples) <- sample.names
+# filt2_samples <- file.path(path, "filtered2", paste0(sample.names, "_filt.fastq.gz"))
+# # Assign names for the filtered fastq.gz files
+# names(filt2_samples) <- sample.names
 
-out2 <- filterAndTrim(fwd = filt1_FNs, filt = filt2_samples,
-                      maxEE=4, # reads with more than 4 expected errors (sum(10e(-Q/10))) are discarded
+filt_test <- file.path(path, "filt_test", paste0(sample.names, "_filt.fastq.gz"))
+names(filt_test) <- sample.names
+
+out2 <- filterAndTrim(fwd = filt1_samples, filt = filt_test, # filt = filt2_samples,
+                      maxEE=3, # reads with more than 4 expected errors (sum(10e(-Q/10))) are discarded
                       truncQ=10, # Truncate reads at the first instance of a quality score less than or equal to truncQ.
-                      minLen=200, # Discard reads shorter than 200 bp. This is done after trimming and truncation.
+                      minLen=150, # Discard reads shorter than 200 bp. This is done after trimming and truncation.
                       compress=TRUE, # Output files in gzip format
                       verbose=TRUE) # give a message saying the percentage of filtered sequences
+
+test <- out2 %>%
+  as.data.frame() %>%
+  mutate(percent = reads.out*100 / reads.in) %>%
+  select(percent)
+mean(test$percent)
+
+out2 %>%
+  as.data.frame() %>%
+  filter(reads.out > 1000)
 ```
 
 Let's look at the output filtered fastq files as sanity check.
@@ -368,7 +381,7 @@ The preprocessing will be easier to do with ASV, taxonomic and metadata tables c
 ```{r phyloseq-preprocess, echo=TRUE, eval=FALSE}
 #_________________________
 # Import metadata
-metadata_table <- read.table("/Users/scarcy/Desktop/Praktikum/Data/Pozuelo_2015/PozueloSraRunTable.txt", header = TRUE, sep = ",")
+metadata_table <- read.table("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Pozuelo-2015/PozueloSraRunTable.txt", header = TRUE, sep = ",")
 
 # Keep relevant covariates
 sampledf <- metadata_table[, c("Run", "Sample.Name", "Collection_Date")]
@@ -412,18 +425,18 @@ physeq <- subset_taxa(physeq, !is.na(Phylum))
 
 ```{r save, eval=FALSE}
 # Save to disk
-saveRDS(out1, "/Users/scarcy/Desktop/Praktikum/Data/Pozuelo_2015/Rproject_Dada2/out1.rds")
-saveRDS(out2, "/Users/scarcy/Desktop/Praktikum/Data/Pozuelo_2015/Rproject_Dada2/out2.rds")
-saveRDS(err, "/Users/scarcy/Desktop/Praktikum/Data/Pozuelo_2015/Rproject_Dada2/err.rds")
-saveRDS(seq_infered, "/Users/scarcy/Desktop/Praktikum/Data/Pozuelo_2015/Rproject_Dada2/seq_infered.rds")
+saveRDS(out1, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Pozuelo-2015/Rproject_Dada2/out1.rds")
+saveRDS(out2, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Pozuelo-2015/Rproject_Dada2/out2.rds")
+saveRDS(err, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Pozuelo-2015/Rproject_Dada2/err.rds")
+saveRDS(seq_infered, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Pozuelo-2015/Rproject_Dada2/seq_infered.rds")
 
 
-saveRDS(otu_table(physeq), "/Users/scarcy/Desktop/Praktikum/Data/Pozuelo_2015/Rproject_Dada2/ASVtable_final.rds") # ASV table
-saveRDS(tax_table(physeq), "/Users/scarcy/Desktop/Praktikum/Data/Pozuelo_2015/Rproject_Dada2/taxa_final.rds") # taxa table
-saveRDS(sample_data(physeq), "/Users/scarcy/Desktop/Praktikum/Data/Pozuelo_2015/Rproject_Dada2/metadata_final.rds") # metadata table
-write.csv(sample_data(physeq), "/Users/scarcy/Desktop/Praktikum/Data/Pozuelo_2015/Rproject_Dada2/PozueloMetadata.csv")
+saveRDS(otu_table(physeq), "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Pozuelo-2015/Rproject_Dada2/ASVtable_final.rds") # ASV table
+saveRDS(tax_table(physeq), "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Pozuelo-2015/Rproject_Dada2/taxa_final.rds") # taxa table
+saveRDS(sample_data(physeq), "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Pozuelo-2015/Rproject_Dada2/metadata_final.rds") # metadata table
+write.csv(sample_data(physeq), "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Pozuelo-2015/Rproject_Dada2/PozueloMetadata.csv")
 
-saveRDS(physeq, "/Users/scarcy/Desktop/Praktikum/Data/Pozuelo_2015/physeq_pozuelo.rds") # phyloseq object
+saveRDS(physeq, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Pozuelo-2015/physeq_pozuelo.rds") # phyloseq object
 
 
 # Save nb of reads per sample before / after dada2 pipeline

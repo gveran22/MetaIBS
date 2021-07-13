@@ -200,6 +200,21 @@ taxtable.new %>%
   ungroup() %>%
   count(verif)
 # Only TRUEs!! =)
+
+# check that the other sequences can be found within the biggest sequence
+for(asv in taxtable.new$ASV){
+  # get the list of sequences
+  seqs <- taxtable.new %>% filter(ASV %in% asv)
+  # if there is just 1 seq
+  if(length(seqs) == 1){ break }
+  # if there is 2 seqs or more
+  else{
+    bigseq <- seqs[which.max(nchar(seqs))] # get the longest sequence
+    seqs <- seqs[seqs != bigseq] # remove the longest sequence
+    
+  }
+}
+
 taxtable.new %>%
   group_by(ASV) %>%
   filter(sequence != sequence[which.min(nchar(sequence))]) %>%

@@ -63,7 +63,7 @@ First, we import the fastq files containing the raw reads. The samples were down
 
 ```{r quality-check, echo=TRUE}
 # Save the path to the directory containing the fastq zipped files
-path <- "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Liu"
+path <- "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Liu-2020"
 # list.files(path) # check we are in the right directory
 
 # fastq filenames have format: SAMPLENAME.fastq.gz
@@ -81,8 +81,8 @@ for (i in 1:4){ # 1:length(FNs)
 }
 
 # Look at nb of reads per sample
-# raw_stats <- data.frame('sample' = sample.names,
-#                         'reads' = fastqq(FNs)@nReads)
+raw_stats <- data.frame('sample' = sample.names,
+                        'reads' = fastqq(FNs)@nReads)
 min(raw_stats$reads)
 max(raw_stats$reads)
 mean(raw_stats$reads)
@@ -93,10 +93,11 @@ We will have a quick peak at the per base sequence content of the reads in some 
 
 ```{r per-base-seq-content, fig.width = 6, fig.height = 3}
 # Look at per base sequence content
-fseq <- seqTools::fastqq(FNs[4])
+fseq <- seqTools::fastqq(FNs[2])
 rc <- read_content(fseq)
 plot_read_content(rc) + labs(title = "Per base sequence content")
 plot_read_content(rc) + xlim(0,50) + labs(title = "Per base sequence content")
+# GTGRGGAATATT
 ```
 
 
@@ -113,7 +114,7 @@ metadata <- read.csv(file.path(path, "Metadata-Liu.csv"))
 table(metadata$pcr_primers..exp.)
 
 # V4
-FWD <- "GTGYCAGCMGCCGCGGTAA"  # 515F primer sequence
+FWD <- "ACTCCTACGGGAGGCAGCA"  # 338F primer sequence
 REV <- "GGACTACHVGGGTWTCTAAT" # 806R primer sequence
 
 # Function that, from the primer sequence, will return all combinations possible (complement, reverse complement, ...)
@@ -127,7 +128,7 @@ allOrients <- function(primer) {
 }
 
 # Get all combinations of the primer sequences
-FWD.orients <- allOrients(FWD) # 515F
+FWD.orients <- allOrients(FWD) # 338F
 REV.orients <- allOrients(REV) # 806R
 FWD.orients # sanity check
 REV.orients
@@ -157,7 +158,23 @@ for (i in 1:4){ # 1:length(FNs)
 
 ### 1. Primer removal
 
-The reads do not contain any primer. We will go forward directly with the quality filtering.
+```{r primer-filter, eval = FALSE, echo = TRUE}
+# KEEP READS WITH PRIMER AND REMOVE PRIMER
+# Place filtered files in a filtered/ subdirectory
+filt1_samples <- file.path(path, "filtered1", paste0(sample.names, "_filt.fastq.gz"))
+# Assign names for the filtered fastq.gz files
+names(filt1_samples) <- sample.names
+
+# Filter first to take out primer
+out1 <- removePrimers(fn = FNs, fout = filt1_samples,
+                      primer.fwd = 'GTGRGGAATATT', # sequence found at the beginning of all reads
+                      primer.rev = REV.orients['RevComp'], # revcomp of the reverse primer, found at the end of the reads
+                      trim.fwd = TRUE,
+                      trim.rev = TRUE,
+                      orient = FALSE, # keep the reads in their original orientation
+                      compress = TRUE, verbose = TRUE)
+```
+
 
 
 ### 2. Quality filtering
@@ -166,22 +183,36 @@ Then, we perform a quality filtering of the reads.
 
 ```{r quality-filter, eval = FALSE, echo = TRUE}
 # Place filtered files in a filtered/ subdirectory
-filt2_samples <- file.path(path, "filtered2", paste0(sample.names, "_filt.fastq.gz"))
-# Assign names for the filtered fastq.gz files
-names(filt2_samples) <- sample.names
+# filt2_samples <- file.path(path, "filtered2", paste0(sample.names, "_filt.fastq.gz"))
+# # Assign names for the filtered fastq.gz files
+# names(filt2_samples) <- sample.names
 
-out2 <- filterAndTrim(fwd = FNs, filt = filt2_samples,
-                      maxEE=4, # reads with more than 4 expected errors (sum(10e(-Q/10))) are discarded
-                      truncQ=10, # Truncate reads at the first instance of a quality score less than or equal to truncQ.
+filt_test <- file.path(path, "filt_test", paste0(sample.names, "_filt.fastq.gz"))
+names(filt_test) <- sample.names
+
+out2 <- filterAndTrim(fwd = FNs, filt = filt_test, # filt = filt2_samples,
+                      maxEE=3, # reads with more than 4 expected errors (sum(10e(-Q/10))) are discarded
+                      truncQ=15, # Truncate reads at the first instance of a quality score less than or equal to truncQ.
                       minLen=150, # Discard reads shorter than 200 bp. This is done after trimming and truncation.
                       compress=TRUE, # Output files in gzip format
                       verbose=TRUE) # give a message saying the percentage of filtered sequences
 
+test <- out2 %>%
+  as.data.frame() %>%
+  mutate(percent = reads.out*100 / reads.in) %>%
+  select(percent)
+mean(test$percent)
+
+out2 %>%
+  as.data.frame() %>%
+  filter(reads.out > 1000)
+
+
 # Update list of filtered files
 # FNs_filt <- file.path(path, "filtered2", paste0(sample.names, "_filt.fastq.gz"))
-FNs_filt <- sort(list.files(file.path(path, "filtered2"), pattern=".fastq.gz", full.names = TRUE))
-sample.names_filt <- sapply(strsplit(basename(FNs_filt), "_"), `[`, 1)
-names(FNs_filt) <- sample.names_filt
+# FNs_filt <- sort(list.files(file.path(path, "filtered2"), pattern=".fastq.gz", full.names = TRUE))
+# sample.names_filt <- sapply(strsplit(basename(FNs_filt), "_"), `[`, 1)
+# names(FNs_filt) <- sample.names_filt
 
 ```
 
