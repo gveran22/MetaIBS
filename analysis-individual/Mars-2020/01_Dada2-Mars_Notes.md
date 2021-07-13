@@ -27,3 +27,27 @@ Mars et al. (_Cell_, 2020) - [Longitudinal Multi-omics Reveals Subset-Specific M
 ## Filtering
 - **primer removal**: fastq files deposited on the SRA/ENA databases don't contain Ilumina headers, which are needed to merge paired reads later on. Thus, primer sequences could not be removed (the first 20bp and last 30bp were trimmed instead).
 - **quality filtering**: \~64% of reads are kept.
+
+## Learn error rates
+- parametric error model fits data
+
+## Construct ASV table
+### a) Infer sequence variants
+- 3,733 amplicon sequence variants (ASVs)
+
+### b) Remove chimeras
+- 2,789 seq variants (but still >90% reads kept)
+
+### c) Assign taxonomy
+Taxonomy assigned with Silva v138.
+- Bacteria - ...
+- Archaea - ...
+- Eukaryota - ...
+There was ... unassigned phyla. The final ASV table contains **... sequence variants**.
+
+## Metadata
+- IBS subtype
+- gender
+- age
+- BMI
+- collection time (0 - 6 months)
