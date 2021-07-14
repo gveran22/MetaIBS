@@ -24,3 +24,6 @@ Liu et al. (_BMC Microbiology_, 2020) - [Microbial and metabolomic profiles in c
 ## Filtering
 - **primers removal** - not applied (requires a forward primer)
 - **quality filter** - ~81% reads kept per sample.
+
+## Learn error rates
+- parametric error model fits data

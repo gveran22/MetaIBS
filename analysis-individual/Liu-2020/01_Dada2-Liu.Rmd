@@ -220,13 +220,13 @@ De-replication is a common step in almost all modern ASV inference (or OTU picki
 
 ```{r infer-sample-composition, eval = FALSE}
 # Prepare empty vector for the infered sequences
-seq_infered <- vector("list", length(sample.names_filt))
-names(seq_infered) <- sample.names_filt # names of each row will be the sample names
+seq_infered <- vector("list", length(sample.names))
+names(seq_infered) <- sample.names # names of each row will be the sample names
 
-# Iterate through the 1242 samples
-for(sampl in sample.names_filt) {
+# Iterate through the 128 samples
+for(sampl in sample.names) {
   cat("Processing:", sampl, "\n") # print which sample is being processed
-  derep <- derepFastq(FNs_filt[[sampl]]) # dereplicate the reads in the sample
+  derep <- derepFastq(filt2_samples[[sampl]]) # dereplicate the reads in the sample
   seq_infered[[sampl]] <- dada(derep, err=err, multithread=TRUE) # default parameters
 }
 ```
