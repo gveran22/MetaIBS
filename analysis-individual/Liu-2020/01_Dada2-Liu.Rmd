@@ -59,7 +59,8 @@ physeq <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Liu
 ##  QUALITY CHECK  ##
 #####################
 
-First, we import the fastq files containing the raw reads. The samples were downloaded from the SRA database with the accession number PRJEB11419. IBS and healthy samples were selected out of the thousands of samples as described in [00_Metadata-Liu.R](00_Metadata-Liu.R).
+First, we import the fastq files containing the raw reads. The samples were downloaded from the SRA database with the accession number 
+PRJNA544721.
 
 ```{r quality-check, echo=TRUE}
 # Save the path to the directory containing the fastq zipped files
@@ -76,7 +77,7 @@ sample.names <- sapply(strsplit(basename(FNs), "_"), `[`, 1)
 show(sample.names[1:5]) # saves only the file name (without the path)
 
 # Look at quality of all files
-for (i in 1:4){ # 1:length(FNs)
+for (i in 1:length(FNs)){ # 1:length(FNs)
   show(plotQualityProfile(FNs[i]))
 }
 
