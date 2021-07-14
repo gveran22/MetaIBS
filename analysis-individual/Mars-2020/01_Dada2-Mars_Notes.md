@@ -16,7 +16,6 @@ Mars et al. (_Cell_, 2020) - [Longitudinal Multi-omics Reveals Subset-Specific M
 - **Nb of reads per sample** - mean of 68,693 reads per sample (1,633 - 129,697)
 - **Read length** - ~300 bp
 - **Quality** - excellent
-- **Per base sequence content** - first few bases are always the same (corresponding to primer), then base content is fluctuating, as expected.
 
 ## Primers
 - V4 variable region (about 250bp)

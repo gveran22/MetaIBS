@@ -14,4 +14,13 @@ Liu et al. (_BMC Microbiology_, 2020) - [Microbial and metabolomic profiles in c
 - **Nb of reads per sample** - mean of 49,952 reads per sample (30,739 - 73,625)
 - **Read length** - ~420 bp
 - **Quality** - excellent
-- **Per base sequence content** - first few bases are always the same (corresponding to primer), then base content is fluctuating, as expected.
+
+## Primers
+- V3-V4 variable regions (about 450bp)
+- FWD - 338F - 5’ - ACTCCTACGGGAGGCAGCA - 3’
+- REV -  806R - 5’ - GGACTACHVGGGTWTCTAAT - 3’
+- reverse complement of the reverse primer is found at the very end of >95% of the reads
+
+## Filtering
+- **primers removal** - not applied (requires a forward primer)
+- **quality filter** - ~81% reads kept per sample.

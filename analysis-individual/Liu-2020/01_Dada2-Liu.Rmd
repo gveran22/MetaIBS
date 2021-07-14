@@ -94,7 +94,7 @@ We will have a quick peak at the per base sequence content of the reads in some 
 
 ```{r per-base-seq-content, fig.width = 6, fig.height = 3}
 # Look at per base sequence content
-fseq <- seqTools::fastqq(FNs[2])
+fseq <- seqTools::fastqq(FNs[10])
 rc <- read_content(fseq)
 plot_read_content(rc) + labs(title = "Per base sequence content")
 plot_read_content(rc) + xlim(0,50) + labs(title = "Per base sequence content")
@@ -110,11 +110,7 @@ plot_read_content(rc) + xlim(0,50) + labs(title = "Per base sequence content")
 Now, we will look whether the reads still contain the primers.
 
 ```{r primer-check, eval = TRUE, message=FALSE}
-# Import metadata, that contains the primer sequences
-metadata <- read.csv(file.path(path, "Metadata-Liu.csv"))
-table(metadata$pcr_primers..exp.)
-
-# V4
+# V3-V4
 FWD <- "ACTCCTACGGGAGGCAGCA"  # 338F primer sequence
 REV <- "GGACTACHVGGGTWTCTAAT" # 806R primer sequence
 
@@ -125,7 +121,7 @@ allOrients <- function(primer) {
     dna <- DNAString(primer)  # The Biostrings works w/ DNAString objects rather than character vectors
     orients <- c(Forward = dna, Complement = complement(dna), Reverse = reverse(dna), 
         RevComp = reverseComplement(dna))
-    return(sapply(orients, toString))  # Convert back to character vector
+    return(sapply(orients, toString))
 }
 
 # Get all combinations of the primer sequences
@@ -136,13 +132,12 @@ REV.orients
 
 # Function that counts number of reads in which a sequence is found
 primerHits <- function(primer, fn) {
-    # Counts number of reads in which the primer is found
     nhits <- vcountPattern(primer, sread(readFastq(fn)), fixed = FALSE, max.mismatch = 2)
     return(sum(nhits > 0))
 }
 
 # Get a table to know how many times the 515F and 806R primers are found in the reads of each sample
-for (i in 1:4){ # 1:length(FNs)
+for (i in 1:5){ # 1:length(FNs)
   cat("SAMPLE", sample.names[i], "with total number of", raw_stats[i,'reads'], "reads\n\n")
   x <-  rbind(ForwardPrimer = sapply(FWD.orients, primerHits, fn = FNs[[i]]), 
               ReversePrimer = sapply(REV.orients, primerHits, fn = FNs[[i]]))
@@ -159,23 +154,8 @@ for (i in 1:4){ # 1:length(FNs)
 
 ### 1. Primer removal
 
-```{r primer-filter, eval = FALSE, echo = TRUE}
-# KEEP READS WITH PRIMER AND REMOVE PRIMER
-# Place filtered files in a filtered/ subdirectory
-filt1_samples <- file.path(path, "filtered1", paste0(sample.names, "_filt.fastq.gz"))
-# Assign names for the filtered fastq.gz files
-names(filt1_samples) <- sample.names
-
-# Filter first to take out primer
-out1 <- removePrimers(fn = FNs, fout = filt1_samples,
-                      primer.fwd = 'GTGRGGAATATT', # sequence found at the beginning of all reads
-                      primer.rev = REV.orients['RevComp'], # revcomp of the reverse primer, found at the end of the reads
-                      trim.fwd = TRUE,
-                      trim.rev = TRUE,
-                      orient = FALSE, # keep the reads in their original orientation
-                      compress = TRUE, verbose = TRUE)
-```
-
+Only the reverse primer is found in the reads. We can not use the _removePrimers_ function, that requires a forward primer sequence.
+However, as the reverse complement of the reverse primer is found at the very end of >95% of the reads, we can simply trim the last 20bp of the reads.
 
 
 ### 2. Quality filtering
@@ -184,50 +164,19 @@ Then, we perform a quality filtering of the reads.
 
 ```{r quality-filter, eval = FALSE, echo = TRUE}
 # Place filtered files in a filtered/ subdirectory
-# filt2_samples <- file.path(path, "filtered2", paste0(sample.names, "_filt.fastq.gz"))
-# # Assign names for the filtered fastq.gz files
-# names(filt2_samples) <- sample.names
+filt2_samples <- file.path(path, "filtered2", paste0(sample.names, "_filt.fastq.gz"))
+# Assign names for the filtered fastq.gz files
+names(filt2_samples) <- sample.names
 
-filt_test <- file.path(path, "filt_test", paste0(sample.names, "_filt.fastq.gz"))
-names(filt_test) <- sample.names
-
-out2 <- filterAndTrim(fwd = FNs, filt = filt_test, # filt = filt2_samples,
-                      maxEE=3, # reads with more than 4 expected errors (sum(10e(-Q/10))) are discarded
-                      truncQ=15, # Truncate reads at the first instance of a quality score less than or equal to truncQ.
+out2 <- filterAndTrim(fwd = FNs, filt = filt2_samples,
+                      trimRight=20,
+                      maxEE=3, # reads with more than 3 expected errors (sum(10e(-Q/10))) are discarded
+                      truncQ=10, # Truncate reads at the first instance of a quality score less than or equal to truncQ.
                       minLen=150, # Discard reads shorter than 200 bp. This is done after trimming and truncation.
-                      compress=TRUE, # Output files in gzip format
-                      verbose=TRUE) # give a message saying the percentage of filtered sequences
-
-test <- out2 %>%
-  as.data.frame() %>%
-  mutate(percent = reads.out*100 / reads.in) %>%
-  select(percent)
-mean(test$percent)
-
-out2 %>%
-  as.data.frame() %>%
-  filter(reads.out > 1000)
-
-
-# Update list of filtered files
-# FNs_filt <- file.path(path, "filtered2", paste0(sample.names, "_filt.fastq.gz"))
-# FNs_filt <- sort(list.files(file.path(path, "filtered2"), pattern=".fastq.gz", full.names = TRUE))
-# sample.names_filt <- sapply(strsplit(basename(FNs_filt), "_"), `[`, 1)
-# names(FNs_filt) <- sample.names_filt
-
+                      multithread=TRUE,
+                      compress=TRUE,
+                      verbose=TRUE)
 ```
-
-
-About ~35 samples had a large number of reads but none of them passed the quality filter. Let's inspect quickly the quality profile of some of them.
-
-```{r}
-for (i in 195:234){ # printing 2 samples before & after the "abnormal samples", that actually passed the quality filter (as comparison)
-  show(plotQualityProfile(FNs[i]))
-}
-```
-
-The quality profile of these discarded samples show some abnormalities, and reads were also shorter than 150bp. It is not surprising none of the reads passed the quality filtering.
-
 
 Let's look at the output filtered fastq files as sanity check.
 
@@ -249,7 +198,7 @@ for (i in 1:4){
 Now we will build the parametric error model, to be able to infer amplicon sequence variants (ASVs) later on.
 
 ```{r error-rate-estimate, eval = FALSE}
-err <- learnErrors(FNs_filt, multithread=TRUE, randomize=TRUE, verbose = 1)
+err <- learnErrors(filt2_samples, multithread=TRUE, randomize=TRUE, verbose = 1)
 ```
 
 The error rates for each possible transition (A→C, A→G, …) are shown. Points are the observed error rates for each consensus quality score. The black line shows the estimated error rates after convergence of the machine-learning algorithm. The red line shows the error rates expected under the nominal definition of the Q-score. Here the estimated error rates (black line) are a good fit to the observed rates (points), and the error rates drop with increased quality as expected.
