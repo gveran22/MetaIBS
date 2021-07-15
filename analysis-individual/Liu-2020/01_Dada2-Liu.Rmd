@@ -248,11 +248,18 @@ We can now construct an amplicon sequence variant table (ASV) table, a higher-re
 # Make sequence table from the infered sequence variants
 seqtable <- makeSequenceTable(seq_infered)
 
-# We should have 1242 samples (1242 rows)
+# We should have 128 samples (128 rows)
 dim(seqtable)
 
 # Inspect distribution of sequence lengths
 hist(nchar(getSequences(seqtable)), breaks = 100, xlab = "ASV length", ylab = "Number of ASVs", main="")
+
+# Sequences should be between 338F - 806R, so around ~420bp (removing the primers lengths).
+
+# Remove any sequence variant below 350bp
+seqtable.new <- seqtable[,nchar(colnames(seqtable)) >= 350]
+dim(seqtable.new)
+hist(nchar(getSequences(seqtable.new)), breaks = 100, xlab = "Read length", ylab = "Number of reads", main="")
 ```
 
 
@@ -261,7 +268,7 @@ hist(nchar(getSequences(seqtable)), breaks = 100, xlab = "ASV length", ylab = "N
 The core dada method corrects substitution and indel errors, but chimeras remain. Fortunately, the accuracy of sequence variants after denoising makes identifying chimeric ASVs simpler than when dealing with fuzzy OTUs. Chimeric sequences are identified if they can be exactly reconstructed by combining a left-segment and a right-segment from two more abundant “parent” sequences.
 
 ```{r remove-chimeras}
-seqtable.nochim <- removeBimeraDenovo(seqtable, method="consensus", multithread=TRUE, verbose=TRUE)
+seqtable.nochim <- removeBimeraDenovo(seqtable.new, method="consensus", multithread=TRUE, verbose=TRUE)
 
 # Check how many sequence variants we have after removing chimeras
 dim(seqtable.nochim)
@@ -284,24 +291,16 @@ Sanity check before assigning taxonomy.
 getN <- function(x) sum(getUniques(x))
 
 # Table that will count number of reads for each process of interest (input reads, filtered reads, denoised reads, non chimera reads)
-rownames(out2) <- sapply(strsplit(rownames(out2), "_"), `[`, 1)
-track <- out2 %>%
-  as.data.frame() %>%
-  mutate(Run=rownames(out2)) %>%
-  rename("input"="reads.in",
-         "quality-filt"="reads.out") %>%
-  left_join(sapply(seq_infered, getN) %>%
-              as.data.frame %>% 
-              rename(denoised=".") %>%
-              mutate(Run=names(sapply(seq_infered, getN))),
-            by="Run") %>%
-  left_join(rowSums(seqtable.nochim) %>%
-              as.data.frame %>%
-              rename(nonchim=".") %>%
-              mutate(Run=rownames(seqtable.nochim)),
-            by="Run") %>%
-  relocate(Run) %>%
-  mutate("%kept_input->output"=as.integer(nonchim*100/input))
+track <- cbind(out2,
+               sapply(seq_infered, getN),
+               rowSums(seqtable.nochim),
+               lapply(rowSums(seqtable.nochim)*100/out2[,1], as.integer))
+# Assign column and row names
+colnames(track) <- c("input", "quality-filt",
+                     "denoised",
+                     "nonchim",
+                     "%input->output")
+rownames(track) <- sample.names
 
 # Show final table: for each row/sample, we have shown the initial number of reads, filtered reads, denoised reads, and non chimera reads
 track
@@ -351,11 +350,6 @@ The preprocessing will be easier to do with ASV, taxonomic and metadata tables c
 #_________________________
 # Import metadata
 metadata <- read.csv(file.path(path, "Metadata-Liu.csv"))
-
-# Keep relevant covariates
-sampledf <- metadata %>%
-  select(-"pcr_primers..exp.")
-rownames(sampledf) <- sampledf$Run
 
 sampledf$author <- "Liu"
 sampledf$sequencing_tech <- "Illumina"
