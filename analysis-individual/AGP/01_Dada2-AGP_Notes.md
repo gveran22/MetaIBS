@@ -14,7 +14,6 @@ IBS and healthy samples were selected out of the pool of >30,000 samples deposit
 - **Nb of reads per sample** - mean of 30,914 reads per sample (1 - 502,121)
 - **Read length** - ~150 bp
 - **Quality** - excellent
-- **Per base sequence content** - fluctuating per-base sequence content (no primer at the beginning of reads?...)
 
 
 ## Primers
@@ -34,10 +33,10 @@ IBS and healthy samples were selected out of the pool of >30,000 samples deposit
 
 ## Construct ASV table
 ### a) Infer sequence variants
-- 27,790 amplicon sequence variants (ASVs)
+- 28,348 amplicon sequence variants (ASVs)
 
 ### b) Remove chimeras
-- 18,431 seq variants (but still >95% reads kept)
+- 18,673 seq variants (but still >95% reads kept)
 
 ### c) Assign taxonomy
 Taxonomy assigned with Silva v138.

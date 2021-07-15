@@ -81,8 +81,8 @@ for (i in 1:4){ # 1:length(FNs)
 }
 
 # Look at nb of reads per sample
-# raw_stats <- data.frame('sample' = sample.names,
-#                         'reads' = fastqq(FNs)@nReads)
+raw_stats <- data.frame('sample' = sample.names,
+                        'reads' = fastqq(FNs)@nReads)
 min(raw_stats$reads)
 max(raw_stats$reads)
 mean(raw_stats$reads)
@@ -166,36 +166,23 @@ Then, we perform a quality filtering of the reads.
 
 ```{r quality-filter, eval = FALSE, echo = TRUE}
 # Place filtered files in a filtered/ subdirectory
-# filt2_samples <- file.path(path, "filtered2", paste0(sample.names, "_filt.fastq.gz"))
-# # Assign names for the filtered fastq.gz files
-# names(filt2_samples) <- sample.names
+filt2_samples <- file.path(path, "filtered2", paste0(sample.names, "_filt.fastq.gz"))
+# Assign names for the filtered fastq.gz files
+names(filt2_samples) <- sample.names
 
-filt_test <- file.path(path, "filt_test", paste0(sample.names, "_filt.fastq.gz"))
-names(filt_test) <- sample.names
-
-out2 <- filterAndTrim(fwd = FNs, filt = filt_test, # filt = filt2_samples,
-                      maxEE=3, # reads with more than 4 expected errors (sum(10e(-Q/10))) are discarded
-                      truncQ=15, # Truncate reads at the first instance of a quality score less than or equal to truncQ.
+out2 <- filterAndTrim(fwd = FNs, filt = filt2_samples,
+                      maxEE=3, # reads with more than 3 expected errors (sum(10e(-Q/10))) are discarded
+                      truncQ=10, # Truncate reads at the first instance of a quality score less than or equal to truncQ.
                       minLen=150, # Discard reads shorter than 200 bp. This is done after trimming and truncation.
-                      compress=TRUE, # Output files in gzip format
-                      verbose=TRUE) # give a message saying the percentage of filtered sequences
-
-test <- out2 %>%
-  as.data.frame() %>%
-  mutate(percent = reads.out*100 / reads.in) %>%
-  select(percent)
-mean(test$percent)
-
-out2 %>%
-  as.data.frame() %>%
-  filter(reads.out > 1000)
+                      multithread=TRUE,
+                      compress=TRUE,
+                      verbose=TRUE)
 
 
 # Update list of filtered files
-## FNs_filt <- file.path(path, "filtered2", paste0(sample.names, "_filt.fastq.gz"))
-# FNs_filt <- sort(list.files(file.path(path, "filtered2"), pattern=".fastq.gz", full.names = TRUE))
-# sample.names_filt <- sapply(strsplit(basename(FNs_filt), "_"), `[`, 1)
-# names(FNs_filt) <- sample.names_filt
+FNs_filt <- sort(list.files(file.path(path, "filtered2"), pattern=".fastq.gz", full.names = TRUE))
+sample.names_filt <- sapply(strsplit(basename(FNs_filt), "_"), `[`, 1)
+names(FNs_filt) <- sample.names_filt
 
 ```
 
@@ -209,18 +196,6 @@ for (i in 195:234){ # printing 2 samples before & after the "abnormal samples", 
 ```
 
 The quality profile of these discarded samples show some abnormalities, and reads were also shorter than 150bp. It is not surprising none of the reads passed the quality filtering.
-
-
-Let's look at the output filtered fastq files as sanity check.
-
-```{r quality-filter-check}
-out2[1:4,] # show how many reads were filtered in each file
-
-# Look at quality profile of filtered files
-for (i in 1:4){
-  show(plotQualityProfile(filt2_samples[i]))
-}
-```
 
 
 
@@ -334,7 +309,7 @@ track <- out2 %>%
               mutate(Run=rownames(seqtable.nochim)),
             by="Run") %>%
   relocate(Run) %>%
-  mutate("%kept_input->output"=as.integer(nonchim*100/input))
+  mutate("%input->output"=as.integer(nonchim*100/input))
 
 # Show final table: for each row/sample, we have shown the initial number of reads, filtered reads, denoised reads, and non chimera reads
 track
