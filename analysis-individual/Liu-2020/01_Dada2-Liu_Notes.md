@@ -27,3 +27,25 @@ Liu et al. (_BMC Microbiology_, 2020) - [Microbial and metabolomic profiles in c
 
 ## Learn error rates
 - parametric error model fits data
+
+## Construct ASV table
+### a) Infer sequence variants
+- 14,612 amplicon sequence variants (ASVs)
+
+### b) Remove chimeras
+- 5,558 seq variants (but still >89% reads kept)
+
+### c) Assign taxonomy
+Taxonomy assigned with Silva v138.
+- Bacteria - ...
+- Archaea - ...
+- Eukaryota - ...
+
+All unassigned phyla were removed (n=...), samples below 500 total reads (n=...). The final ASV table contains **... sequence variants**.
+
+## Metadata
+- age
+- BMI
+- gender
+- Bristol stool scale
+- IBS symptom severity scale
