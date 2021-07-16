@@ -265,22 +265,28 @@ As the error rate model doesn’t fit well the observations for high quality sco
 err_new <- err
 
 # G2T
-err_new$err_out['G2T','36'] <- 0.0014
-err_new$err_out['G2T','37'] <- 0.0012
-err_new$err_out['G2T','38':'46'] <- 0.001
+err_new$err_out['G2T','35':'38'] <- 0.0016
+err_new$err_out['G2T','38'] <- 0.0014
+err_new$err_out['G2T','39'] <- 0.0013
+err_new$err_out['G2T','40'] <- 0.00115
+err_new$err_out['G2T','41'] <- 0.0010
+err_new$err_out['G2T','42'] <- 0.00085
+err_new$err_out['G2T','43'] <- 0.0007
+err_new$err_out['G2T','44'] <- 0.00055
+err_new$err_out['G2T','45'] <- 0.0004
 
 # All the other transitions/transversions
-err_new$err_out['A2C','35':'46'] <- 0.0006
-err_new$err_out['A2G','38':'46'] <- 0.006
-err_new$err_out['A2T','37':'46'] <- 0.0015
+err_new$err_out['A2C','35':'46'] <- 0.0008
+err_new$err_out['A2G','38':'46'] <- 0.007
+err_new$err_out['A2T','37':'46'] <- 0.002
 err_new$err_out['C2A','37':'46'] <- 0.0008
-err_new$err_out['C2G','40':'46'] <- 0.002
-err_new$err_out['C2T','38':'46'] <- 0.006
-err_new$err_out['G2A','36':'46'] <- 0.003
+err_new$err_out['C2G','39':'46'] <- 0.0025
+err_new$err_out['C2T','38':'46'] <- 0.007
+err_new$err_out['G2A','36':'46'] <- 0.0035
 err_new$err_out['G2C','36':'46'] <- 0.0006
-err_new$err_out['T2A','38':'46'] <- 0.002
-err_new$err_out['T2C','36':'46'] <- 0.006
-err_new$err_out['T2G','36':'46'] <- 0.002
+err_new$err_out['T2A','38':'46'] <- 0.0025
+err_new$err_out['T2C','36':'46'] <- 0.0065
+err_new$err_out['T2G','36':'46'] <- 0.0025
 ```
 
 ```{r plot-new-errors, fig.height=5, fig.width=5}
