@@ -36,22 +36,22 @@ library(stringr)
 #_____________________________________________________________________
 #____________ THIS IS ONLY FOR (quicker) PDF OUTPUT __________________
 #_____________________________________________________________________
-path <- "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Liu"
+path <- "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Liu-2020"
 
 # seq depth
-raw_stats <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Liu/01_Dada2-Liu/raw_stats.rds")
+raw_stats <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Liu-2020/01_Dada2-Liu/raw_stats.rds")
 # out process
-out2 <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Liu/01_Dada2-Liu/out2.rds")
+out2 <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Liu-2020/01_Dada2-Liu/out2.rds")
 # quality profiles
 filt2_samples <- sort(list.files(file.path(path, "filtered2"), pattern=".fastq.gz", full.names = TRUE))
 # error rates
-err <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Liu/01_Dada2-Liu/err.rds")
+err <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Liu-2020/01_Dada2-Liu/err.rds")
 # infered ASVs
-seq_infered <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Liu/01_Dada2-Liu/seq_infered.rds")
+seq_infered <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Liu-2020/01_Dada2-Liu/seq_infered.rds")
 # taxa
 taxa <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/OutputTaxa/taxa_Liu.rds")
 # phyloseq object
-physeq <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Liu/01_Dada2-Liu/physeq_Liu.rds")
+physeq <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Liu-2020/01_Dada2-Liu/physeq_Liu.rds")
 ```
 
 
