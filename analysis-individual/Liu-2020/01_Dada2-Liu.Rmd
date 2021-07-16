@@ -172,7 +172,7 @@ out2 <- filterAndTrim(fwd = FNs, filt = filt2_samples,
                       trimRight=20,
                       maxEE=3, # reads with more than 3 expected errors (sum(10e(-Q/10))) are discarded
                       truncQ=10, # Truncate reads at the first instance of a quality score less than or equal to truncQ.
-                      minLen=150, # Discard reads shorter than 200 bp. This is done after trimming and truncation.
+                      minLen=150, # Discard reads shorter than 150 bp.
                       multithread=TRUE,
                       compress=TRUE,
                       verbose=TRUE)

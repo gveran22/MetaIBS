@@ -173,7 +173,7 @@ names(filt2_samples) <- sample.names
 out2 <- filterAndTrim(fwd = FNs, filt = filt2_samples,
                       maxEE=3, # reads with more than 3 expected errors (sum(10e(-Q/10))) are discarded
                       truncQ=10, # Truncate reads at the first instance of a quality score less than or equal to truncQ.
-                      minLen=150, # Discard reads shorter than 200 bp. This is done after trimming and truncation.
+                      minLen=150, # Discard reads shorter than 150 bp.
                       multithread=TRUE,
                       compress=TRUE,
                       verbose=TRUE)
@@ -315,6 +315,20 @@ track <- out2 %>%
 track
 ```
 
+```{r seqdepth, echo=FALSE, eval=FALSE, include=FALSE}
+# Save nb of reads per sample before / after dada2 pipeline
+nb.reads <- as.data.frame(rowSums(seqtable.nochim)) %>%
+  rename("after"="rowSums(seqtable.nochim)") %>%
+  mutate("Run"=names(rowSums(seqtable.nochim))) %>%
+  right_join(raw_stats %>% rename(Run=sample, before=reads),
+             by="Run") %>%
+  relocate(before) %>%
+  relocate(Run) %>%
+  mutate(after = nafill(after, fill=0),
+         "dataset" = "AGP")
+
+saveRDS(nb.reads, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/DADA2-FILT/seqdepth_agp.rds")
+```
 
 
 #####################
@@ -402,14 +416,6 @@ write.csv(sample_data(physeq), "~/Projects/IBS_Meta-analysis_16S/analysis-indivi
 
 saveRDS(physeq, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/AGP/01_Dada2-AGP/physeq_AGP.rds") # phyloseq object
 saveRDS(physeq.filt, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/AGP/01_Dada2-AGP/physeq(ASVfilt)_AGP.rds")
-
-# Save nb of reads per sample before / after dada2 pipeline
-nb.reads <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/nb_reads.rds")
-nb.reads[1:1191, 'AGP_before'] <- fastqq(FNs)@nReads
-nb.reads[1:1191, 'AGP_after'] <- rowSums(seqtable.nochim)
-median(na.omit(nb.reads$AGP_before)) # sanity check
-median(na.omit(nb.reads$AGP_after)) # sanity check
-saveRDS(nb.reads, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/nb_reads.rds")
 ```
 
 
