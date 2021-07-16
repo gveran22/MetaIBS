@@ -3,9 +3,9 @@ title: "Dada2_Nagel2016"
 params:
   date: "!r Sys.Date()"
 output:
-  pdf_document: default
   html_document:
     df_print: paged
+    toc: true
 ---
 
 ```{r, include=FALSE}
@@ -60,7 +60,7 @@ physeq <- readRDS("~/Projects/IBS_Meta-analysis_16S/phyloseq-objects/physeq_nage
 ##  QUALITY CHECK  ##
 #####################
 
-First, we import the fastq files containing the raw reads. The samples were shared by the author. 
+First, we import the fastq files containing the raw reads. The samples were kindly shared by the author. 
 
 ```{r quality-check, echo=TRUE, results="hide", fig.height=3, fig.width=4}
 # Save the path to the directory containing the fastq zipped files
