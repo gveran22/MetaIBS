@@ -312,7 +312,7 @@ names(seq_infered) <- sample.names # names of each row will be the sample names
 
 # Iterate through the 30 samples
 for(sampl in sample.names) {
-  cat("Processing:", sampl, "\n") # print which sample is being processed
+  cat("Processing:", sampl, "\n")
   derep <- derepFastq(filt2_samples[[sampl]]) # dereplicate the reads in the sample
   seq_infered[[sampl]] <- dada(derep, err=err_new, multithread=TRUE, # default parameters
                                HOMOPOLYMER_GAP_PENALTY=-1, BAND_SIZE=32) # parameters for Ion Torrent recommended
@@ -375,11 +375,19 @@ track <- cbind(out1, out2[,2], sapply(seq_infered, getN), rowSums(seqtable.nochi
                lapply(rowSums(seqtable.nochim)*100/out1[,1], as.integer))
 
 # Assign column and row names
-colnames(track) <- c("input", "primer-filt", "quality-filt", "denoised", "nonchim", "%kept_input->output")
+colnames(track) <- c("input", "primer-filt", "quality-filt", "denoised", "nonchim", "%input->output")
 rownames(track) <- sample.names
 
 # Show final table: for each row/sample, we have shown the initial number of reads, filtered reads, denoised reads, and non chimera reads
 track
+```
+
+```{r seqdepth, echo=FALSE, eval=FALSE, include=FALSE}
+# Save nb of reads per sample before / after dada2 pipeline
+nb.reads <- data.frame("before" = fastqq(trim_samples)@nReads,
+                       "after" = rowSums(seqtable.nochim),
+                       "dataset" = "Nagel")
+saveRDS(nb.reads, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/DADA2-FILT/seqdepth_nagel.rds")
 ```
 
 
@@ -454,11 +462,11 @@ physeq <- subset_taxa(physeq, !is.na(Phylum))
 
 ```{r save, eval=FALSE}
 # Save to disk
-saveRDS(out1, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Nagel-2016/out1.rds")
-saveRDS(out2, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Nagel-2016/out2.rds")
-saveRDS(err, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Nagel-2016/errorRates.rds")
-saveRDS(err_new, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Nagel-2016/errorRates_modif.rds")
-saveRDS(seq_infered, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Nagel-2016/seq_infered.rds")
+saveRDS(out1, file.path(path, "01_Dada2-Nagel/out1.rds"))
+saveRDS(out2, file.path(path, "01_Dada2-Nagel/out2.rds"))
+saveRDS(err, file.path(path, "01_Dada2-Nagel/errorRates.rds"))
+saveRDS(err_new, file.path(path, "01_Dada2-Nagel/errorRates_modif.rds"))
+saveRDS(seq_infered, file.path(path, "01_Dada2-Nagel/seq_infered.rds"))
 
 
 saveRDS(otu_table(physeq), "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Nagel-2016/ASVtable_final.rds") # ASV table
@@ -467,14 +475,6 @@ saveRDS(sample_data(physeq), "~/Projects/IBS_Meta-analysis_16S/data/analysis-ind
 write.csv(sample_data(physeq), "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Nagel-2016/NagelMetadata.csv")
 
 saveRDS(physeq, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/physeq_nagel.rds") # phyloseq object
-
-# Save nb of reads per sample before / after dada2 pipeline
-nb.reads <- readRDS("/Users/scarcy/Desktop/Praktikum/Data/nb_reads.rds")
-nb.reads[1:30, 'Nagel_before'] <- fastqq(trim_samples)@nReads
-nb.reads[1:30, 'Nagel_after'] <- rowSums(seqtable.nochim)
-median(na.omit(nb.reads$Nagel_before)) # sanity check
-median(na.omit(nb.reads$Nagel_after)) # sanity check
-saveRDS(nb.reads, "/Users/scarcy/Desktop/Praktikum/Data/nb_reads.rds")
 ```
 
 
