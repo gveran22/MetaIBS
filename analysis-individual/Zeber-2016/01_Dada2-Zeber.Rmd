@@ -374,15 +374,6 @@ saveRDS(sample_data(physeq), "~/Projects/IBS_Meta-analysis_16S/data/analysis-ind
 write.csv(sample_data(physeq), "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Zeber-2016/01_Dada2-Zeber/ZeberMetadata.csv")
 
 saveRDS(physeq, "/Users/scarcy/Desktop/Praktikum/Data/Zeber-Lubecka_2016/physeq_zeber.rds") # phyloseq object
-
-
-# Save nb of reads per sample before / after dada2 pipeline
-nb.reads <- readRDS("/Users/scarcy/Desktop/Praktikum/Data/nb_reads.rds")
-nb.reads[1:90, 'Zeber_before'] <- fastqq(FNs)@nReads
-nb.reads[1:90, 'Zeber_after'] <- rowSums(seqtable.nochim_test)
-median(na.omit(nb.reads$Zeber_before)) # sanity check
-median(na.omit(nb.reads$Zeber_after)) # sanity check
-saveRDS(nb.reads, "/Users/scarcy/Desktop/Praktikum/Data/nb_reads.rds")
 ```
 
 

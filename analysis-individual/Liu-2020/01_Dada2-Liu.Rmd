@@ -308,6 +308,16 @@ track
 
 
 
+```{r seqdepth, echo=FALSE, eval=FALSE, include=FALSE}
+# Save nb of reads per sample before / after dada2 pipeline
+nb.reads <- data.frame("before" = raw_stats$reads,
+                       "after" = rowSums(seqtable.nochim),
+                       "dataset" = "Liu")
+saveRDS(nb.reads, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/DADA2-FILT/seqdepth_liu.rds")
+```
+
+
+
 #####################
 ## ASSIGN TAXONOMY ##
 #####################
@@ -386,14 +396,6 @@ saveRDS(sample_data(physeq), file.path(path, "01_Dada2-Liu/metadata_final.rds"))
 write.csv(sample_data(physeq), file.path(path, "Metadata-Liu.csv"))
 
 saveRDS(physeq, file.path(path, "01_Dada2-Liu/physeq_Liu.rds")) # phyloseq object
-
-# Save nb of reads per sample before / after dada2 pipeline
-nb.reads <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/nb_reads.rds")
-nb.reads[1:1191, 'Liu_before'] <- fastqq(FNs)@nReads
-nb.reads[1:1191, 'Liu_after'] <- rowSums(seqtable.nochim)
-median(na.omit(nb.reads$Liu_before)) # sanity check
-median(na.omit(nb.reads$Liu_after)) # sanity check
-saveRDS(nb.reads, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/nb_reads.rds")
 ```
 
 

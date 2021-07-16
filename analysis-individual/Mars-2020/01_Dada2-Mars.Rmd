@@ -329,6 +329,14 @@ track
 ```
 
 
+```{r seqdepth, echo=FALSE, eval=FALSE, include=FALSE}
+# Save nb of reads per sample before / after dada2 pipeline
+nb.reads <- data.frame("before" = raw_stats$reads,
+                       "after" = rowSums(seqtable.nochim),
+                       "dataset" = "Mars")
+saveRDS(nb.reads, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/DADA2-FILT/seqdepth_mars.rds")
+```
+
 
 #####################
 ## ASSIGN TAXONOMY ##
@@ -398,6 +406,7 @@ physeq <- subset_taxa(physeq, !is.na(Phylum))
 
 ```{r, eval=FALSE}
 # Save to disk
+saveRDS(raw_stats, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Mars-2020/01_Dada2-Mars/raw_stats.rds")
 saveRDS(out2, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Mars-2020/01_Dada2-Mars/out2.rds")
 saveRDS(errF, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Mars-2020/01_Dada2-Mars/errF.rds")
 saveRDS(errR, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Mars-2020/01_Dada2-Mars/errR.rds")
@@ -410,15 +419,6 @@ saveRDS(tax_table(physeq), "~/Projects/IBS_Meta-analysis_16S/data/analysis-indiv
 saveRDS(sample_data(physeq), "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Mars-2020/01_Dada2-Mars/metadata_final.rds") # metadata table
 
 saveRDS(physeq, "~/Projects/IBS_Meta-analysis_16S/phyloseq-objects/physeq_Mars.rds") # phyloseq object
-
-
-# Save nb of reads per sample before / after dada2 pipeline
-nb.reads <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/nb_reads.rds")
-nb.reads[1:29, 'Mars_before'] <- fastqq(fnFs)@nReads
-nb.reads[1:29, 'Mars_after'] <- rowSums(seqtable.nochim)
-median(na.omit(nb.reads$Mars_before)) # sanity check
-median(na.omit(nb.reads$Mars_after)) # sanity check
-saveRDS(nb.reads, "~/Projects/IBS_Meta-analysis_16S/data/nb_reads.rds")
 ```
 
 
