@@ -165,18 +165,18 @@ As the error rate model doesn't fit well the observations for high quality score
 # Modify error rate model
 err_new <- err
 
-err_new$err_out['A2C','40':'45'] <- 0.005
-err_new$err_out['A2G','40':'45'] <- 0.015
-err_new$err_out['A2T','39':'45'] <- 0.004
-err_new$err_out['C2A','40':'45'] <- 0.0035
-err_new$err_out['C2G','39':'45'] <- 0.0035
-err_new$err_out['C2T','39':'45'] <- 0.0075
-err_new$err_out['G2A','39':'45'] <- 0.008
-err_new$err_out['G2C','39':'45'] <- 0.0045
-err_new$err_out['G2T','39':'45'] <- 0.003
-err_new$err_out['T2A','39':'45'] <- 0.0045
-err_new$err_out['T2C','40':'45'] <- 0.012
-err_new$err_out['T2G','40':'45'] <- 0.0045
+err_new$err_out['A2C','40':'45'] <- 0.0025
+err_new$err_out['A2G','40':'45'] <- 0.01
+err_new$err_out['A2T','39':'45'] <- 0.0025
+err_new$err_out['C2A','40':'45'] <- 0.002
+err_new$err_out['C2G','39':'45'] <- 0.002
+err_new$err_out['C2T','39':'45'] <- 0.007
+err_new$err_out['G2A','39':'45'] <- 0.0075
+err_new$err_out['G2C','39':'45'] <- 0.002
+err_new$err_out['G2T','39':'45'] <- 0.0015
+err_new$err_out['T2A','39':'45'] <- 0.003
+err_new$err_out['T2C','40':'45'] <- 0.01
+err_new$err_out['T2G','40':'45'] <- 0.0035
 ```
 
 ```{r plot-new-errors, fig.height = 5, fig.width = 5}
@@ -197,11 +197,11 @@ De-replication is a common step in almost all modern ASV inference (or OTU picki
 ```{r infer-sample-composition, eval = FALSE}
 # Prepare empty vector for the infered sequences
 seq_infered <- vector("list", length(sample.names))
-names(seq_infered) <- sample.names # names of each row will be the sample names
+names(seq_infered) <- sample.names
 
 # Iterate through the 90 samples
 for(sampl in sample.names) {
-  cat("Processing:", sampl, "\n") # print which sample is being processed
+  cat("Processing:", sampl, "\n")
   derep <- derepFastq(filt_samples[[sampl]]) # dereplicate the reads in the sample
   seq_infered[[sampl]] <- dada(derep, err=err_new, multithread=TRUE, # default parameters
                                HOMOPOLYMER_GAP_PENALTY=-1, BAND_SIZE=32) # parameters for Ion Torrent recommended
@@ -264,13 +264,20 @@ track <- cbind(out, sapply(seq_infered, getN), rowSums(seqtable.nochim),
                lapply(rowSums(seqtable.nochim)*100/out[,1], as.integer))
 
 # Assign column and row names
-colnames(track) <- c("input", "quality-filt", "denoised", "nonchim", "%kept_input->output")
+colnames(track) <- c("input", "quality-filt", "denoised", "nonchim", "%input->output")
 rownames(track) <- sample.names
 
 # Show final table: for each row/sample, we have shown the initial number of reads, filtered reads, denoised reads, and non chimera reads
 track
 ```
 
+```{r seqdepth, echo=FALSE, eval=FALSE, include=FALSE}
+# Save nb of reads per sample before / after dada2 pipeline
+nb.reads <- data.frame("before" = raw_stats$reads,
+                       "after" = rowSums(seqtable.nochim),
+                       "dataset" = "Zeber")
+saveRDS(nb.reads, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/DADA2-FILT/seqdepth_zeber.rds")
+```
 
 
 #####################
@@ -355,6 +362,7 @@ physeq <- subset_taxa(physeq, !is.na(Phylum))
 
 ```{r save, eval=FALSE}
 # Save to disk
+saveRDS(raw_stats, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Zeber-2016/01_Dada2-Zeber/raw_stats.rds")
 saveRDS(out, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Zeber-2016/01_Dada2-Zeber/out.rds")
 saveRDS(err, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Zeber-2016/01_Dada2-Zeber/error_rates.rds")
 saveRDS(err_new, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Zeber-2016/01_Dada2-Zeber/error_rates_modified.rds")
