@@ -65,7 +65,7 @@ First, we import the fastq files containing the raw reads. The samples were shar
 ```{r quality-check, echo=TRUE, results="hide", fig.height=3, fig.width=4}
 # Save the path to the directory containing the fastq zipped files
 path <- "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Nagel-2016"
-#list.files(path) # check we are in the right directory
+# list.files(path) # check we are in the right directory
 
 # fastq filenames have format: SAMPLENAME.fastq
 # Saves the whole directory path to each file name
@@ -143,7 +143,7 @@ allOrients <- function(primer) {
     dna <- DNAString(primer)  # The Biostrings works w/ DNAString objects rather than character vectors
     orients <- c(Forward = dna, Complement = complement(dna), Reverse = reverse(dna), 
         RevComp = reverseComplement(dna))
-    return(sapply(orients, toString))  # Convert back to character vector
+    return(sapply(orients, toString))
 }
 
 # Get all combinations of the primer sequences
@@ -159,7 +159,7 @@ primerHits <- function(primer, fn) {
 }
 
 # Look in all samples if we find the primers
-for (i in 1:5){
+for (i in 1:30){
   cat("SAMPLE", sample.names[i], "with total number of", raw_stats[i,'reads'], "reads\n\n")
   x <-  rbind(ForwardPrimer = sapply(FWD.orients, primerHits, fn = trim_samples[[i]]), 
               ReversePrimer = sapply(REV.orients, primerHits, fn = trim_samples[[i]]))
@@ -177,7 +177,7 @@ for (i in 1:5){
 
 ### 1. Primer removal
 
-The reads indeed contain the forward primer. We will keep only reads containing the forward primer, and then trim the primer! For the reverse primer, the last 20bp of each read will be trimmed off.
+The reads indeed contain both primers. We will keep only reads containing both primers, and trim the primers.
 
 ```{r primer-filter, eval = FALSE, echo = TRUE}
 # KEEP READS WITH PRIMER AND REMOVE PRIMER
@@ -188,8 +188,10 @@ names(filt1_samples) <- sample.names
 
 # Filter first to take out primer
 out1 <- removePrimers(fn = trim_samples, fout = filt1_samples,
-                      primer.fwd = FWD, # forward primer is found at the beginning of the reads
+                      primer.fwd = FWD.orients['Forward'],
+                      primer.rev = REV.orients['RevComp'],
                       trim.fwd = TRUE,
+                      trim.rev = TRUE,
                       orient = FALSE, # keep the reads in their original orientation
                       compress = TRUE, verbose = TRUE)
 ```
@@ -213,33 +215,18 @@ Then, we perform a quality filtering of the reads.
 
 ```{r filter-trim, eval = FALSE, echo = TRUE}
 # Place filtered files in a filtered/ subdirectory
-# filt2_samples <- file.path(path, "filtered2", paste0(sample.names, "_filt.fastq.gz"))
-# # Assign names for the filtered fastq.gz files
-# names(filt2_samples) <- sample.names
-
-filt_test <- file.path(path, "filt_test", paste0(sample.names, "_filt.fastq.gz"))
-names(filt_test) <- sample.names
+filt2_samples <- file.path(path, "filtered2", paste0(sample.names, "_filt.fastq.gz"))
+# Assign names for the filtered fastq.gz files
+names(filt2_samples) <- sample.names
 
 # Filter
-out2 <- filterAndTrim(fwd = filt1_samples, filt = filt_test,
-                      # filt = filt2_samples,
-                      trimRight = 20, # remove the reverse complement of the reverse primer at the end of the reads
-                      maxEE=3, # reads with more than 4 expected errors (sum(10e(-Q/10))) are discarded
+out2 <- filterAndTrim(fwd = filt1_samples, filt = filt2_samples,
+                      maxEE=3, # reads with more than 3 expected errors (sum(10e(-Q/10))) are discarded
                       truncQ=10, # Truncate reads at the first instance of a quality score less than or equal to truncQ.
-                      minLen = 150, # Discard reads shorter than 200 bp. This is done after trimming and truncation.
+                      minLen = 150, # Discard reads shorter than 150 bp.
                       compress=TRUE,
                       multithread=TRUE,
                       verbose=TRUE)
-
-test <- out2 %>%
-  as.data.frame() %>%
-  mutate(percent = reads.out*100 / reads.in) %>%
-  select(percent)
-mean(test$percent)
-
-out2 %>%
-  as.data.frame() %>%
-  filter(reads.out > 1000)
 ```
 
 Let's look at the output filtered fastq files as sanity check.
