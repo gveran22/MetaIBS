@@ -3,9 +3,9 @@ title: "Dada2_Zeber2016"
 params:
   date: "!r Sys.Date()"
 output:
-  pdf_document: default
   html_document:
     df_print: paged
+    toc: true
 ---
 
 ```{r, include=FALSE}
@@ -41,7 +41,7 @@ First, we import the fastq files containing the raw reads. The samples were down
 ```{r quality-check, echo=TRUE, results="hide"}
 # Save the path to the directory containing the fastq zipped files
 path <- "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Zeber-2016"
-list.files(path) # check we are in the right directory
+# list.files(path) # check we are in the right directory
 
 # fastq filenames have format: SAMPLENAME.fastq.gz
 # Saves the whole directory path to each file name
@@ -50,7 +50,7 @@ show(FNs[1:5])
 
 # Extract sample names, assuming filenames have format: SAMPLENAME.fastq.gz
 sample.names <- sapply(strsplit(basename(FNs), "_"), `[`, 1)
-show(sample.names[1:5]) # saves only the file name (without the path)
+show(sample.names[1:5])
 
 # Look at quality of all files
 for (i in 1:4){
@@ -113,33 +113,19 @@ We perform a quality filtering of the reads.
 
 ```{r filter-trim, eval = FALSE, echo = TRUE}
 # Place filtered files in a filtered/ subdirectory
-# filt_samples <- file.path(path, "filtered", paste0(sample.names, "_filt.fastq.gz"))
-# # Assign names for the filtered fastq.gz files
-# names(filt_samples) <- sample.names
-
-filt_test <- file.path(path, "filt_test", paste0(sample.names, "_filt.fastq.gz"))
-names(filt_test) <- sample.names
+filt_samples <- file.path(path, "filtered", paste0(sample.names, "_filt.fastq.gz"))
+# Assign names for the filtered fastq.gz files
+names(filt_samples) <- sample.names
 
 # Filter
-out <- filterAndTrim(fwd = FNs, filt = filt_test,
-                     # filt = filt_samples,
+out <- filterAndTrim(fwd = FNs, filt = filt_samples,
                      trimLeft = 15, # as recommanded on QIIME forum
-                     maxEE=3, # reads with more than 4 expected errors (sum(10e(-Q/10))) are discarded
-                     truncQ=15, # Truncate reads at the first instance of a quality score less than or equal to truncQ.
-                     minLen=150, # Discard reads shorter than 200 bp. This is done after trimming and truncation.
+                     maxEE=3, # reads with more than 3 expected errors (sum(10e(-Q/10))) are discarded
+                     truncQ=10, # Truncate reads at the first instance of a quality score less than or equal to truncQ.
+                     minLen=150, # Discard reads shorter than 150 bp.
                      compress=TRUE,
                      multithread=TRUE,
                      verbose=TRUE)
-
-test <- out %>%
-  as.data.frame() %>%
-  mutate(percent = reads.out*100 / reads.in) %>%
-  select(percent)
-mean(test$percent)
-
-out %>%
-  as.data.frame() %>%
-  filter(reads.out > 1000)
 ```
 
 Let's look at the output filtered fastq files as sanity check.
