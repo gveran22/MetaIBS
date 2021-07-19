@@ -32,10 +32,10 @@ Mars et al. (_Cell_, 2020) - [Longitudinal Multi-omics Reveals Subset-Specific M
 
 ## Construct ASV table
 ### a) Infer sequence variants
-- 3,733 amplicon sequence variants (ASVs)
+- 1,738 amplicon sequence variants (ASVs)
 
 ### b) Remove chimeras
-- 2,789 seq variants (but still >90% reads kept)
+- 1,678 seq variants (but still >90% reads kept)
 
 ### c) Assign taxonomy
 Taxonomy assigned with Silva v138.

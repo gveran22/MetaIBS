@@ -286,7 +286,10 @@ dim(seqtable)
 hist(nchar(getSequences(seqtable)), breaks = 100, xlab = "Read length", ylab = "Number of reads", main="")
 
 # Sequences should be between 515F - 806R, so around ~250bp (removing the primers lengths).
-# However, as we didn't filter out reads based on the sequence of forward&reverse primers, it is possible that some reads sequenced past 250bp.
+# Remove any sequence variant below outside 200-300bp
+seqtable.new <- seqtable[,nchar(colnames(seqtable)) %in% 200:300]
+dim(seqtable.new)
+hist(nchar(getSequences(seqtable.new)), breaks = 100, xlab = "Read length", ylab = "Number of reads", main="")
 ```
 
 
@@ -295,13 +298,13 @@ hist(nchar(getSequences(seqtable)), breaks = 100, xlab = "Read length", ylab = "
 The core dada method corrects substitution and indel errors, but chimeras remain. Fortunately, the accuracy of sequence variants after denoising makes identifying chimeric ASVs simpler than when dealing with fuzzy OTUs. Chimeric sequences are identified if they can be exactly reconstructed by combining a left-segment and a right-segment from two more abundant “parent” sequences.
 
 ```{r remove-chimeras}
-seqtable.nochim <- removeBimeraDenovo(seqtable, method="consensus", multithread=TRUE, verbose=TRUE)
+seqtable.nochim <- removeBimeraDenovo(seqtable.new, method="consensus", multithread=TRUE, verbose=TRUE)
 
 # Check how many sequence variants we have after removing chimeras
 dim(seqtable.nochim)
 
 # Check how many reads we have after removing chimeras (we should keep the vast majority of the reads, like > 80%)
-sum(seqtable.nochim)/sum(seqtable)
+sum(seqtable.nochim)/sum(seqtable.new)
 ```
 
 
