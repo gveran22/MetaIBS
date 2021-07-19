@@ -2,7 +2,7 @@
 
 Nagel et al. (_Microbiome_, 2016) - [Comparison of faecal microbiota in Blastocystis-positive and Blastocystisnegative irritable bowel syndrome patients][1]
 
-[1]: ....
+[1]: https://microbiomejournal.biomedcentral.com/articles/10.1186/s40168-016-0191-0
 
 
 ## Samples

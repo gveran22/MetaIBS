@@ -2,7 +2,7 @@
 
 Zeber-Lubecka et al. (_Gut Microbes_, 2016) - [Limited prolonged effects of rifaximin treatment on irritable bowel syndrome-related differences in the fecal microbiome and metabolome][1]
 
-[1]: ....
+[1]: https://www.tandfonline.com/doi/full/10.1080/19490976.2016.1215805
 
 
 ## Samples
