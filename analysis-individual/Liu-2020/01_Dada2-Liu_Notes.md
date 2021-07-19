@@ -30,7 +30,7 @@ Liu et al. (_BMC Microbiology_, 2020) - [Microbial and metabolomic profiles in c
 
 ## Construct ASV table
 ### a) Infer sequence variants
-- 14,612 amplicon sequence variants (ASVs)
+- 14,605 amplicon sequence variants (ASVs)
 
 ### b) Remove chimeras
 - 5,558 seq variants (but still >89% reads kept)

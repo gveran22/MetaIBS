@@ -257,7 +257,7 @@ hist(nchar(getSequences(seqtable)), breaks = 100, xlab = "ASV length", ylab = "N
 # Sequences should be between 338F - 806R, so around ~420bp (removing the primers lengths).
 
 # Remove any sequence variant below 350bp
-seqtable.new <- seqtable[,nchar(colnames(seqtable)) >= 350]
+seqtable.new <- seqtable[,nchar(colnames(seqtable)) >= 380]
 dim(seqtable.new)
 hist(nchar(getSequences(seqtable.new)), breaks = 100, xlab = "Read length", ylab = "Number of reads", main="")
 ```
@@ -274,7 +274,7 @@ seqtable.nochim <- removeBimeraDenovo(seqtable.new, method="consensus", multithr
 dim(seqtable.nochim)
 
 # Check how many reads we have after removing chimeras (we should keep the vast majority of the reads, like > 80%)
-sum(seqtable.nochim)/sum(seqtable)
+sum(seqtable.nochim)/sum(seqtable.new)
 ```
 
 
