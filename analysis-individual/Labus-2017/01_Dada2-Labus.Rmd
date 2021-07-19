@@ -408,24 +408,17 @@ physeq <- subset_taxa(physeq, !is.na(Phylum))
 
 ```{r save, eval=FALSE}
 # Save to disk
-saveRDS(out1, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Labus-2017/01_Dada2-Labus/out1.rds")
-saveRDS(out2, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Labus-2017/01_Dada2-Labus/out2.rds")
-saveRDS(err, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Labus-2017/01_Dada2-Labus/err.rds")
-saveRDS(seq_infered, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Labus-2017/01_Dada2-Labus/seq_infered.rds")
+saveRDS(out1, file.path(path, "01_Dada2-Labus/out1.rds"))
+saveRDS(out2, file.path(path, "01_Dada2-Labus/out2.rds"))
+saveRDS(err, file.path(path, "01_Dada2-Labus/err.rds"))
+saveRDS(seq_infered, file.path(path, "01_Dada2-Labus/seq_infered.rds"))
 
-
-saveRDS(otu_table(physeq), "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Labus-2017/01_Dada2-Labus/ASVtable_final.rds") # ASV table
-saveRDS(tax_table(physeq), "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Labus-2017/01_Dada2-Labus/taxa_final.rds") # taxa table
-saveRDS(sample_data(physeq), "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Labus-2017/01_Dada2-Labus/metadata_final.rds") # metadata table
-write.csv(sample_data(physeq), "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Labus-2017/01_Dada2-Labus/LabusMetadata.csv") # metadata table
+saveRDS(otu_table(physeq), file.path(path, "01_Dada2-Labus/ASVtable_final.rds")) # ASV table
+saveRDS(tax_table(physeq), file.path(path, "01_Dada2-Labus/taxa_final.rds")) # taxa table
+saveRDS(sample_data(physeq), file.path(path, "01_Dada2-Labus/metadata_final.rds")) # metadata table
+write.csv(sample_data(physeq), file.path(path, "LabusMetadata.csv")) # metadata table
 
 saveRDS(physeq, "~/Projects/IBS_Meta-analysis_16S/phyloseq-objects/physeq_labus.rds") # phyloseq object
-
-
-# Save nb of reads per sample before / after dada2 pipeline
-nb.reads <- data.frame('Labus_before' = fastqq(FNs)@nReads,
-                       'Labus_after' = rowSums(seqtable.nochim))
-saveRDS(nb.reads, "~/Projects/IBS_Meta-analysis_16S/data/nb_reads.rds")
 ```
 
 
