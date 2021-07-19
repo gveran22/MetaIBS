@@ -42,7 +42,7 @@ First, we import the fastq files containing the raw reads. The samples were down
 ```{r quality-check, echo=TRUE, results="hide", message=FALSE}
 # Save the path to the directory containing the fastq zipped files
 path <- "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Labus-2017"
-list.files(path) # check we are in the right directory
+# list.files(path) # check we are in the right directory
 
 # fastq filenames have format: SAMPLENAME.fastq.gz
 # Saves the whole directory path to each file name
@@ -51,7 +51,7 @@ show(FNs[1:5])
 
 # Extract sample names, assuming filenames have format: SAMPLENAME.fastq.gz
 sample.names <- sapply(strsplit(basename(FNs), "_"), `[`, 1)
-show(sample.names) # saves only the file name (without the path)
+show(sample.names[1:5]) # saves only the file name (without the path)
 
 # Look at quality of all files
 for (i in 1:4){ # 1:length(FNs)
@@ -144,7 +144,6 @@ for (i in 1:5){
 
 
 
-
 #####################
 ## FILTER AND TRIM ##
 #####################
@@ -162,13 +161,12 @@ names(filt1_samples) <- sample.names
 
 # Filter first to take out primer
 out1 <- removePrimers(fn = FNs, fout = filt1_samples,
-                      primer.fwd = REV, # reverse primer is found at the beginning of the reads
+                      primer.fwd = REV.orients['Forward'], # reverse primer is found at the beginning of the reads
                       trim.fwd = TRUE,
                       orient = FALSE, # keep the reads in their original orientation
                       compress = TRUE, verbose = TRUE)
 
 ```
-
 
 ```{r primer-filter-check, fig.width = 3, fig.height = 2}
 # Primer removal
@@ -177,16 +175,6 @@ out1[1:4,]
 # Quality profile after primer removal
 for (i in 1:4){
   show(plotQualityProfile(filt1_samples[i]))
-}
-
-# Sanity check if we still find the primers in the reads
-for (i in 1:4){
-  cat("SAMPLE", sample.names[i], "with total number of", raw_stats[i,'reads'], "reads\n\n")
-  # Get a table to know how many times the 357F and 926R primers are found (in how many reads)
-  x <-  rbind(ForwardPrimer = sapply(FWD.orients, primerHits, fn = filt1_samples[[i]]), 
-              ReversePrimer = sapply(REV.orients, primerHits, fn = filt1_samples[[i]]))
-  print(x)
-  cat("\n____________________________________________\n\n")
 }
 ```
 
@@ -198,31 +186,18 @@ Then, we perform a quality filtering of the reads.
 
 ```{r filter-trim, eval = FALSE, echo = TRUE}
 # Place filtered files in a filtered/ subdirectory
-# filt2_samples <- file.path(path, "filtered2", paste0(sample.names, "_filt.fastq.gz"))
-# # Assign names for the filtered fastq.gz files
-# names(filt2_samples) <- sample.names
-
-filt_test <- file.path(path, "filt_test", paste0(sample.names, "_filt.fastq.gz"))
-names(filt_test) <- sample.names
+filt2_samples <- file.path(path, "filtered2", paste0(sample.names, "_filt.fastq.gz"))
+# Assign names for the filtered fastq.gz files
+names(filt2_samples) <- sample.names
 
 # Filter
-out2 <- filterAndTrim(fwd = filt1_samples, filt = filt_test, # filt = filt2_samples,
-                      maxEE=3, # reads with more than 4 expected errors (sum(10e(-Q/10))) are discarded
+out2 <- filterAndTrim(fwd = filt1_samples, filt = filt2_samples,
+                      maxEE=3, # reads with more than 3 expected errors (sum(10e(-Q/10))) are discarded
                       truncQ=10, # Truncate reads at the first instance of a quality score less than or equal to truncQ.
-                      minLen=150, # Discard reads shorter than 200 bp. This is done after trimming and truncation.
-                      compress=TRUE, # Output files in gzip format
-                      verbose=TRUE) # give a message saying the percentage of filtered sequences
-
-test <- out2 %>%
-  as.data.frame() %>%
-  mutate(percent = reads.out*100 / reads.in) %>%
-  select(percent)
-mean(test$percent)
-
-out2 %>%
-  as.data.frame() %>%
-  filter(reads.out > 1000)
-
+                      minLen=150, # Discard reads shorter than 150 bp. This is done after trimming and truncation.
+                      compress=TRUE,
+                      multithread=TRUE,
+                      verbose=TRUE)
 ```
 
 Let's look at the output filtered fastq files as sanity check.
