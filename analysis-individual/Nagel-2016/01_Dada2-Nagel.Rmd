@@ -252,7 +252,7 @@ Now we will build the parametric error model, to be able to infer amplicon seque
 err <- learnErrors(filt2_samples, multithread=TRUE, randomize=TRUE, verbose = 1)
 ```
 
-The error rates for each possible transition (A→C, A→G, …) are shown. Points are the observed error rates for each consensus quality score. The black line shows the estimated error rates after convergence of the machine-learning algorithm. The red line shows the error rates expected under the nominal definition of the Q-score. Here the estimated error rates (black line) are a good fit to the observed rates (points), and the error rates drop with increased quality as expected.
+The error rates for each possible transition (A→C, A→G, …) are shown. Points are the observed error rates for each consensus quality score. The black line shows the estimated error rates after convergence of the machine-learning algorithm. The red line shows the error rates expected under the nominal definition of the Q-score.
 
 ```{r plot-errors, fig.height=5, fig.width=5}
 plotErrors(err, nominalQ = TRUE)
@@ -469,10 +469,10 @@ saveRDS(err_new, file.path(path, "01_Dada2-Nagel/errorRates_modif.rds"))
 saveRDS(seq_infered, file.path(path, "01_Dada2-Nagel/seq_infered.rds"))
 
 
-saveRDS(otu_table(physeq), "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Nagel-2016/ASVtable_final.rds") # ASV table
-saveRDS(tax_table(physeq), "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Nagel-2016/taxa_final.rds") # taxa table
-saveRDS(sample_data(physeq), "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Nagel-2016/metadata_final.rds") # metadata table
-write.csv(sample_data(physeq), "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Nagel-2016/NagelMetadata.csv")
+saveRDS(otu_table(physeq), file.path(path, "01_Dada2-Nagel/ASVtable_final.rds")) # ASV table
+saveRDS(tax_table(physeq), file.path(path, "01_Dada2-Nagel/taxa_final.rds")) # taxa table
+saveRDS(sample_data(physeq), file.path(path, "01_Dada2-Nagel/metadata_final.rds")) # metadata table
+write.csv(sample_data(physeq), file.path(path, "NagelMetadata.csv"))
 
 saveRDS(physeq, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/physeq_nagel.rds") # phyloseq object
 ```
