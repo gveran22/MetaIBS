@@ -3,9 +3,9 @@ title: "Dada2_Ringel2015"
 params:
   date: "!r Sys.Date()"
 output:
-  pdf_document: default
   html_document:
     df_print: paged
+    toc: true
 ---
 
 ```{r, include=FALSE}
@@ -41,7 +41,7 @@ First, we import the fastq files containing the raw reads. The samples were down
 ```{r quality-check, echo=TRUE, results="hide"}
 # Save the path to the directory containing the fastq zipped files
 path <- "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Ringel-2015"
-list.files(path) # check we are in the right directory
+# list.files(path) # check we are in the right directory
 
 # fastq filenames have format: SAMPLENAME.fastq
 # Saves the whole directory path to each file name
@@ -116,16 +116,15 @@ allOrients <- function(primer) {
     dna <- DNAString(primer)  # The Biostrings works w/ DNAString objects rather than character vectors
     orients <- c(Forward = dna, Complement = complement(dna), Reverse = reverse(dna), 
         RevComp = reverseComplement(dna))
-    return(sapply(orients, toString))  # Convert back to character vector
+    return(sapply(orients, toString))
 }
-FWD.orients <- allOrients(FWD) # get all combinations for the 8FM primer sequence
+FWD.orients <- allOrients(FWD) # get all combinations for the 8F primer sequence
 REV.orients <- allOrients(REV) # get all combinations for the 357R primer sequence
 FWD.orients # sanity check
 REV.orients
 
 # Function that counts number of reads in which a sequence is found
 primerHits <- function(primer, fn) {
-    # Counts number of reads in which the primer is found
     nhits <- vcountPattern(primer, sread(readFastq(fn)), fixed = FALSE, max.mismatch = 2)
     return(sum(nhits > 0))
 }
@@ -158,8 +157,8 @@ names(filt1_samples) <- sample.names
 
 # Filter first to take out primer
 out1 <- removePrimers(fn = FNs, fout = filt1_samples,
-                      primer.fwd = 'TTTGATCMTGGCTCAG', # forward primer is found at the beginning of the reads
-                      primer.rev = 'TACGGRAGGCAGCAG', # revcomp of the REV primer at the end of the reads
+                      primer.fwd = FWD.orients['Forward'], # forward primer is found at the beginning of the reads
+                      primer.rev = REV.orients['RevComp'], # revcomp of the REV primer at the end of the reads
                       trim.fwd = TRUE,
                       trim.rev = TRUE,
                       orient = FALSE, # keep the reads in their original orientation
@@ -184,36 +183,24 @@ Then, we perform a quality filtering of the reads.
 
 ```{r filter-trim, eval = FALSE, echo = TRUE}
 # Place filtered files in a filtered/ subdirectory
-# filt2_samples <- file.path(path, "filtered2", paste0(sample.names, "_filt.fastq.gz"))
-# # Assign names for the filtered fastq.gz files
-# names(filt2_samples) <- sample.names
-
-filt_test <- file.path(path, "filt_test", paste0(sample.names, "_filt.fastq.gz"))
-names(filt_test) <- sample.names
+filt2_samples <- file.path(path, "filtered2", paste0(sample.names, "_filt.fastq.gz"))
+# Assign names for the filtered fastq.gz files
+names(filt2_samples) <- sample.names
 
 # Filter
-out2 <- filterAndTrim(fwd = filt1_samples, filt = filt_test, # filt = filt2_samples,
-                     maxEE=3, # reads with more than 4 expected errors (sum(10e(-Q/10))) are discarded
+out2 <- filterAndTrim(fwd = filt1_samples, filt = filt2_samples,
+                     maxEE=3, # reads with more than 3 expected errors (sum(10e(-Q/10))) are discarded
                      truncQ=10, # Truncate reads at the first instance of a quality score less than or equal to truncQ.
-                     minLen = 150, # Discard reads shorter than 200 bp. This is done after trimming and truncation.
-                     compress=TRUE, # Output files in gzip format
-                     verbose=TRUE) # give a message saying the percentage of filtered sequences
-
-test <- out2 %>%
-  as.data.frame() %>%
-  mutate(percent = reads.out*100 / reads.in) %>%
-  select(percent)
-mean(test$percent)
-
-out2 %>%
-  as.data.frame() %>%
-  filter(reads.out > 1000)
+                     minLen = 150, # Discard reads shorter than 150 bp. This is done after trimming and truncation.
+                     compress=TRUE,
+                     multithread=TRUE,
+                     verbose=TRUE)
 ```
 
 Let's look at the output filtered fastq files as sanity check.
 
 ```{r quality-filter-check}
-out2[1:4,] # show how many reads were filtered in each file
+out2[1:4,]
 
 # Look at quality profile of filtered files
 for (i in 1:4){
