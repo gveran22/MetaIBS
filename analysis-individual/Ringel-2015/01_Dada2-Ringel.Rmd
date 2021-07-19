@@ -403,15 +403,15 @@ physeq <- subset_taxa(physeq, !is.na(Phylum))
 
 ```{r save, eval=FALSE}
 # Save to disk
-saveRDS(out1, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Ringel-2015/01_Dada2-Ringel/out1.rds")
-saveRDS(out2, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Ringel-2015/01_Dada2-Ringel/out2.rds")
-saveRDS(err, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Ringel-2015/01_Dada2-Ringel/err.rds")
-saveRDS(seq_infered, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Ringel-2015/01_Dada2-Ringel/seq_infered.rds")
+saveRDS(out1, file.path(path, "01_Dada2-Ringel/out1.rds"))
+saveRDS(out2, file.path(path, "01_Dada2-Ringel/out2.rds"))
+saveRDS(err, file.path(path, "01_Dada2-Ringel/err.rds"))
+saveRDS(seq_infered, file.path(path, "01_Dada2-Ringel/seq_infered.rds"))
 
-saveRDS(otu_table(physeq), "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Ringel-2015/01_Dada2-Ringel/ASVtable_final.rds") # ASV table
-saveRDS(tax_table(physeq), "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Ringel-2015/01_Dada2-Ringel/taxa_final.rds") # taxa table
-saveRDS(sample_data(physeq), "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Ringel-2015/01_Dada2-Ringel/metadata_final.rds") # metadata table
-write.csv(sample_data(physeq), "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Ringel-2015/01_Dada2-Ringel/RingelMetadata.csv")
+saveRDS(otu_table(physeq), file.path(path, "01_Dada2-Ringel/ASVtable_final.rds")) # ASV table
+saveRDS(tax_table(physeq), file.path(path, "01_Dada2-Ringel/taxa_final.rds")) # taxa table
+saveRDS(sample_data(physeq), file.path(path, "01_Dada2-Ringel/metadata_final.rds")) # metadata table
+write.csv(sample_data(physeq), file.path(path, "RingelMetadata.csv"))
 
 saveRDS(physeq, "~/Projects/IBS_Meta-analysis_16S/phyloseq-objects/physeq_ringel.rds") # phyloseq object
 ```
