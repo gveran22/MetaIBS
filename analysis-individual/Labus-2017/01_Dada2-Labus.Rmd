@@ -209,13 +209,6 @@ out2[1:4,] # show how many reads were filtered in each file
 for (i in 1:4){
   show(plotQualityProfile(filt2_samples[i]))
 }
-
-# Look at number of reads per sample
-#raw_stats_filt <- data.frame('sample' = sample.names,
-#                             'reads' = fastqq(filt2_samples)@nReads)
-#min(raw_stats_filt$reads)
-#max(raw_stats_filt$reads)
-#mean(raw_stats_filt$reads)
 ```
 
 
@@ -249,7 +242,7 @@ De-replication is a common step in almost all modern ASV inference (or OTU picki
 ```{r infer-sample-composition, eval = FALSE}
 # Prepare empty vector for the infered sequences
 seq_infered <- vector("list", length(sample.names))
-names(seq_infered) <- sample.names # names of each row will be the sample names
+names(seq_infered) <- sample.names
 
 # Iterate through the 52 samples
 for(sampl in sample.names) {
@@ -312,15 +305,27 @@ Sanity check before assigning taxonomy.
 getN <- function(x) sum(getUniques(x))
 
 # Table that will count number of reads for each process of interest (input reads, filtered reads, denoised reads, non chimera reads)
-track <- cbind(out1, out2[,2], sapply(seq_infered, getN), rowSums(seqtable.nochim),
+track <- cbind(out1,
+               out2[,2],
+               sapply(seq_infered, getN),
+               rowSums(seqtable.nochim),
                lapply(rowSums(seqtable.nochim)*100/out1[,1], as.integer))
 
 # Assign column and row names
-colnames(track) <- c("input", "primer-filt", "quality-filt", "denoised", "nonchim", "%kept_input->output")
+colnames(track) <- c("input", "primer-filt", "quality-filt", "denoised", "nonchim", "%input->output")
 rownames(track) <- sample.names
 
 # Show final table
 track
+```
+
+
+```{r seqdepth, echo=FALSE, eval=FALSE, include=FALSE}
+# Save nb of reads per sample before / after dada2 pipeline
+nb.reads <- data.frame("before" = raw_stats$reads,
+                       "after" = rowSums(seqtable.nochim),
+                       "dataset" = "Labus")
+saveRDS(nb.reads, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/DADA2-FILT/seqdepth_labus.rds")
 ```
 
 
