@@ -239,11 +239,11 @@ De-replication is a common step in almost all modern ASV inference (or OTU picki
 ```{r infer-sample-composition, eval = FALSE}
 # Prepare empty vector for the infered sequences
 seq_infered <- vector("list", length(sample.names))
-names(seq_infered) <- sample.names # names of each row will be the sample names
+names(seq_infered) <- sample.names
 
 # Iterate through the 76 samples
 for(sampl in sample.names) {
-  cat("Processing:", sampl, "\n") # print which sample is being processed
+  cat("Processing:", sampl, "\n")
   derep <- derepFastq(filt2_samples[[sampl]]) # dereplicate the reads in the sample
   seq_infered[[sampl]] <- dada(derep, err=err, multithread=TRUE, # default parameters
                                HOMOPOLYMER_GAP_PENALTY=-1, BAND_SIZE=32) # parameters for 454 sequencing recommended
@@ -272,33 +272,27 @@ dim(seqtable)
 
 # Inspect distribution of sequence lengths
 hist(nchar(getSequences(seqtable)), breaks = 100, xlab = "ASV length", ylab = "Number of ASVs", main="")
+
+# Sequences should be between 8F - 357R, so around ~310bp (removing the primers lengths).
+# Remove any sequence variant outside 250-400bp
+seqtable.new <- seqtable[,nchar(colnames(seqtable)) %in% 260:360]
+dim(seqtable.new)
+hist(nchar(getSequences(seqtable.new)), breaks = 100, xlab = "Read length", ylab = "Number of reads", main="")
 ```
 
-Considering that both primers were found in the reads, and that the V1-V2 region should not be larger than ~350bp, we will remove any sequence variant above that 400bp, as they could be due to non-specific priming.
-
-```{r new-seq-table, fig.height=3, fig.width=4}
-# Remove any sequence variant below 400bp
-seqtable_new <- seqtable[,nchar(colnames(seqtable)) %in% 300:400]
-
-# We should have 76 samples (76 rows)
-dim(seqtable_new)
-
-# Inspect distribution of sequence lengths
-hist(nchar(getSequences(seqtable_new)), breaks = 100, xlab = "ASV length", ylab = "Number of ASVs", main="")
-```
 
 ### 3. Remove chimeras
 
 The core dada method corrects substitution and indel errors, but chimeras remain. Fortunately, the accuracy of sequence variants after denoising makes identifying chimeric ASVs simpler than when dealing with fuzzy OTUs. Chimeric sequences are identified if they can be exactly reconstructed by combining a left-segment and a right-segment from two more abundant “parent” sequences.
 
 ```{r remove-chimeras}
-seqtable.nochim <- removeBimeraDenovo(seqtable_new, method="consensus", multithread=TRUE, verbose=TRUE)
+seqtable.nochim <- removeBimeraDenovo(seqtable.new, method="consensus", multithread=TRUE, verbose=TRUE)
 
 # Check how many sequence variants we have after removing chimeras
 dim(seqtable.nochim)
 
 # Check how many reads we have after removing chimeras (we should keep the vast majority of the reads, like > 80%)
-sum(seqtable.nochim)/sum(seqtable_new)
+sum(seqtable.nochim)/sum(seqtable.new)
 ```
 
 
@@ -314,16 +308,28 @@ Sanity check before assigning taxonomy.
 getN <- function(x) sum(getUniques(x))
 
 # Table that will count number of reads for each process of interest (input reads, filtered reads, denoised reads, non chimera reads)
-track <- cbind(out1, out2[,2], sapply(seq_infered, getN), rowSums(seqtable.nochim),
+track <- cbind(out1,
+               out2[,2],
+               sapply(seq_infered, getN),
+               rowSums(seqtable.nochim),
                lapply(rowSums(seqtable.nochim)*100/out1[,1], as.integer))
 
 # Assign column and row names
-colnames(track) <- c("input", "primer-filt", "quality-filt", "denoised", "nonchim", "%kept_input->output")
+colnames(track) <- c("input", "primer-filt", "quality-filt", "denoised", "nonchim", "%input->output")
 rownames(track) <- sample.names
 
 # Show final table: for each row/sample, we have shown the initial number of reads, filtered reads, denoised reads, and non chimera reads
 track
 ```
+
+```{r seqdepth, echo=FALSE, eval=FALSE, include=FALSE}
+# Save nb of reads per sample before / after dada2 pipeline
+nb.reads <- data.frame("before" = raw_stats$reads,
+                       "after" = rowSums(seqtable.nochim),
+                       "dataset" = "Ringel")
+saveRDS(nb.reads, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/DADA2-FILT/seqdepth_ringel.rds")
+```
+
 
 
 #####################
@@ -408,15 +414,6 @@ saveRDS(sample_data(physeq), "~/Projects/IBS_Meta-analysis_16S/data/analysis-ind
 write.csv(sample_data(physeq), "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Ringel-2015/01_Dada2-Ringel/RingelMetadata.csv")
 
 saveRDS(physeq, "~/Projects/IBS_Meta-analysis_16S/phyloseq-objects/physeq_ringel.rds") # phyloseq object
-
-
-# Save nb of reads per sample before / after dada2 pipeline
-nb.reads <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/nb_reads.rds")
-nb.reads[1:76, 'Ringel_before'] <- fastqq(FNs)@nReads
-nb.reads[1:76, 'Ringel_after'] <- rowSums(seqtable.nochim)
-median(na.omit(nb.reads$Ringel_before)) # sanity check
-median(na.omit(nb.reads$Ringel_after)) # sanity check
-saveRDS(nb.reads, "~/Projects/IBS_Meta-analysis_16S/data/nb_reads.rds")
 ```
 
 
