@@ -409,17 +409,17 @@ physeq <- subset_taxa(physeq, !is.na(Phylum))
 
 ```{r, eval=FALSE}
 # Save to disk
-saveRDS(raw_stats, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Mars-2020/01_Dada2-Mars/raw_stats.rds")
-saveRDS(out2, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Mars-2020/01_Dada2-Mars/out2.rds")
-saveRDS(errF, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Mars-2020/01_Dada2-Mars/errF.rds")
-saveRDS(errR, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Mars-2020/01_Dada2-Mars/errR.rds")
-saveRDS(dadaFs, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Mars-2020/01_Dada2-Mars/infered_seq_F.rds")
-saveRDS(dadaRs, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Mars-2020/01_Dada2-Mars/infered_seq_R.rds")
-saveRDS(mergers, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Mars-2020/01_Dada2-Mars/mergers.rds")
+saveRDS(raw_stats, file.path(path, "01_Dada2-Mars/raw_stats.rds"))
+saveRDS(out2, file.path(path, "01_Dada2-Mars/out2.rds"))
+saveRDS(errF, file.path(path, "01_Dada2-Mars/errF.rds"))
+saveRDS(errR, file.path(path, "01_Dada2-Mars/errR.rds"))
+saveRDS(dadaFs, file.path(path, "01_Dada2-Mars/infered_seq_F.rds"))
+saveRDS(dadaRs, file.path(path, "01_Dada2-Mars/infered_seq_R.rds"))
+saveRDS(mergers, file.path(path, "01_Dada2-Mars/mergers.rds"))
 
-saveRDS(otu_table(physeq), "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Mars-2020/01_Dada2-Mars/ASVtable_final.rds") # ASV table
-saveRDS(tax_table(physeq), "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Mars-2020/01_Dada2-Mars/taxa_final.rds") # taxa table
-saveRDS(sample_data(physeq), "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Mars-2020/01_Dada2-Mars/metadata_final.rds") # metadata table
+saveRDS(otu_table(physeq), file.path(path, "01_Dada2-Mars/ASVtable_final.rds")) # ASV table
+saveRDS(tax_table(physeq), file.path(path, "01_Dada2-Mars/taxa_final.rds")) # taxa table
+saveRDS(sample_data(physeq), file.path(path, "01_Dada2-Mars/metadata_final.rds")) # metadata table
 
 saveRDS(physeq, "~/Projects/IBS_Meta-analysis_16S/phyloseq-objects/physeq_Mars.rds") # phyloseq object
 ```
