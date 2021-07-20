@@ -33,7 +33,7 @@ Liu et al. (_BMC Microbiology_, 2020) - [Microbial and metabolomic profiles in c
 - 14,605 amplicon sequence variants (ASVs)
 
 ### b) Remove chimeras
-- 5,558 seq variants (but still >89% reads kept)
+- 5,551 seq variants (but still >90% reads kept)
 
 ### c) Assign taxonomy
 Taxonomy assigned with Silva v138.

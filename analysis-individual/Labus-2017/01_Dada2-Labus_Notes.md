@@ -16,7 +16,7 @@ Labus et al. (_Microbiome_, 2017) - [Differences in gut microbial composition co
 - **Quality** - average (Q around 30)
 
 ## Primers
-- V3-V5 variable regions (about 350bp)
+- V3-V5 variable regions (about 550bp)
 - FWD - 341F - 5’ - CCTACGGGAGGCAGCAG - 3’
 - REV -  926R - 5’ - CCGTCAATTCMTTTRAGT - 3’
 - reverse primer found at the beginning of all of the reads (in its forward orientation)
