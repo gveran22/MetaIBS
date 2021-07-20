@@ -46,3 +46,4 @@ All unassigned phyla were removed (n=...), samples below 500 total reads (n=...)
 ## Metadata
 - age
 - gender
+- IBS subtype (all IBS-D)

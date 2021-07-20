@@ -276,7 +276,7 @@ for (i in 1:2){
 ### 2. Merge paired-end reads
 
 ```{r merge-paired-end, eval = FALSE}
-mergers <- mergePairs(dadaFs, derepF, dadaRs, derepR, verbose=TRUE)
+mergers <- mergePairs(dadaFs, derepF, dadaRs, derepR, minOverlap=20, verbose=TRUE)
 ```
 
 ```{r}
