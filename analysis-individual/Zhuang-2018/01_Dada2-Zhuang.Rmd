@@ -255,7 +255,7 @@ for (i in 1:3){
 We now need to merge paired reads.
 
 ```{r merge-paired-end, eval = FALSE}
-mergers <- mergePairs(dadaFs, derepF, dadaRs, derepR, verbose=TRUE)
+mergers <- mergePairs(dadaFs, derepF, dadaRs, derepR, minOverlap=20, verbose=TRUE)
 ```
 
 ```{r}
@@ -306,17 +306,28 @@ Sanity check before assigning taxonomy.
 getN <- function(x) sum(getUniques(x))
 
 # Table that will count number of reads for each process of interest (input reads, filtered reads, denoised reads, non chimera reads)
-track <- cbind(out2, sapply(dadaFs, getN),  sapply(dadaRs, getN), sapply(mergers, getN), rowSums(seqtable.nochim),
+track <- cbind(out2,
+               sapply(dadaFs, getN),
+               sapply(dadaRs, getN),
+               sapply(mergers, getN),
+               rowSums(seqtable.nochim),
                lapply(rowSums(seqtable.nochim)*100/out2[,1], as.integer))
 
 # Assign column and row names
-colnames(track) <- c("input", "quality-filt", "denoisedF", "denoisedR", 'merged', 'nonchim', "%kept_input->output")
+colnames(track) <- c("input", "quality-filt", "denoisedF", "denoisedR", 'merged', 'nonchim', "%input->output")
 rownames(track) <- sample.names
 
 # Show final table: for each row/sample, we have shown the initial number of reads, filtered reads, denoised reads, and non chimera reads
 track
 ```
 
+```{r seqdepth, echo=FALSE, eval=FALSE, include=FALSE}
+# Save nb of reads per sample before / after dada2 pipeline
+nb.reads <- data.frame("before" = raw_stats$reads,
+                       "after" = rowSums(seqtable.nochim),
+                       "dataset" = "Zhuang")
+saveRDS(nb.reads, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/DADA2-FILT/seqdepth_zhuang.rds")
+```
 
 
 #####################
