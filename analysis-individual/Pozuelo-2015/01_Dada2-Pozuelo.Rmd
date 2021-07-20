@@ -445,27 +445,18 @@ physeq <- subset_taxa(physeq, !is.na(Phylum))
 
 ```{r save, eval=FALSE}
 # Save to disk
-saveRDS(out1, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Pozuelo-2015/Rproject_Dada2/out1.rds")
-saveRDS(out2, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Pozuelo-2015/Rproject_Dada2/out2.rds")
-saveRDS(err, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Pozuelo-2015/Rproject_Dada2/err.rds")
-saveRDS(seq_infered, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Pozuelo-2015/Rproject_Dada2/seq_infered.rds")
+saveRDS(raw_stats, file.path(path, "01_Dada2-Pozuelo/raw_stats.rds"))
+saveRDS(out1, file.path(path, "01_Dada2-Pozuelo/out1.rds"))
+saveRDS(out2, file.path(path, "01_Dada2-Pozuelo/out2.rds"))
+saveRDS(err, file.path(path, "01_Dada2-Pozuelo/err.rds"))
+saveRDS(seq_infered, file.path(path, "01_Dada2-Pozuelo/seq_infered.rds"))
 
+saveRDS(otu_table(physeq), file.path(path, "01_Dada2-Pozuelo/ASVtable_final.rds")) # ASV table
+saveRDS(tax_table(physeq), file.path(path, "01_Dada2-Pozuelo/taxa_final.rds")) # taxa table
+saveRDS(sample_data(physeq), file.path(path, "01_Dada2-Pozuelo/metadata_final.rds")) # metadata table
+write.csv(sample_data(physeq), file.path(path, "PozueloMetadata.csv"))
 
-saveRDS(otu_table(physeq), "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Pozuelo-2015/Rproject_Dada2/ASVtable_final.rds") # ASV table
-saveRDS(tax_table(physeq), "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Pozuelo-2015/Rproject_Dada2/taxa_final.rds") # taxa table
-saveRDS(sample_data(physeq), "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Pozuelo-2015/Rproject_Dada2/metadata_final.rds") # metadata table
-write.csv(sample_data(physeq), "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Pozuelo-2015/Rproject_Dada2/PozueloMetadata.csv")
-
-saveRDS(physeq, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Pozuelo-2015/physeq_pozuelo.rds") # phyloseq object
-
-
-# Save nb of reads per sample before / after dada2 pipeline
-nb.reads <- readRDS("/Users/scarcy/Desktop/Praktikum/Data/nb_reads.rds")
-nb.reads[1:290, 'Pozuelo_before'] <- fastqq(FNs)@nReads
-nb.reads[1:290, 'Pozuelo_after'] <- rowSums(seqtable.nochim)
-median(na.omit(nb.reads$Pozuelo_before)) # sanity check
-median(na.omit(nb.reads$Pozuelo_after)) # sanity check
-saveRDS(nb.reads, "/Users/scarcy/Desktop/Praktikum/Data/nb_reads.rds")
+saveRDS(physeq, "~/Projects/IBS_Meta-analysis_16S/phyloseq-objects/physeq_pozuelo.rds") # phyloseq object
 ```
 
 
