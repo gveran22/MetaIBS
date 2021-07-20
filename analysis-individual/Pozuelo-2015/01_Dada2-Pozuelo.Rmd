@@ -41,7 +41,7 @@ First, we import the fastq files containing the raw reads. The samples were down
 ```{r quality-check, echo=TRUE}
 # Save the path to the directory containing the fastq zipped files
 path <- "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Pozuelo-2015"
-#list.files(path) # check we are in the right directory
+# list.files(path) # check we are in the right directory
 
 # fastq filenames have format: SAMPLENAME.fastq.gz
 # Saves the whole directory path to each file name
@@ -49,7 +49,7 @@ FNs <- sort(list.files(file.path(path, "original"), pattern=".fastq", full.names
 show(FNs[1:5])
 
 # Extract sample names, assuming filenames have format: SAMPLENAME.fastq
-sample.names <- sapply(strsplit(basename(FNs), "_"), `[`, 1)
+sample.names <- sapply(strsplit(basename(FNs), "[.]"), `[`, 1)
 show(sample.names[1:5]) # saves only the file name (without the path)
 
 # Look at quality of all files
@@ -58,11 +58,11 @@ for (i in 1:4){ # 1:length(FNs)
 }
 
 # Look at nb of reads per sample
-#raw_stats <- data.frame('sample' = sample.names,
-#                        'reads' = fastqq(FNs)@nReads)
-#min(raw_stats$reads)
-#max(raw_stats$reads)
-#mean(raw_stats$reads)
+# raw_stats <- data.frame('sample' = sample.names,
+#                         'reads' = fastqq(FNs)@nReads)
+# min(raw_stats$reads)
+# max(raw_stats$reads)
+# mean(raw_stats$reads)
 ```
 
 We will have a quick peak at the per base sequence content of the reads in some samples, to make sure there is no anomaly (i.e. all reads having the same sequence).
@@ -109,7 +109,6 @@ Now, we will look whether the reads still contain the primers.
 # V4
 FWD <- "GTGCCAGCMGCCGCGGTAA"  # 515F primer sequence
 REV <- "GGACTACHVGGGTWTCTAAT" # 806R primer sequence
-SEQBegin <- "TACGKA" # sequence at the beginning of all reads (what is it?!)
 
 # Function that, from the primer sequence, will return all combinations possible (complement, reverse complement, ...)
 allOrients <- function(primer) {
@@ -118,20 +117,17 @@ allOrients <- function(primer) {
     dna <- DNAString(primer)  # The Biostrings works w/ DNAString objects rather than character vectors
     orients <- c(Forward = dna, Complement = complement(dna), Reverse = reverse(dna), 
         RevComp = reverseComplement(dna))
-    return(sapply(orients, toString))  # Convert back to character vector
+    return(sapply(orients, toString))
 }
 
 # Get all combinations of the primer sequences
 FWD.orients <- allOrients(FWD) # 515F
 REV.orients <- allOrients(REV) # 806R
-SEQBegin.orients <- allOrients(SEQBegin)
 FWD.orients # sanity check
 REV.orients
-SEQBegin.orients
 
 # Function that counts number of reads in which a sequence is found
 primerHits <- function(primer, fn) {
-    # Counts number of reads in which the primer is found
     nhits <- vcountPattern(primer, sread(readFastq(fn)), fixed = FALSE, max.mismatch = 2)
     return(sum(nhits > 0))
 }
@@ -140,8 +136,7 @@ primerHits <- function(primer, fn) {
 for (i in 1:5){
   cat("SAMPLE", sample.names[i], "with total number of", raw_stats[i,'reads'], "reads\n\n")
   x <-  rbind(ForwardPrimer = sapply(FWD.orients, primerHits, fn = FNs[[i]]), 
-              ReversePrimer = sapply(REV.orients, primerHits, fn = FNs[[i]]),
-              SeqBeginning = sapply(SEQBegin.orients, primerHits, fn = FNs[[i]]))
+              ReversePrimer = sapply(REV.orients, primerHits, fn = FNs[[i]]))
   print(x)
   cat("\n____________________________________________\n\n")
 }
@@ -155,28 +150,50 @@ for (i in 1:5){
 
 ### 1. Primer removal
 
-The reads indeed contain the reverse primer. We could not find the forward primer, but we need to give a _primer.fwd_ parameter to the function 'removePrimers', so we will give the 'TACGKA' sequence that we found at the beginning of all the reads.
-We will keep only reads containing the reverse primer, and then remove the primer!
+The reads indeed contain the reverse primer. The reverse complement of the reverse primer is found at the **end** of the reads, which is expected.
+We could not find the forward primer, but we need to give a _primer.fwd_ parameter to the function 'removePrimers'... We will reverse complement the reads, so that the reverse primer can be set as a _primer.fwd_ in the function. Then we will reverse-complement the filtered reads again, so they are kept in their original orientation.
 
 ```{r primer-filter, eval = FALSE, echo = TRUE}
+# REVERSE COMPLEMENT THE READS
+FNs_revcomp <- file.path(path, "original(revcomp)", paste0(sample.names, "_revcomp.fastq.gz"))
+names(FNs_revcomp) <- sample.names
+
+# Write reverse complement of the reads
+for (i in 1:length(FNs)){
+  fq <- reverseComplement(readFastq(FNs[i]))
+  fout <- FNs_revcomp[i]
+  writeFastq(fq, fout)
+}
+
+
 # KEEP READS WITH PRIMER AND REMOVE PRIMER
 # Place filtered files in a filtered/ subdirectory
-filt1_samples <- file.path(path, "filtered1", paste0(sample.names, "_filt.fastq.gz"))
+filt1_revcomp <- file.path(path, "filtered1(revcomp)", paste0(sample.names, "_filt_revcomp.fastq.gz"))
 # Assign names for the filtered fastq.gz files
-names(filt1_samples) <- sample.names
+names(filt1_revcomp) <- sample.names
 
-# Filter first to take out primer
-out1 <- removePrimers(fn = FNs, fout = filt1_samples,
-                      primer.fwd = 'TACGKA', # sequence found at the beginning of all reads
-                      primer.rev = REV.orients['RevComp'], # revcomp of the reverse primer, found at the end of the reads
+out1 <- removePrimers(fn = FNs_revcomp, fout = filt1_revcomp,
+                      primer.fwd = REV.orients['Forward'], # reverse primer found at the beginning of all reads
                       trim.fwd = TRUE,
-                      trim.rev = TRUE,
                       orient = FALSE, # keep the reads in their original orientation
                       compress = TRUE, verbose = TRUE)
+
+
+# REVERSE COMPLEMENT THE FILTERED READS
+filt1_samples <- file.path(path, "filtered1", paste0(sample.names, "_filt1.fastq.gz"))
+names(filt1_samples) <- sample.names
+
+# Write reverse complement of the reads
+for (i in 1:length(filt1_revcomp)){
+  fq <- reverseComplement(readFastq(filt1_revcomp[i]))
+  fout <- filt1_samples[i]
+  writeFastq(fq, fout)
+}
 ```
 
 ```{r primer-filter-check}
 # Primer removal
+rownames(out1) <- sample.names
 out1[1:5,]
 
 # Quality profile after primer removal
@@ -195,29 +212,15 @@ Then, we perform a quality filtering of the reads.
 
 ```{r quality-filter, eval = FALSE, echo = TRUE}
 # Place filtered files in a filtered/ subdirectory
-# filt2_samples <- file.path(path, "filtered2", paste0(sample.names, "_filt.fastq.gz"))
-# # Assign names for the filtered fastq.gz files
-# names(filt2_samples) <- sample.names
+filt2_samples <- file.path(path, "filtered2", paste0(sample.names, "_filt2.fastq.gz"))
+# Assign names for the filtered fastq.gz files
+names(filt2_samples) <- sample.names
 
-filt_test <- file.path(path, "filt_test", paste0(sample.names, "_filt.fastq.gz"))
-names(filt_test) <- sample.names
-
-out2 <- filterAndTrim(fwd = filt1_samples, filt = filt_test, # filt = filt2_samples,
-                      maxEE=3, # reads with more than 4 expected errors (sum(10e(-Q/10))) are discarded
+out2 <- filterAndTrim(fwd = filt1_samples, filt = filt2_samples,
+                      maxEE=3, # reads with more than 3 expected errors (sum(10e(-Q/10))) are discarded
                       truncQ=10, # Truncate reads at the first instance of a quality score less than or equal to truncQ.
-                      minLen=150, # Discard reads shorter than 200 bp. This is done after trimming and truncation.
-                      compress=TRUE, # Output files in gzip format
-                      verbose=TRUE) # give a message saying the percentage of filtered sequences
-
-test <- out2 %>%
-  as.data.frame() %>%
-  mutate(percent = reads.out*100 / reads.in) %>%
-  select(percent)
-mean(test$percent)
-
-out2 %>%
-  as.data.frame() %>%
-  filter(reads.out > 1000)
+                      minLen=150, # Discard reads shorter than 150 bp. This is done after trimming and truncation.
+                      compress=TRUE, multithread=TRUE, verbose=TRUE)
 ```
 
 Let's look at the output filtered fastq files as sanity check.
