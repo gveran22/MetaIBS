@@ -424,28 +424,19 @@ physeq <- subset_taxa(physeq, Kingdom != "Eukaryota" & !is.na(Phylum))
 
 ```{r save, eval=FALSE}
 # Save to disk
-saveRDS(out1, "/Users/scarcy/Desktop/Praktikum/Data/LoPresti_2019/Rproject_Dada2/out1.rds")
-saveRDS(out2, "/Users/scarcy/Desktop/Praktikum/Data/LoPresti_2019/Rproject_Dada2/out2.rds")
-saveRDS(err, "/Users/scarcy/Desktop/Praktikum/Data/LoPresti_2019/Rproject_Dada2/err.rds")
-saveRDS(seq_infered, "/Users/scarcy/Desktop/Praktikum/Data/LoPresti_2019/Rproject_Dada2/seq_infered.rds")
+saveRDS(raw_stats, file.path(path, "01_Dada2-LoPresti/raw_stats.rds"))
+saveRDS(out1, file.path(path, "01_Dada2-LoPresti/out1.rds"))
+saveRDS(out2, file.path(path, "01_Dada2-LoPresti/out2.rds"))
+saveRDS(err, file.path(path, "01_Dada2-LoPresti/err.rds"))
+saveRDS(seq_infered, file.path(path, "01_Dada2-LoPresti/seq_infered.rds"))
+saveRDS(seqtable.nochim, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/CLUSTER/Taxonomy/input/seqtable_lopresti.rds")
 
-saveRDS(otu_table(physeq), "/Users/scarcy/Desktop/Praktikum/Data/LoPresti_2019/Rproject_Dada2/ASVtable_final.rds") # ASV table
-saveRDS(tax_table(physeq), "/Users/scarcy/Desktop/Praktikum/Data/LoPresti_2019/Rproject_Dada2/taxa_final.rds") # taxa table
-saveRDS(sample_data(physeq), "/Users/scarcy/Desktop/Praktikum/Data/LoPresti_2019/Rproject_Dada2/metadata_final.rds") # metadata table
-write.table(sample_data(physeq), "/Users/scarcy/Desktop/Praktikum/Data/LoPresti_2019/Rproject_Dada2/LoPrestiMetadata.csv")
+saveRDS(otu_table(physeq), file.path(path, "01_Dada2-LoPresti/ASVtable_final.rds")) # ASV table
+saveRDS(tax_table(physeq), file.path(path, "01_Dada2-LoPresti/taxa_final.rds")) # taxa table
+saveRDS(sample_data(physeq), file.path(path, "01_Dada2-LoPresti/metadata_final.rds")) # metadata table
+write.table(sample_data(physeq), file.path(path, "LoPrestiMetadata.csv"))
 
-saveRDS(physeq, "/Users/scarcy/Desktop/Praktikum/Data/LoPresti_2019/physeq_lopresti.rds") # phyloseq object
-
-
-#_______________
-# Save nb of reads per sample before / after dada2 pipeline
-nb.reads <- readRDS("/Users/scarcy/Desktop/Praktikum/Data/nb_reads.rds")
-nb.reads[53:300,] <- NA # add rows
-nb.reads[1:163, 'LoPresti_before'] <- fastqq(FNs)@nReads
-nb.reads[1:163, 'LoPresti_after'] <- rowSums(seqtable.nochim)
-median(na.omit(nb.reads$LoPresti_before)) # sanity check
-median(na.omit(nb.reads$LoPresti_after)) # sanity check
-saveRDS(nb.reads, "/Users/scarcy/Desktop/Praktikum/Data/nb_reads.rds")
+saveRDS(physeq, "~/Projects/IBS_Meta-analysis_16S/phyloseq-objects/physeq_lopresti.rds") # phyloseq object
 ```
 
 
