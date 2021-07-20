@@ -59,11 +59,11 @@ for (i in 1:4){ # 1:length(FNs)
 }
 
 # Look at number of reads per sample
-raw_stats <- data.frame('sample' = sample.names,
-                        'reads' = fastqq(FNs)@nReads)
-min(raw_stats$reads)
-max(raw_stats$reads)
-print(mean(raw_stats$reads))
+# raw_stats <- data.frame('sample' = sample.names,
+#                         'reads' = fastqq(FNs)@nReads)
+# min(raw_stats$reads)
+# max(raw_stats$reads)
+# mean(raw_stats$reads)
 ```
 
 We will have a quick peak at the per base sequence content of the reads in some samples, to make sure there is no anomaly (i.e. all reads having the same sequence).
