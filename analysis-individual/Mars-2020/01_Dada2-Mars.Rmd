@@ -385,6 +385,7 @@ The preprocessing will be easier to do with ASV, taxonomic and metadata tables c
 # Import metadata
 metadata_table <- read.csv(file.path(path, "00_Metadata-Mars/modif_metadata(R).csv")) %>% select(-X)
 colnames(metadata_table)
+rownames(metadata_table) <- metadata_table$Run
 
 # Add a few covariates
 metadata_table$author <- "Mars"
@@ -421,7 +422,7 @@ saveRDS(otu_table(physeq), file.path(path, "01_Dada2-Mars/ASVtable_final.rds")) 
 saveRDS(tax_table(physeq), file.path(path, "01_Dada2-Mars/taxa_final.rds")) # taxa table
 saveRDS(sample_data(physeq), file.path(path, "01_Dada2-Mars/metadata_final.rds")) # metadata table
 
-saveRDS(physeq, "~/Projects/IBS_Meta-analysis_16S/phyloseq-objects/physeq_Mars.rds") # phyloseq object
+saveRDS(physeq, "~/Projects/IBS_Meta-analysis_16S/phyloseq-objects/physeq_mars.rds") # phyloseq object
 ```
 
 
