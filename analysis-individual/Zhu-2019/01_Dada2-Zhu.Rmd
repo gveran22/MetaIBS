@@ -349,6 +349,11 @@ dim(seqtable.nochim)
 
 # Check how many reads we have after removing chimeras (we should keep the vast majority of the reads, like > 80%)
 sum(seqtable.nochim)/sum(seqtable)
+
+# Same for the table with ASVs where I cut the FWD primer
+seqtable.small.nochim <- removeBimeraDenovo(seqtable.small, method="consensus", multithread=TRUE, verbose=TRUE)
+dim(seqtable.small.nochim)
+sum(seqtable.small.nochim)/sum(seqtable.small)
 ```
 
 
@@ -364,15 +369,27 @@ Sanity check before assigning taxonomy.
 getN <- function(x) sum(getUniques(x))
 
 # Table that will count number of reads for each process of interest (input reads, filtered reads, denoised reads, non chimera reads)
-track <- cbind(out2, sapply(dadaFs, getN),  sapply(dadaRs, getN), sapply(mergers, getN), rowSums(seqtable.nochim),
+track <- cbind(out2,
+               sapply(dadaFs, getN),
+               sapply(dadaRs, getN),
+               sapply(mergers, getN),
+               rowSums(seqtable.nochim),
                lapply(rowSums(seqtable.nochim)*100/out2[,1], as.integer))
 
 # Assign column and row names
-colnames(track) <- c("input", "quality-filt", "denoisedF", "denoisedR", 'merged', 'nonchim', "%kept_input->output")
+colnames(track) <- c("input", "quality-filt", "denoisedF", "denoisedR", 'merged', 'nonchim', "%input->output")
 rownames(track) <- sample.names
 
 # Show final table: for each row/sample, we have shown the initial number of reads, filtered reads, denoised reads, and non chimera reads
 track
+```
+
+```{r seqdepth, echo=FALSE, eval=FALSE, include=FALSE}
+# Save nb of reads per sample before / after dada2 pipeline
+nb.reads <- data.frame("before" = raw_stats$reads,
+                       "after" = rowSums(seqtable.nochim),
+                       "dataset" = "Zhu")
+saveRDS(nb.reads, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/DADA2-FILT/seqdepth_zhu.rds")
 ```
 
 
@@ -391,11 +408,17 @@ taxa <- assignTaxonomy(seqtable.nochim, "~/Projects/IBS_Meta-analysis_16S/data/s
 
 # Add species assignment
 taxa <- addSpecies(taxa, "~/Projects/IBS_Meta-analysis_16S/data/silva_species_assignment_v138.fa.gz")
+
+# Same with our optimized seqtable
+taxa.small <- assignTaxonomy(seqtable.small.nochim, "~/Projects/IBS_Meta-analysis_16S/data/silva_nr_v138_train_set.fa.gz",
+                            tryRC = TRUE, # try reverse complement of the sequences
+                            multithread=TRUE, verbose = TRUE)
+taxa.small <- addSpecies(taxa.small, "~/Projects/IBS_Meta-analysis_16S/data/silva_species_assignment_v138.fa.gz")
 ```
 
 ```{r}
 # Check how the taxonomy table looks like
-taxa.print <- taxa 
+taxa.print <- taxa
 rownames(taxa.print) <- NULL # Removing sequence rownames for display only
 head(taxa.print)
 
@@ -404,6 +427,18 @@ taxa.print[taxa.print[,1] == 'Eukaryota',2] # the eukaryota are all NAs
 
 table(taxa.print[,2]) # Show the different phyla
 table(is.na(taxa.print[,2])) # is there any NA phyla?
+```
+
+```{r}
+# Check how the taxonomy table looks like
+taxa.small.print <- taxa.small
+rownames(taxa.small.print) <- NULL # Removing sequence rownames for display only
+head(taxa.small.print)
+
+table(taxa.small.print[,1]) # Show the different kingdoms (should be only bacteria)
+
+table(taxa.small.print[,2]) # Show the different phyla
+table(is.na(taxa.small.print[,2])) # is there any NA phyla?
 ```
 
 
