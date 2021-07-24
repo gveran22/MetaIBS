@@ -539,3 +539,21 @@ ggplot(phylum.table, aes(x = Sample, y = Abundance, fill = Phylum))+
 
 ```
 
+```{r plot-2, fig.width = 10, fig.height = 5}
+# Absolute abundance
+plot_bar(physeq.small, fill = "Phylum")+ facet_wrap("host_disease", scales="free") + theme(axis.text.x = element_blank())
+
+# Relative abundance for Phylum
+phylum.table <- physeq.small %>%
+  tax_glom(taxrank = "Phylum") %>%                     # agglomerate at phylum level
+  transform_sample_counts(function(x) {x/sum(x)} ) %>% # Transform to rel. abundance
+  psmelt()                                             # Melt to long format
+
+ggplot(phylum.table, aes(x = Sample, y = Abundance, fill = Phylum))+
+  facet_wrap(~ host_disease, scales = "free") + # scales = "free" removes empty lines
+  geom_bar(stat = "identity") +
+  theme(axis.text.x = element_text(size = 5, angle = -90))+
+  labs(x = "Samples", y = "Relative abundance")
+
+```
+
