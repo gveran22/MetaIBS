@@ -322,7 +322,7 @@ saveRDS(nb.reads, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/DAD
 ## ASSIGN TAXONOMY ##
 #####################
 
-Extensions: The dada2 package also implements a method to make species level assignments based on exact matching between ASVs and sequenced reference strains. Recent analysis suggests that exact matching (or 100% identity) is the only appropriate way to assign species to 16S gene fragments. Currently, species-assignment training fastas are available for the Silva and RDP 16S databases. To follow the optional species addition step, download the silva_species_assignment_v132.fa.gz file, and place it in the directory with the fastq files.
+Extensions: The dada2 package also implements a method to make species level assignments based on exact matching between ASVs and sequenced reference strains. Recent analysis suggests that exact matching (or 100% identity) is the only appropriate way to assign species to 16S gene fragments. Currently, species-assignment training fastas are available for the Silva and RDP 16S databases. To follow the optional species addition step, download the silva_species_assignment_v138.fa.gz file, and place it in the directory with the fastq files.
 
 ```{r assign-taxonomy, eval = FALSE}
 # Assign taxonomy (with silva v138)
@@ -359,16 +359,20 @@ The preprocessing will be easier to do with ASV, taxonomic and metadata tables c
 ```{r phyloseq-preprocess, echo=TRUE, eval=FALSE}
 #_________________________
 # Import metadata
-metadata <- read.csv(file.path(path, "Metadata-Liu.csv"))
+metadata <- read.csv(file.path(path, "00_Metadata-Liu/modif_metadata(R).csv")) %>% select(-X)
+rownames(metadata) <- metadata$Run
 
-sampledf$author <- "Liu"
-sampledf$sequencing_tech <- "Illumina"
-sampledf$variable_region <- "V4"
+metadata$author <- "Liu"
+metadata$sequencing_tech <- "Illumina"
+metadata$variable_region <- "V3-V4"
+
+# Remove .fastq extension in seqtable.nochim
+rownames(seqtable.nochim) <- gsub(".fastq.gz", "", rownames(seqtable.nochim))
 
 #_________________________
 # Create phyloseq object
 physeq <- phyloseq(otu_table(seqtable.nochim, taxa_are_rows=FALSE), # by default, in otu_table the sequence variants are in rows
-                   sample_data(sampledf), 
+                   sample_data(metadata), 
                    tax_table(taxa))
 
 # Remove samples with less than 500 reads
@@ -395,7 +399,7 @@ saveRDS(tax_table(physeq), file.path(path, "01_Dada2-Liu/taxa_final.rds")) # tax
 saveRDS(sample_data(physeq), file.path(path, "01_Dada2-Liu/metadata_final.rds")) # metadata table
 write.csv(sample_data(physeq), file.path(path, "Metadata-Liu.csv"))
 
-saveRDS(physeq, file.path(path, "01_Dada2-Liu/physeq_Liu.rds")) # phyloseq object
+saveRDS(physeq, "~/Projects/IBS_Meta-analysis_16S/phyloseq-objects/physeq_liu.rds") # phyloseq object
 ```
 
 
@@ -403,7 +407,7 @@ saveRDS(physeq, file.path(path, "01_Dada2-Liu/physeq_Liu.rds")) # phyloseq objec
 
 ```{r plot, fig.width = 10}
 # Absolute abundance
-# plot_bar(physeq, fill = "Phylum")+ facet_wrap("host_disease", scales="free") + theme(axis.text.x = element_blank()) # long to compute
+plot_bar(physeq, fill = "Phylum")+ facet_wrap("host_disease", scales="free") + theme(axis.text.x = element_blank()) # long to compute
 
 # Relative abundance for Phylum
 phylum.table <- physeq %>%
@@ -420,3 +424,21 @@ ggplot(phylum.table, aes(x = reorder(Sample, Sample, function(x) mean(phylum.tab
 
 ```
 
+```{r plot, fig.width = 10}
+# Absolute abundance
+plot_bar(physeq.filt, fill = "Phylum")+ facet_wrap("host_disease", scales="free") + theme(axis.text.x = element_blank()) # long to compute
+
+# Relative abundance for Phylum
+phylum.table <- physeq.filt %>%
+  tax_glom(taxrank = "Phylum") %>%                     # agglomerate at phylum level
+  transform_sample_counts(function(x) {x/sum(x)} ) %>% # Transform to rel. abundance
+  psmelt()                                             # Melt to long format
+
+ggplot(phylum.table, aes(x = reorder(Sample, Sample, function(x) mean(phylum.table[Sample == x & Phylum == 'Bacteroidota', 'Abundance'])),
+                         y = Abundance, fill = Phylum))+
+  facet_wrap(~ host_disease, scales = "free") + # scales = "free" removes empty lines
+  geom_bar(stat = "identity") +
+  theme(axis.text.x = element_blank())+
+  labs(x = "Samples", y = "Relative abundance")
+
+```
