@@ -261,7 +261,7 @@ for (i in 1:3){
 We now need to merge paired reads.
 
 ```{r merge-paired-end, eval = FALSE}
-mergers <- mergePairs(dadaFs, derepF, dadaRs, derepR, minOverlap=20, verbose=TRUE)
+mergers <- mergePairs(dadaFs, derepF, dadaRs, derepR, verbose=TRUE)
 ```
 
 ```{r}
@@ -281,8 +281,60 @@ seqtable <- makeSequenceTable(mergers)
 dim(seqtable)
 
 # Inspect distribution of sequence lengths
-hist(nchar(getSequences(seqtable)), breaks = 100, xlab = "Read length", ylab = "Number of reads", main="")
+hist(nchar(getSequences(seqtable)), breaks = 100, xlab = "ASV length", ylab = "Number of ASVs", main="")
 ```
+
+The V4 region should be ~250bp, and our ASVs are rather ~400bp long. Considering that the forward primer was found in the middle of the forward reads, it is possible that we have much longer ASVs than we should (pre-V4 region + V4 region).
+Let's try trimming the ASVs until the end of the forward primer.
+
+```{r cut-asvs}
+# Get the ASVs
+asvs <- getSequences(seqtable)
+
+# Trim the ASVs when they contain the forward primer.
+# FWD primer: GTGCCAGCMGCCGCGGTAA (M: A or C)
+new.asvs <- sub(".*GTGCCAGCAGCCGCGGTAA|.*GTGCCAGCCGCCGCGGTAA", "", getSequences(seqtable))
+length(new.asvs) == length(asvs) # sanity check
+
+# Let's check the length of our new asvs
+hist(nchar(new.asvs), breaks = 100, xlab = "ASV length", ylab = "Number of ASVs", main="")
+
+# Put these new ASVs in a separate seqtable
+seqtable.new <- seqtable
+colnames(seqtable.new) <- new.asvs
+
+# Sanity check
+# for (i in 1:length(asvs)){
+#   test <- str_detect(string = getSequences(seqtable)[i],
+#                    pattern = getSequences(seqtable.new)[i])
+#   if(test==FALSE){print('FALSE')}
+# }
+
+# Is there any duplicate ASVs now?
+table(duplicated(new.asvs))
+table(duplicated(asvs))
+
+# We will merge columns with same ASV and sum their counts
+seqtable.small <- sapply(unique(colnames(seqtable.new)),
+                         function(i) as.integer(rowSums(as.data.frame(seqtable.new[,colnames(seqtable.new) == i]))))
+rownames(seqtable.small) <- rownames(seqtable.new) # add sample names as rownames
+
+# sanity checks
+ncol(seqtable.small) == length(unique(new.asvs))
+rowSums(seqtable.new) == rowSums(seqtable.small)
+sum(seqtable.new) == sum(seqtable.small)
+
+# Check the ASVs are same sequence length, but we should have less of them
+hist(nchar(getSequences(seqtable.small)), breaks = 100, xlab = "ASV length", ylab = "Number of ASVs", main="")
+
+# Sequences should be between 515F - 806R, so around ~250bp (removing the primers lengths).
+# Remove any sequence variant outside 200:300bp
+seqtable.small <- seqtable.small[,nchar(colnames(seqtable.small)) %in% 200:300]
+dim(seqtable.small)
+hist(nchar(getSequences(seqtable.small)), breaks = 100, xlab = "ASV length", ylab = "Number of ASVs", main="")
+```
+
+
 
 
 ### 4. Remove chimeras
