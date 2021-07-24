@@ -283,13 +283,13 @@ seqtable <- makeSequenceTable(mergers)
 dim(seqtable)
 
 # Inspect distribution of sequence lengths
-hist(nchar(getSequences(seqtable)), breaks = 100, xlab = "Read length", ylab = "Number of reads", main="")
+hist(nchar(getSequences(seqtable)), breaks = 100, xlab = "ASV length", ylab = "Number of ASVs", main="")
 
 # Sequences should be between 515F - 806R, so around ~250bp (removing the primers lengths).
 # Remove any sequence variant below outside 200-300bp
 seqtable.new <- seqtable[,nchar(colnames(seqtable)) %in% 200:300]
 dim(seqtable.new)
-hist(nchar(getSequences(seqtable.new)), breaks = 100, xlab = "Read length", ylab = "Number of reads", main="")
+hist(nchar(getSequences(seqtable.new)), breaks = 100, xlab = "ASV length", ylab = "Number of ASVs", main="")
 ```
 
 

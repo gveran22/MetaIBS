@@ -277,7 +277,7 @@ hist(nchar(getSequences(seqtable)), breaks = 100, xlab = "ASV length", ylab = "N
 # Remove any sequence variant outside 250-400bp
 seqtable.new <- seqtable[,nchar(colnames(seqtable)) %in% 260:360]
 dim(seqtable.new)
-hist(nchar(getSequences(seqtable.new)), breaks = 100, xlab = "Read length", ylab = "Number of reads", main="")
+hist(nchar(getSequences(seqtable.new)), breaks = 100, xlab = "ASV length", ylab = "Number of ASVs", main="")
 ```
 
 

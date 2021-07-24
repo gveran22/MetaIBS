@@ -7,7 +7,7 @@ Zhuang et al. (_Frontiers in Microbiology_, 2018) - [Fecal microbiota alteration
 
 ## Samples
 - **30 total**
-- 15 IBS & 15 HC
+- 20 IBS-D & 10 HC
 
 
 ## Data Quality
