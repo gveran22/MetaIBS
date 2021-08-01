@@ -161,7 +161,7 @@ primerHits <- function(primer, fn) {
 }
 
 # Look in all samples if we find the primers
-for (i in 1:30){
+for (i in 1:5){
   cat("SAMPLE", sample.names[i], "with total number of", raw_stats[i,'reads'], "reads\n\n")
   x <-  rbind(ForwardPrimer = sapply(FWD.orients, primerHits, fn = trim_samples[[i]]), 
               ReversePrimer = sapply(REV.orients, primerHits, fn = trim_samples[[i]]))
@@ -356,6 +356,10 @@ seqtable.nochim <- removeBimeraDenovo(seqtable, method="consensus", multithread=
 # Check how many sequence variants we have after removing chimeras
 dim(seqtable.nochim)
 
+# Keep only ASVs that are present in at least 2 samples
+seqtable.nochim <- seqtable.nochim[, colSums(seqtable.nochim > 0) >=2]
+dim(seqtable.nochim)
+
 # Check how many reads we have after removing chimeras (we should keep the vast majority of the reads, like > 80%)
 sum(seqtable.nochim)/sum(seqtable)
 ```
@@ -386,7 +390,7 @@ track
 
 ```{r seqdepth, echo=FALSE, eval=FALSE, include=FALSE}
 # Save nb of reads per sample before / after dada2 pipeline
-nb.reads <- data.frame("before" = fastqq(trim_samples)@nReads,
+nb.reads <- data.frame("before" = raw_stats$reads,
                        "after" = rowSums(seqtable.nochim),
                        "dataset" = "Nagel")
 saveRDS(nb.reads, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/DADA2-FILT/seqdepth_nagel.rds")
@@ -412,7 +416,7 @@ taxa <- addSpecies(taxa, "~/Projects/IBS_Meta-analysis_16S/data/silva_species_as
 
 ```{r taxa-sanity-check}
 # Check how the taxonomy table looks like
-taxa.print <- taxa 
+taxa.print <- taxa
 rownames(taxa.print) <- NULL # Removing sequence rownames for display only
 head(taxa.print)
 
@@ -433,7 +437,7 @@ The preprocessing will be easier to do with ASV, taxonomic and metadata tables c
 ```{r phyloseq-preprocess, echo=TRUE, eval=FALSE}
 #_________________________
 # Import metadata
-metadata_table <- read.table("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Nagel_metadata.csv", header = TRUE, sep = ",")
+metadata_table <- read.table("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Nagel-2016/Metadata-Nagel.csv", header = TRUE, sep = ",")
 colnames(metadata_table)
 
 # Keep relevant data
@@ -441,6 +445,10 @@ sampledf <- metadata_table
 rownames(sampledf) <- metadata_table$Run # have the same sample.names
 sampledf$host_disease <- as.character(sampledf$host_disease)
 sampledf[sampledf[, 'host_disease'] == "healthy", 'host_disease'] <- 'Healthy'
+
+# Add host_subtype
+sampledf[sampledf[, 'host_disease'] == "Healthy", 'host_subtype'] <- "HC"
+sampledf[sampledf[, 'host_disease'] == "IBS", 'host_subtype'] <- "IBS-D"
 
 sampledf$author <- "Nagel"
 sampledf$sequencing_tech <- "Ion Torrent"
