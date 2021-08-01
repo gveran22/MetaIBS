@@ -37,7 +37,7 @@ library(stringr)
 #####################
 
 First, we import the fastq files containing the raw reads. The samples were downloaded from the SRA database with the accession number 
-PRJEB37924. Only sigmoid biopsy samples that were analyzed by 16S rRNA sequencing were downloaded (see ![00_Metadata-Mars](./00_Metadata-Mars.html)).
+PRJEB37924. Only sigmoid biopsy samples that were analyzed by 16S rRNA sequencing were downloaded (see _00_Metadata-Mars_).
 
 ```{r, quality-check, echo=TRUE, results="hide"}
 # Save the path to the directory containing the fastq zipped files
@@ -88,11 +88,12 @@ plot_read_content(rcR1) + labs(title = "Per base sequence content - Reverse read
 #____________ THIS IS ONLY FOR (quicker) PDF/HTML OUTPUT __________________
 #__________________________________________________________________________
 
+raw_stats <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Mars-2020/01_Dada2-Mars/raw_stats.rds")
 # out process
 out2 <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Mars-2020/01_Dada2-Mars/out2.rds")
 # quality profiles
-FWD.filt2_samples <- file.path(path, "filtered2", paste0(sample.names, "_1_filt.fastq.gz")) # FWD reads
-REV.filt2_samples <- file.path(path, "filtered2", paste0(sample.names, "_2_filt.fastq.gz")) # REV reads
+FWD.filt2_samples <- file.path(path, "filtered2", paste0(sample.names, "_F_filt2.fastq.gz")) # FWD reads
+REV.filt2_samples <- file.path(path, "filtered2", paste0(sample.names, "_R_filt2.fastq.gz")) # REV reads
 # error rates
 errF <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Mars-2020/01_Dada2-Mars/errF.rds")
 errR <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Mars-2020/01_Dada2-Mars/errR.rds")
@@ -102,9 +103,9 @@ dadaRs <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Mar
 # mergers
 mergers <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Mars-2020/01_Dada2-Mars/mergers.rds")
 # taxa
-taxa <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/OutputTaxa/taxa_Mars.rds")
+taxa <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/CLUSTER/Taxonomy/output/taxa_mars.rds")
 # phyloseq object
-physeq <- readRDS("~/Projects/IBS_Meta-analysis_16S/phyloseq-objects/physeq_Mars.rds")
+physeq <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/CLUSTER/PhyloTree/input/physeq_mars.rds")
 ```
 
 
@@ -320,7 +321,11 @@ Sanity check before assigning taxonomy.
 getN <- function(x) sum(getUniques(x))
 
 # Table that will count number of reads for each process of interest (input reads, filtered reads, denoised reads, non chimera reads)
-track <- cbind(out2, sapply(dadaFs, getN),  sapply(dadaRs, getN), sapply(mergers, getN), rowSums(seqtable.nochim),
+track <- cbind(out2,
+               sapply(dadaFs, getN),
+               sapply(dadaRs, getN),
+               sapply(mergers, getN),
+               rowSums(seqtable.nochim),
                lapply(rowSums(seqtable.nochim)*100/out2[,1], as.integer))
 
 # Assign column and row names
@@ -392,17 +397,21 @@ metadata_table$author <- "Mars"
 metadata_table$sequencing_tech <- "Illumina"
 metadata_table$variable_region <- "V4"
 
+# Remove _F_filt2.fastq.gz from rownames
+# rownames(seqtable.nochim)[1:5]
+rownames(seqtable.nochim) <- sub("_.*", "", rownames(seqtable.nochim))
+
 #_________________________
 # Create phyloseq object
 physeq <- phyloseq(otu_table(seqtable.nochim, taxa_are_rows=FALSE), # by default, in otu_table the sequence variants are in rows
                   sample_data(metadata_table), 
                   tax_table(taxa))
 
-# Remove samples with less than 500 reads
-physeq <- prune_samples(sample_sums(physeq)>=500, physeq)
 # Remove taxa that are eukaryota, or have unassigned Phyla
 physeq <- subset_taxa(physeq, Kingdom != "Eukaryota")
 physeq <- subset_taxa(physeq, !is.na(Phylum))
+# Remove samples with less than 500 reads
+physeq <- prune_samples(sample_sums(physeq)>=500, physeq)
 ```
 
 
@@ -422,7 +431,9 @@ saveRDS(otu_table(physeq), file.path(path, "01_Dada2-Mars/ASVtable_final.rds")) 
 saveRDS(tax_table(physeq), file.path(path, "01_Dada2-Mars/taxa_final.rds")) # taxa table
 saveRDS(sample_data(physeq), file.path(path, "01_Dada2-Mars/metadata_final.rds")) # metadata table
 
-saveRDS(physeq, "~/Projects/IBS_Meta-analysis_16S/phyloseq-objects/physeq_mars.rds") # phyloseq object
+# Taxa & Phyloseq object
+saveRDS(taxa, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/CLUSTER/Taxonomy/output/taxa_mars.rds")
+saveRDS(physeq, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/CLUSTER/PhyloTree/input/physeq_mars.rds")
 ```
 
 
@@ -431,7 +442,7 @@ saveRDS(physeq, "~/Projects/IBS_Meta-analysis_16S/phyloseq-objects/physeq_mars.r
 
 ```{r plot, fig.width = 10, fig.height = 5}
 # Absolute abundance
-plot_bar(physeq, fill = "Phylum")+ facet_wrap("host_disease", scales="free") + theme(axis.text.x = element_blank())
+plot_bar(physeq, fill = "Phylum")+ facet_wrap("host_disease", scales="free_x") + theme(axis.text.x = element_blank())
 
 # Relative abundance for Phylum
 phylum.table <- physeq %>%
