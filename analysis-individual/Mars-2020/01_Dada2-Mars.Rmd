@@ -264,7 +264,7 @@ for (i in 1:3){
 We now need to merge paired reads.
 
 ```{r merge-paired-end, eval = FALSE}
-mergers <- mergePairs(dadaFs, derepF, dadaRs, derepR, minOverlap=20, verbose=TRUE)
+mergers <- mergePairs(dadaFs, derepF, dadaRs, derepR, verbose=TRUE)
 ```
 
 ```{r}
@@ -302,6 +302,10 @@ The core dada method corrects substitution and indel errors, but chimeras remain
 seqtable.nochim <- removeBimeraDenovo(seqtable.new, method="consensus", multithread=TRUE, verbose=TRUE)
 
 # Check how many sequence variants we have after removing chimeras
+dim(seqtable.nochim)
+
+# Keep only ASVs that are present in at least 2 samples
+seqtable.nochim <- seqtable.nochim[, colSums(seqtable.nochim > 0) >=2]
 dim(seqtable.nochim)
 
 # Check how many reads we have after removing chimeras (we should keep the vast majority of the reads, like > 80%)
