@@ -35,7 +35,9 @@ library(stringr)
 #_____________________________________________________________________
 #____________ THIS IS ONLY FOR (quicker) PDF OUTPUT __________________
 #_____________________________________________________________________
-path <- "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Nagel-2016/"
+path <- "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Nagel-2016"
+
+raw_stats <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Nagel-2016/01_Dada2-Nagel/raw_stats.rds")
 # out process
 out1 <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Nagel-2016/01_Dada2-Nagel/out1.rds")
 out2 <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Nagel-2016/01_Dada2-Nagel/out2.rds")
@@ -49,9 +51,9 @@ err_new <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Na
 # infered sequences
 seq_infered <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Nagel-2016/01_Dada2-Nagel/seq_infered.rds")
 # taxa
-taxa <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/OutputTaxa/taxa_nagel.rds")
+taxa <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/CLUSTER/Taxonomy/output/taxa_nagel.rds")
 # phyloseq object
-physeq <- readRDS("~/Projects/IBS_Meta-analysis_16S/phyloseq-objects/physeq_nagel.rds")
+physeq <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/CLUSTER/PhyloTree/input/physeq_nagel.rds")
 ```
 
 
@@ -451,30 +453,31 @@ physeq <- phyloseq(otu_table(seqtable.nochim, taxa_are_rows=FALSE), # by default
                   sample_data(sampledf), 
                   tax_table(taxa))
 
-# Remove samples with less than 500 reads
-physeq <- prune_samples(sample_sums(physeq)>=500, physeq)
 # Remove taxa that are eukaryota, or have unassigned Phyla
 physeq <- subset_taxa(physeq, Kingdom != "Eukaryota")
 physeq <- subset_taxa(physeq, !is.na(Phylum))
+# Remove samples with less than 500 reads
+physeq <- prune_samples(sample_sums(physeq)>=500, physeq)
 ```
 
 ### 2. Save to disk
 
 ```{r save, eval=FALSE}
 # Save to disk
+saveRDS(raw_stats, file.path(path, "01_Dada2-Nagel/raw_stats.rds"))
 saveRDS(out1, file.path(path, "01_Dada2-Nagel/out1.rds"))
 saveRDS(out2, file.path(path, "01_Dada2-Nagel/out2.rds"))
 saveRDS(err, file.path(path, "01_Dada2-Nagel/errorRates.rds"))
 saveRDS(err_new, file.path(path, "01_Dada2-Nagel/errorRates_modif.rds"))
 saveRDS(seq_infered, file.path(path, "01_Dada2-Nagel/seq_infered.rds"))
 
-
 saveRDS(otu_table(physeq), file.path(path, "01_Dada2-Nagel/ASVtable_final.rds")) # ASV table
 saveRDS(tax_table(physeq), file.path(path, "01_Dada2-Nagel/taxa_final.rds")) # taxa table
 saveRDS(sample_data(physeq), file.path(path, "01_Dada2-Nagel/metadata_final.rds")) # metadata table
-write.csv(sample_data(physeq), file.path(path, "NagelMetadata.csv"))
 
-saveRDS(physeq, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/physeq_nagel.rds") # phyloseq object
+# Taxa & Phyloseq object
+saveRDS(taxa, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/CLUSTER/Taxonomy/output/taxa_nagel.rds")
+saveRDS(physeq, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/CLUSTER/PhyloTree/input/physeq_nagel.rds")
 ```
 
 
@@ -482,7 +485,7 @@ saveRDS(physeq, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/physe
 
 ```{r plot, fig.width = 10, fig.height = 4}
 # Absolute abundance
-plot_bar(physeq, fill = "Phylum")+ facet_wrap("host_disease", scales="free") + theme(axis.text.x = element_blank())
+plot_bar(physeq, fill = "Phylum")+ facet_wrap("host_disease", scales="free_x") + theme(axis.text.x = element_blank())
 
 # Relative abundance for Phylum
 phylum.table <- physeq %>%
