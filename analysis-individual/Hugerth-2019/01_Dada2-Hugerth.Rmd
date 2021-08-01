@@ -466,7 +466,7 @@ taxa.print <- taxa
 rownames(taxa.print) <- NULL # Removing sequence rownames for display only
 head(taxa.print)
 
-table(taxa.print[,1]) # Show the different kingdoms (should be only bacteria)
+table(taxa.print[,1]) # Show the different kingdoms (should be only bacteria/archaea)
 table(taxa.print[,2]) # Show the different Phyla
 table(is.na(taxa.print[,2])) # is there any NA phyla?
 ```
@@ -481,18 +481,10 @@ We will remove any sample with less than 500 reads from further analysis, and al
 The preprocessing will be easier to do with ASV, taxonomic and metadata tables combined in a phyloseq object.
 
 ```{r phyloseq-preprocess, echo=TRUE, eval=FALSE}
-#_________________________
-# Remove .fastq.gz extension in seqtable.nochim
-rownames(seqtable.nochim) <- gsub("_1_filt.fastq.gz", "", rownames(seqtable.nochim))
-
 #________________________
 # Import metadata
-metadata_table <- read.csv("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Hugerth-2019/modif_metadata(R).csv",
+metadata_table <- read.csv("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Hugerth-2019/00_Metadata-Hugerth/modif_metadata(R).csv",
                            sep=" ")
-metadata_table$collection_date <- NULL
-colnames(metadata_table)[12] <- "collection_date"
-metadata_table[] <- lapply(metadata_table, function(x) if(is.factor(x)) as.character(x) else x)
-metadata_table$host_disease[metadata_table$host_disease == "none"] <- "Healthy"
 rownames(metadata_table) <- metadata_table$Run
 head(metadata_table)
 
@@ -506,54 +498,35 @@ physeq <- phyloseq(otu_table(seqtable.nochim, taxa_are_rows=FALSE),
                    sample_data(metadata_table[metadata_table$Run %in% rownames(seqtable.nochim),]),
                    tax_table(taxa))
 
-# Remove samples with less than 500 reads
-physeq <- prune_samples(sample_sums(physeq)>=500, physeq) # 85 samples discarded
 # Remove taxa that are eukaryota, or have unassigned Phyla
 physeq <- subset_taxa(physeq, Kingdom != "Eukaryota")
 physeq <- subset_taxa(physeq, !is.na(Phylum))
+# Remove samples with less than 500 reads
+physeq <- prune_samples(sample_sums(physeq)>=500, physeq) # 79 samples discarded
 ```
-
-
-```{r phyloseq-preprocess-2, echo=FALSE, eval=FALSE}
-# Phyloseq object (including phylogenetic tree) was built without metadata
-physeq <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/OutputPhangorn/physeq_hugerth.rds")
-physeq #659 samples
-
-# Add metadata
-physeq <- merge_phyloseq(physeq, sample_data(metadata_table[metadata_table$Run %in% sample_names(physeq),]))
-
-# Keep only healthy and IBS samples
-physeq <- subset_samples(physeq, host_disease=="IBS" | host_disease=="Healthy")
-physeq <- prune_taxa(taxa_sums(physeq) != 0, physeq)
-```
-
 
 
 ### 2. Save to disk
 
 ```{r, eval=FALSE}
 # Save to disk
-saveRDS(out2, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Hugerth-2019//01_Dada2-Hugerth/out2.rds")
-saveRDS(errF, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Hugerth-2019/01_Dada2-Hugerth/errF.rds")
-saveRDS(errR, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Hugerth-2019/01_Dada2-Hugerth/errR.rds")
-saveRDS(dadaFs, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Hugerth-2019/01_Dada2-Hugerth/infered_seq_F.rds")
-saveRDS(dadaRs, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Hugerth-2019/01_Dada2-Hugerth/infered_seq_R.rds")
-saveRDS(mergers, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Hugerth-2019/01_Dada2-Hugerth/mergers.rds")
+saveRDS(raw_stats, file.path(path, "01_Dada2-Hugerth/raw_stats.rds"))
+saveRDS(FWD.out1, file.path(path, "01_Dada2-Hugerth/FWD_out1.rds"))
+saveRDS(REV.out1, file.path(path, "01_Dada2-Hugerth/REV_out1.rds"))
+saveRDS(out2, file.path(path, "01_Dada2-Hugerth/out2.rds"))
+saveRDS(errF, file.path(path, "01_Dada2-Hugerth/errF.rds"))
+saveRDS(errR, file.path(path, "01_Dada2-Hugerth/errR.rds"))
+saveRDS(dadaFs, file.path(path, "01_Dada2-Hugerth/infered_seq_F.rds"))
+saveRDS(dadaRs, file.path(path, "01_Dada2-Hugerth/infered_seq_R.rds"))
+saveRDS(mergers, file.path(path, "01_Dada2-Hugerth/mergers.rds"))
 
-saveRDS(otu_table(physeq), "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Hugerth-2019/01_Dada2-Hugerth/ASVtable_final.rds") # ASV table
-saveRDS(tax_table(physeq), "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Hugerth-2019/01_Dada2-Hugerth/taxa_final.rds") # taxa table
-write.csv(sample_data(physeq), "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Hugerth-2019/HugerthMetadata.csv") # taxa table
+saveRDS(otu_table(physeq), file.path(path, "01_Dada2-Hugerth/ASVtable_final.rds")) # ASV table
+saveRDS(tax_table(physeq), file.path(path, "01_Dada2-Hugerth/taxa_final.rds")) # taxa table
+write.csv(sample_data(physeq), file.path(path, "HugerthMetadata.csv")) # metadata table
 
-saveRDS(physeq, "~/Projects/IBS_Meta-analysis_16S/phyloseq-objects/physeq_hugerth.rds") # phyloseq object
-
-
-# Save nb of reads per sample before / after dada2 pipeline
-nb.reads <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/nb_reads.rds")
-nb.reads[1:747, 'Hugerth_before'] <- fastqq(fnFs)@nReads
-nb.reads[1:744, 'Hugerth_after'] <- rowSums(seqtable.nochim)
-median(na.omit(nb.reads$Hugerth_before)) # sanity check
-median(na.omit(nb.reads$Hugerth_after)) # sanity check
-saveRDS(nb.reads, "~/Projects/IBS_Meta-analysis_16S/data/nb_reads.rds")
+# Taxa & Phyloseq object
+saveRDS(taxa, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/CLUSTER/Taxonomy/output/taxa_hugerth.rds")
+saveRDS(physeq, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/CLUSTER/PhyloTree/input/physeq_hugerth.rds")
 ```
 
 
@@ -561,7 +534,7 @@ saveRDS(nb.reads, "~/Projects/IBS_Meta-analysis_16S/data/nb_reads.rds")
 
 ```{r plot, fig.width = 10, fig.height = 4}
 # Absolute abundance
-plot_bar(physeq, fill = "Phylum")+ facet_wrap("host_disease", scales="free") + theme(axis.text.x = element_blank())
+plot_bar(physeq, fill = "Phylum")+ facet_wrap("host_disease", scales="free_x") + theme(axis.text.x = element_blank())
 
 # Relative abundance for Phylum
 phylum.table <- physeq %>%
