@@ -49,9 +49,9 @@ err <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/AGP/01
 # infered ASVs
 seq_infered <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/AGP/01_Dada2-AGP/seq_infered.rds")
 # taxa
-taxa <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/OutputTaxa/taxa_AGP.rds")
+taxa <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/CLUSTER/Taxonomy/output/taxa_agp.rds")
 # phyloseq object
-physeq <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/AGP/01_Dada2-AGP/physeq_AGP.rds")
+physeq <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/CLUSTER/PhyloTree/input/physeq_agp.rds")
 ```
 
 
@@ -274,6 +274,10 @@ seqtable.nochim <- removeBimeraDenovo(seqtable, method="consensus", multithread=
 # Check how many sequence variants we have after removing chimeras
 dim(seqtable.nochim)
 
+# Keep only ASVs that are present in at least 2 samples
+seqtable.nochim <- seqtable.nochim[, colSums(seqtable.nochim > 0) >=2]
+dim(seqtable.nochim)
+
 # Check how many reads we have after removing chimeras (we should keep the vast majority of the reads, like > 80%)
 sum(seqtable.nochim)/sum(seqtable)
 ```
@@ -349,7 +353,7 @@ taxa <- addSpecies(taxa, "~/Projects/IBS_Meta-analysis_16S/data/silva_species_as
 
 ```{r taxa-sanity-check}
 # Check how the taxonomy table looks like
-taxa.print <- taxa 
+taxa.print <- taxa
 rownames(taxa.print) <- NULL # Removing sequence rownames for display only
 head(taxa.print)
 
@@ -389,13 +393,11 @@ physeq <- phyloseq(otu_table(seqtable.nochim, taxa_are_rows=FALSE), # by default
                    sample_data(sampledf), 
                    tax_table(taxa))
 
-# Remove samples with less than 500 reads
-physeq <- prune_samples(sample_sums(physeq)>=500, physeq)
 # Remove taxa that are eukaryota, or have unassigned Phyla
 physeq <- subset_taxa(physeq, Kingdom != "Eukaryota")
 physeq <- subset_taxa(physeq, !is.na(Phylum))
-physeq <- filter_taxa(physeq, function(x) sum(x > 0) > 0, TRUE) # keep ASVs present in at least 1 sample
-physeq.filt <- filter_taxa(physeq, function(x) sum(x > 0) >= 2, TRUE)
+# Remove samples with less than 500 reads
+physeq <- prune_samples(sample_sums(physeq)>=500, physeq)
 ```
 
 
@@ -412,10 +414,10 @@ saveRDS(seq_infered, file.path(path, "01_Dada2-AGP/seq_infered.rds"))
 saveRDS(otu_table(physeq), file.path(path, "01_Dada2-AGP/ASVtable_final.rds")) # ASV table
 saveRDS(tax_table(physeq), file.path(path, "01_Dada2-AGP/taxa_final.rds")) # taxa table
 saveRDS(sample_data(physeq), file.path(path, "01_Dada2-AGP/metadata_final.rds")) # metadata table
-write.csv(sample_data(physeq), file.path(path, "Metadata-AGP.csv"))
 
-saveRDS(physeq, file.path(path, "01_Dada2-AGP/physeq_AGP.rds")) # phyloseq object
-saveRDS(physeq.filt, file.path(path, "01_Dada2-AGP/physeq(ASVfilt)_AGP.rds"))
+# Taxa & Phyloseq object
+saveRDS(taxa, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/CLUSTER/Taxonomy/output/taxa_agp.rds")
+saveRDS(physeq, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/CLUSTER/PhyloTree/input/physeq_agp.rds")
 ```
 
 
