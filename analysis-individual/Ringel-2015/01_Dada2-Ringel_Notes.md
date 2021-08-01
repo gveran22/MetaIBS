@@ -35,12 +35,15 @@ Ringel-Kulka et al. (_Am J Physiol Gastrointest Liver Physiol_, 2016) - [Molecul
 ### b) Remove chimeras
 - 3264 seq variants (but still >98% reads kept)
 
-### c) Assign taxonomy
+### c) Remove ASVs present in only 1 sample
+- 759 seq variants (but still >75% reads kept)
+
+### d) Assign taxonomy
 Taxonomy assigned with Silva v138.
-- Bacteria - ...
-- Archaea - ...
-- Eukaryota - ...
-There was ... unassigned phyla. The final ASV table contains **... sequence variants**.
+- Bacteria - 759
+- Archaea - 0
+- Eukaryota - 0
+There was 0 unassigned phyla. The final ASV table contains **759 sequence variants**.
 
 ## Metadata
 - none (no IBS/HC label)
