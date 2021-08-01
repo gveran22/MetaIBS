@@ -273,6 +273,10 @@ seqtable.nochim <- removeBimeraDenovo(seqtable.new, method="consensus", multithr
 # Check how many sequence variants we have after removing chimeras
 dim(seqtable.nochim)
 
+# Keep only ASVs that are present in at least 2 samples
+seqtable.nochim <- seqtable.nochim[, colSums(seqtable.nochim > 0) >=2]
+dim(seqtable.nochim)
+
 # Check how many reads we have after removing chimeras (we should keep the vast majority of the reads, like > 80%)
 sum(seqtable.nochim)/sum(seqtable.new)
 ```
@@ -336,7 +340,7 @@ taxa <- addSpecies(taxa, "~/Projects/IBS_Meta-analysis_16S/data/silva_species_as
 
 ```{r taxa-sanity-check}
 # Check how the taxonomy table looks like
-taxa.print <- taxa 
+taxa.print <- taxa
 rownames(taxa.print) <- NULL # Removing sequence rownames for display only
 head(taxa.print)
 
@@ -377,13 +381,11 @@ physeq <- phyloseq(otu_table(seqtable.nochim, taxa_are_rows=FALSE), # by default
                    sample_data(metadata), 
                    tax_table(taxa))
 
-# Remove samples with less than 500 reads
-physeq <- prune_samples(sample_sums(physeq)>=500, physeq)
 # Remove taxa that are eukaryota, or have unassigned Phyla
 physeq <- subset_taxa(physeq, Kingdom != "Eukaryota")
 physeq <- subset_taxa(physeq, !is.na(Phylum))
-physeq <- filter_taxa(physeq, function(x) sum(x > 0) > 0, TRUE) # keep ASVs present in at least 1 sample
-physeq.filt <- filter_taxa(physeq, function(x) sum(x > 0) >= 2, TRUE)
+# Remove samples with less than 500 reads
+physeq <- prune_samples(sample_sums(physeq)>=500, physeq)
 ```
 
 
