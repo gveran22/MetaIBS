@@ -32,28 +32,6 @@ library(stringr)
 ```
 
 
-```{r pdf-import, echo = FALSE}
-#_____________________________________________________________________
-#____________ THIS IS ONLY FOR (quicker) PDF OUTPUT __________________
-#_____________________________________________________________________
-path <- "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Liu-2020"
-
-# seq depth
-raw_stats <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Liu-2020/01_Dada2-Liu/raw_stats.rds")
-# out process
-out2 <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Liu-2020/01_Dada2-Liu/out2.rds")
-# quality profiles
-filt2_samples <- sort(list.files(file.path(path, "filtered2"), pattern=".fastq.gz", full.names = TRUE))
-# error rates
-err <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Liu-2020/01_Dada2-Liu/err.rds")
-# infered ASVs
-seq_infered <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Liu-2020/01_Dada2-Liu/seq_infered.rds")
-# taxa
-taxa <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/OutputTaxa/taxa_Liu.rds")
-# phyloseq object
-physeq <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Liu-2020/01_Dada2-Liu/physeq_Liu.rds")
-```
-
 
 #####################
 ##  QUALITY CHECK  ##
@@ -77,7 +55,7 @@ sample.names <- sapply(strsplit(basename(FNs), "_"), `[`, 1)
 show(sample.names[1:5]) # saves only the file name (without the path)
 
 # Look at quality of all files
-for (i in 1:length(FNs)){ # 1:length(FNs)
+for (i in 1:4){ # 1:length(FNs)
   show(plotQualityProfile(FNs[i]))
 }
 
@@ -101,6 +79,28 @@ plot_read_content(rc) + xlim(0,50) + labs(title = "Per base sequence content")
 # GTGRGGAATATT
 ```
 
+
+```{r pdf-import, echo = FALSE}
+#_____________________________________________________________________
+#____________ THIS IS ONLY FOR (quicker) PDF OUTPUT __________________
+#_____________________________________________________________________
+path <- "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Liu-2020"
+
+# seq depth
+raw_stats <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Liu-2020/01_Dada2-Liu/raw_stats.rds")
+# out process
+out2 <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Liu-2020/01_Dada2-Liu/out2.rds")
+# quality profiles
+filt2_samples <- sort(list.files(file.path(path, "filtered2"), pattern=".fastq.gz", full.names = TRUE))
+# error rates
+err <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Liu-2020/01_Dada2-Liu/err.rds")
+# infered ASVs
+seq_infered <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Liu-2020/01_Dada2-Liu/seq_infered.rds")
+# taxa
+taxa <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/CLUSTER/Taxonomy/output/taxa_liu.rds")
+# phyloseq object
+physeq <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/CLUSTER/PhyloTree/input/physeq_liu.rds")
+```
 
 
 ########################
@@ -256,7 +256,7 @@ hist(nchar(getSequences(seqtable)), breaks = 100, xlab = "ASV length", ylab = "N
 
 # Sequences should be between 338F - 806R, so around ~420bp (removing the primers lengths).
 
-# Remove any sequence variant below 350bp
+# Remove any sequence variant below 380bp
 seqtable.new <- seqtable[,nchar(colnames(seqtable)) >= 380]
 dim(seqtable.new)
 hist(nchar(getSequences(seqtable.new)), breaks = 100, xlab = "ASV length", ylab = "Number of ASVs", main="")
@@ -362,6 +362,8 @@ The preprocessing will be easier to do with ASV, taxonomic and metadata tables c
 metadata <- read.csv(file.path(path, "00_Metadata-Liu/modif_metadata(R).csv")) %>% select(-X)
 rownames(metadata) <- metadata$Run
 
+metadata[grep("IBS*",metadata$host_disease), "host_disease"] <- "IBS"
+
 metadata$author <- "Liu"
 metadata$sequencing_tech <- "Illumina"
 metadata$variable_region <- "V3-V4"
@@ -397,9 +399,10 @@ saveRDS(seq_infered, file.path(path, "01_Dada2-Liu/seq_infered.rds"))
 saveRDS(otu_table(physeq), file.path(path, "01_Dada2-Liu/ASVtable_final.rds")) # ASV table
 saveRDS(tax_table(physeq), file.path(path, "01_Dada2-Liu/taxa_final.rds")) # taxa table
 saveRDS(sample_data(physeq), file.path(path, "01_Dada2-Liu/metadata_final.rds")) # metadata table
-write.csv(sample_data(physeq), file.path(path, "Metadata-Liu.csv"))
 
-saveRDS(physeq, "~/Projects/IBS_Meta-analysis_16S/phyloseq-objects/physeq_liu.rds") # phyloseq object
+# Taxa & Phyloseq object
+saveRDS(taxa, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/CLUSTER/Taxonomy/output/taxa_liu.rds")
+saveRDS(physeq, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/CLUSTER/PhyloTree/input/physeq_liu.rds")
 ```
 
 
@@ -407,7 +410,7 @@ saveRDS(physeq, "~/Projects/IBS_Meta-analysis_16S/phyloseq-objects/physeq_liu.rd
 
 ```{r plot, fig.width = 10}
 # Absolute abundance
-plot_bar(physeq, fill = "Phylum")+ facet_wrap("host_disease", scales="free") + theme(axis.text.x = element_blank()) # long to compute
+plot_bar(physeq, fill = "Phylum")+ facet_wrap("host_disease", scales="free_x") + theme(axis.text.x = element_blank()) # long to compute
 
 # Relative abundance for Phylum
 phylum.table <- physeq %>%
@@ -415,26 +418,7 @@ phylum.table <- physeq %>%
   transform_sample_counts(function(x) {x/sum(x)} ) %>% # Transform to rel. abundance
   psmelt()                                             # Melt to long format
 
-ggplot(phylum.table, aes(x = reorder(Sample, Sample, function(x) mean(phylum.table[Sample == x & Phylum == 'Bacteroidota', 'Abundance'])),
-                         y = Abundance, fill = Phylum))+
-  facet_wrap(~ host_disease, scales = "free") + # scales = "free" removes empty lines
-  geom_bar(stat = "identity") +
-  theme(axis.text.x = element_blank())+
-  labs(x = "Samples", y = "Relative abundance")
-
-```
-
-```{r plot, fig.width = 10}
-# Absolute abundance
-plot_bar(physeq.filt, fill = "Phylum")+ facet_wrap("host_disease", scales="free") + theme(axis.text.x = element_blank()) # long to compute
-
-# Relative abundance for Phylum
-phylum.table <- physeq.filt %>%
-  tax_glom(taxrank = "Phylum") %>%                     # agglomerate at phylum level
-  transform_sample_counts(function(x) {x/sum(x)} ) %>% # Transform to rel. abundance
-  psmelt()                                             # Melt to long format
-
-ggplot(phylum.table, aes(x = reorder(Sample, Sample, function(x) mean(phylum.table[Sample == x & Phylum == 'Bacteroidota', 'Abundance'])),
+ggplot(phylum.table, aes(x = Sample,
                          y = Abundance, fill = Phylum))+
   facet_wrap(~ host_disease, scales = "free") + # scales = "free" removes empty lines
   geom_bar(stat = "identity") +
