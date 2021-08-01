@@ -16,7 +16,7 @@ Nagel et al. (_Microbiome_, 2016) - [Comparison of faecal microbiota in Blastocy
 - **Quality** - average (Q around 30)
 
 ## Primers
-- V4 variable regions (about 450bp)
+- V4 variable region (about 250bp)
 - FWD - 515F - 5’ - GTGCCAGCMGCCGCGGTAA - 3’
 - REV -  806R - 5’ - GGACTACHVGGGTWTCTAAT - 3’
 - forward primer found at the beginning of the reads & reverse primer found at the end of \~50% of the reads
@@ -33,15 +33,18 @@ Nagel et al. (_Microbiome_, 2016) - [Comparison of faecal microbiota in Blastocy
 - 1,322 amplicon sequence variants (ASVs)
 
 ### b) Remove chimeras
-- 1,092 seq variants (>95% reads kept)
+- 1,092 seq variants (>97% reads kept)
 
-### c) Assign taxonomy
+### c) Remove ASVs present in only 1 sample
+- 439 seq variants (but still >86% reads kept)
+
+### d) Assign taxonomy
 Taxonomy assigned with Silva v138.
-- Bacteria - ...
-- Archaea - ...
-- Eukaryota - ...
+- Bacteria - 438
+- Archaea - 1
+- Eukaryota - 0
 
-All unassigned phyla were removed (n=...), samples below 500 total reads (n=...). The final ASV table contains **... sequence variants**.
+All unassigned phyla were removed (n=0), samples below 500 total reads (n=0). The final ASV table contains **439 sequence variants**.
 
 ## Metadata
 - age
