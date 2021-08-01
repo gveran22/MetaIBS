@@ -35,13 +35,16 @@ Liu et al. (_BMC Microbiology_, 2020) - [Microbial and metabolomic profiles in c
 ### b) Remove chimeras
 - 5,551 seq variants (but still >90% reads kept)
 
-### c) Assign taxonomy
-Taxonomy assigned with Silva v138.
-- Bacteria - ...
-- Archaea - ...
-- Eukaryota - ...
+### c) Remove ASVs present in only 1 sample
+- 1,948 seq variants (but still >85% reads kept)
 
-All unassigned phyla were removed (n=...), samples below 500 total reads (n=...). The final ASV table contains **... sequence variants**.
+### d) Assign taxonomy
+Taxonomy assigned with Silva v138.
+- Bacteria - 1,946
+- Archaea - 1
+- Eukaryota - 1
+
+All unassigned phyla were removed (n=1), samples below 500 total reads (n=0). The final ASV table contains **1,947 sequence variants**.
 
 ## Metadata
 - age
