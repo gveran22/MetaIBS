@@ -302,16 +302,11 @@ for (i in 1:3){
 Now we will build the parametric error model, to be able to infer amplicon sequence variants (ASVs) later on.
 
 ```{r error-rate-estimate, eval = FALSE}
-errF <- learnErrors(FWD.filt2_samples, multithread=TRUE, randomize = TRUE, verbose = 1)
-errR <- learnErrors(REV.filt2_samples, multithread=TRUE, randomize = TRUE, verbose = 1)
+errF <- learnErrors(fnF.qc, multithread=TRUE, randomize = TRUE, verbose = 1)
+errR <- learnErrors(fnR.qc, multithread=TRUE, randomize = TRUE, verbose = 1)
 ```
 
 The error rates for each possible transition (A→C, A→G, …) are shown. Points are the observed error rates for each consensus quality score. The black line shows the estimated error rates after convergence of the machine-learning algorithm. The red line shows the error rates expected under the nominal definition of the Q-score. Here the estimated error rates (black line) are a good fit to the observed rates (points), and the error rates drop with increased quality as expected.
-
-```{r error-rate-check, include=FALSE, echo=FALSE, eval=FALSE}
-# sanity check on errF
-dada2:::checkConvergence(errF)
-```
 
 ```{r plot-errors, fig.height=5, fig.width=5}
 plotErrors(errF, nominalQ = TRUE) # Forward reads
@@ -330,8 +325,8 @@ De-replication is a common step in almost all modern ASV inference (or OTU picki
 
 ```{r infer-sample-composition, eval = FALSE}
 # Dereplicate the reads in the sample
-derepF <- derepFastq(FWD.filt2_samples) # forward
-derepR <- derepFastq(REV.filt2_samples) # reverse
+derepF <- derepFastq(fnF.qc) # forward
+derepR <- derepFastq(fnR.qc) # reverse
 
 # Infer sequence variants
 dadaFs <- dada(derepF, err=errF, multithread=TRUE) # forward
@@ -351,7 +346,7 @@ for (i in 1:2){
 ### 2. Merge paired-end reads
 
 ```{r merge-paired-end, eval = FALSE}
-mergers <- mergePairs(dadaFs, derepF, dadaRs, derepR, minOverlap=20, verbose=TRUE)
+mergers <- mergePairs(dadaFs, derepF, dadaRs, derepR, verbose=TRUE)
 ```
 
 ```{r}
@@ -367,7 +362,7 @@ We can now construct an amplicon sequence variant table (ASV) table, a higher-re
 # Make sequence table from the infered sequence variants
 seqtable <- makeSequenceTable(mergers)
 
-# We should have 744 samples (744 rows)
+# We should have 604 samples (604 rows)
 dim(seqtable)
 
 # Inspect distribution of sequence lengths
@@ -376,10 +371,10 @@ hist(nchar(getSequences(seqtable)), breaks = 100, xlab = "ASV length", ylab = "N
 # Sequences should be between 341F - 805R, so around 427bp (removing the primers lengths).
 # Considering that we kept only reads containing the primers, and merged the reads, we shouldn't have sequences below ~400bp
 
-# Remove any sequence variant below outside 400-450bp
-seqtable <- seqtable[,nchar(colnames(seqtable)) %in% 400:450]
-dim(seqtable)
-hist(nchar(getSequences(seqtable)), breaks = 100, xlab = "ASV length", ylab = "Number of ASVs", main="")
+# Remove any sequence variant outside 380-480bp
+seqtable.new <- seqtable[,nchar(colnames(seqtable)) %in% 380:480]
+dim(seqtable.new)
+hist(nchar(getSequences(seqtable.new)), breaks = 100, xlab = "ASV length", ylab = "Number of ASVs", main="")
 ```
 
 
@@ -388,13 +383,21 @@ hist(nchar(getSequences(seqtable)), breaks = 100, xlab = "ASV length", ylab = "N
 The core dada method corrects substitution and indel errors, but chimeras remain. Fortunately, the accuracy of sequence variants after denoising makes identifying chimeric ASVs simpler than when dealing with fuzzy OTUs. Chimeric sequences are identified if they can be exactly reconstructed by combining a left-segment and a right-segment from two more abundant “parent” sequences.
 
 ```{r remove-chimeras}
-seqtable.nochim <- removeBimeraDenovo(seqtable, method="consensus", multithread=TRUE, verbose=TRUE)
+seqtable.nochim <- removeBimeraDenovo(seqtable.new, method="consensus", multithread=TRUE, verbose=TRUE)
+
+# Remove _1_filt.fastq.gz from rownames
+# rownames(seqtable.nochim)[1:5]
+rownames(seqtable.nochim) <- sub("_.*", "", rownames(seqtable.nochim))
 
 # Check how many sequence variants we have after removing chimeras
 dim(seqtable.nochim)
 
+# Keep only ASVs that are present in at least 2 samples
+seqtable.nochim <- seqtable.nochim[, colSums(seqtable.nochim > 0) >=2]
+dim(seqtable.nochim)
+
 # Check how many reads we have after removing chimeras (we should keep the vast majority of the reads, like > 80%)
-sum(seqtable.nochim)/sum(seqtable)
+sum(seqtable.nochim)/sum(seqtable.new)
 ```
 
 
@@ -422,7 +425,7 @@ track <- cbind(input,
 # Assign column and row names
 colnames(track) <- c("input",
                      "quality-filt", "denoisedF", "denoisedR",
-                     'merged', 'nonchim', "%kept_input->output")
+                     'merged', 'nonchim', "%input->output")
 rownames(track) <- rownames(seqtable.nochim)
 ```
 
@@ -431,6 +434,13 @@ rownames(track) <- rownames(seqtable.nochim)
 track[1:100,]
 ```
 
+```{r seqdepth, echo=FALSE, eval=FALSE, include=FALSE}
+# Save nb of reads per sample before / after dada2 pipeline
+nb.reads <- data.frame("before" = raw_stats$reads[raw_stats$sample %in% rownames(seqtable.nochim)],
+                       "after" = rowSums(seqtable.nochim),
+                       "dataset" = "Hugerth")
+saveRDS(nb.reads, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/DADA2-FILT/seqdepth_hugerth.rds")
+```
 
 
 
