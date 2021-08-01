@@ -15,10 +15,9 @@ However, from the metadata table downloaded on the SRA, there are **607 total sa
 
 ## Data Quality
 - **Technology** - Illumina MiSeq
-- **Nb of reads per sample** - mean of 32,663 reads per sample (9 - 306,468)
+- **Nb of reads per sample** - mean of 31,163 reads per sample (9 - 306,468)
 - **Read length** - ~300 bp
 - **Quality** - very good
-- **Per base sequence content** - reverse reads oddly seem to have always the same sequence?... (same observation in most Illumina MiSeq datasets)
 
 
 ## Primers
@@ -27,12 +26,12 @@ However, from the metadata table downloaded on the SRA, there are **607 total sa
 - REV -  805R - 5’ - GACTACHVGGGTATCTAATCC - 3’
 - forward primer found at the beginning of forward reads (same for reverse reads & reverse primer).
 
-A few samples have some reads with reverse complement of forward/reverse primer (~500 reads). They were not removed.
+A few samples have some reads with reverse complement of forward/reverse primer (\~500 reads). They were not removed.
 
 
 ## Filtering
-- **primers removal** - ~99% reads kept
-- **quality filter** - ~48% reads kept => 3 samples had no identifier to allow to match forward & reverse reads (ERR3586004, ERR3586042 and ERR3586312 were removed).
+- **primers removal** - \~98% reads kept
+- **quality filter** - \~72% reads kept => 3 samples had no identifier to allow to match forward & reverse reads (ERR3586004, ERR3586042 and ERR3586312 were removed).
 
 
 ## Learn error rates
@@ -40,19 +39,21 @@ A few samples have some reads with reverse complement of forward/reverse primer 
 
 ## Construct ASV table
 ### a) Infer sequence variants
-- amplicon sequence variants outside 400-450bp length were discarded
-- 16,443 amplicon sequence variants (ASVs)
+- 16,438 amplicon sequence variants (ASVs)
 
 ### b) Remove chimeras
-- 6,033 seq variants (but still >97% reads kept)
+- 5,893 seq variants (but still >97% reads kept)
 
-### c) Assign taxonomy
+### c) Remove ASVs present in only 1 sample
+- 2,573 seq variants (but still >94% reads kept)
+
+### d) Assign taxonomy
 Taxonomy assigned with Silva v138.
-- Bacteria - 6,033
-- Archaea - 0
+- Bacteria - 2,571
+- Archaea - 2
 - Eukaryota - 0
 
-All unassigned phyla were removed (n=14), samples below 500 total reads (n=85). The final ASV table contains **5,294 sequence variants**.
+All unassigned phyla were removed (n=0), samples below 500 total reads (n=79). The final ASV table contains **2,573 sequence variants**.
 
 ## Metadata
 - age
