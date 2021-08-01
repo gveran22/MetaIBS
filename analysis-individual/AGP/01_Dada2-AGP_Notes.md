@@ -25,7 +25,7 @@ IBS and healthy samples were selected out of the pool of >30,000 samples deposit
 
 ## Filtering
 - **primers removal** - not applied
-- **quality filter** - ~90% reads kept per sample. 42 samples did not pass the quality filter.
+- **quality filter** - \~93% reads kept per sample. 42 samples did not pass the quality filter.
 
 
 ## Learn error rates
@@ -38,13 +38,16 @@ IBS and healthy samples were selected out of the pool of >30,000 samples deposit
 ### b) Remove chimeras
 - 18,673 seq variants (but still >95% reads kept)
 
-### c) Assign taxonomy
-Taxonomy assigned with Silva v138.
-- Bacteria - 16,910
-- Archaea - 47
-- Eukaryota - 1,076
+### c) Remove ASVs present in only 1 sample
+- 6,512 seq variants (but still >94% reads kept)
 
-All unassigned phyla were removed (n=1740), samples below 500 total reads (n=51). The final ASV table contains **16,584 sequence variants**.
+### d) Assign taxonomy
+Taxonomy assigned with Silva v138.
+- Bacteria - 6,458
+- Archaea - 13
+- Eukaryota - 36
+
+All unassigned phyla were removed (n=67), samples below 500 total reads (n=52). The final ASV table contains **6,432 sequence variants**.
 
 ## Metadata
 - age
