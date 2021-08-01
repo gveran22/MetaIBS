@@ -230,16 +230,11 @@ Then, we perform a quality filtering of the reads.
 
 ```{r filter-trim, eval = FALSE, echo = TRUE}
 # Place filtered files in a filtered/ subdirectory
-# FWD.filt2_samples <- file.path(path, "filtered2", paste0(sample.names, "_1_filt.fastq.gz")) # FWD reads
-# REV.filt2_samples <- file.path(path, "filtered2", paste0(sample.names, "_2_filt.fastq.gz")) # REV reads
-# # Assign names for the filtered fastq.gz files
-# names(FWD.filt2_samples) <- sample.names
-# names(REV.filt2_samples) <- sample.names
-
-FWD.filt_test <- file.path(path, "filtest", paste0(sample.names, "_1_filt.fastq.gz")) # FWD reads
-REV.filt_test <- file.path(path, "filtest", paste0(sample.names, "_2_filt.fastq.gz")) # REV reads
-names(FWD.filt_test) <- sample.names
-names(REV.filt_test) <- sample.names
+FWD.filt2_samples <- file.path(path, "filtered2", paste0(sample.names, "_1_filt.fastq.gz")) # FWD reads
+REV.filt2_samples <- file.path(path, "filtered2", paste0(sample.names, "_2_filt.fastq.gz")) # REV reads
+# Assign names for the filtered fastq.gz files
+names(FWD.filt2_samples) <- sample.names
+names(REV.filt2_samples) <- sample.names
 
 # Create matrix that will count the reads input & reads output (after quality filter)
 out2 <- NULL
@@ -255,15 +250,13 @@ for (i in 1:607){
   
   tryCatch({
     out <- NULL # initialize
-    out <- filterAndTrim(fwd = FWD.filt1_samples[i], filt = FWD.filt_test[i], # filt = FWD.filt2_samples[i],
-                        rev = REV.filt1_samples[i], filt.rev = REV.filt_test[i], # filt.rev = REV.filt2_samples[i],
-                        maxEE=3, # reads with more than 4 expected errors (sum(10e(-Q/10))) are discarded
+    out <- filterAndTrim(fwd = FWD.filt1_samples[i], filt = FWD.filt2_samples[i],
+                        rev = REV.filt1_samples[i], filt.rev = REV.filt2_samples[i],
+                        maxEE=3, # reads with more than 3 expected errors (sum(10e(-Q/10))) are discarded
                         truncQ=10, # Truncate reads at the first instance of a quality score less than or equal to truncQ.
-                        minLen = 150, # Discard reads shorter than 200 bp. This is done after trimming and truncation.
+                        minLen = 150, # Discard reads shorter than 150 bp. This is done after trimming and truncation.
                         matchIDs = TRUE, # match forward & reverse reads (discard reads that don't have their pair)
-                        multithread = TRUE,
-                        compress=TRUE, # Output files in gzip format
-                        verbose=TRUE) # give a message saying the percentage of filtered sequences
+                        multithread = TRUE, compress=TRUE, verbose=TRUE)
     out2 <- rbind(out2, out)
     #print(out2)
     #print("-------")
@@ -276,22 +269,15 @@ for (i in 1:607){
 # Remove first row that only has 0
 out2 <- out2[-1,]
 
-test <- out2 %>%
-  as.data.frame() %>%
-  mutate(percent = reads.out*100 / reads.in) %>%
-  select(percent)
-mean(test$percent)
-
-out2 %>%
-  as.data.frame() %>%
-  filter(reads.out > 1000)
-
-
 # 3 files had an error, which ones?
 setdiff(sample.names, sub("_.*", "", rownames(out2)))
 # Output: ERR3586005, ERR3586042, ERR3586312
 # When looking at the header of the gzip files, they have "@1" written, and not
 # "@HWI-M03284:58:000000000-B4YML:1:1101:20603:1834" that allow to match forward & reverse reads
+
+# Let's save the file paths of the 604 samples that passed the filter
+fnF.qc <- sort(list.files(file.path(path, "filtered2"), pattern="_1_filt.fastq.gz", full.names = TRUE)) # forward
+fnR.qc <- sort(list.files(file.path(path, "filtered2"), pattern="_2_filt.fastq.gz", full.names = TRUE)) # reverse
 ```
 
 
