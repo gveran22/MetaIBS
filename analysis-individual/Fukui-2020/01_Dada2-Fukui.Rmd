@@ -243,7 +243,6 @@ derepR <- derepFastq(REV.filt2_samples) # reverse
 # Infer sequence variants
 dadaFs <- dada(derepF, err=errF, multithread=TRUE) # forward
 dadaRs <- dada(derepR, err=errR, multithread=TRUE) # reverse
-
 ```
 
 ```{r}
@@ -258,7 +257,7 @@ for (i in 1:2){
 ### 2. Merge paired-end reads
 
 ```{r merge-paired-end, eval = FALSE}
-mergers <- mergePairs(dadaFs, derepF, dadaRs, derepR, minOverlap=20, verbose=TRUE)
+mergers <- mergePairs(dadaFs, derepF, dadaRs, derepR, verbose=TRUE)
 ```
 
 ```{r}
@@ -282,8 +281,8 @@ hist(nchar(getSequences(seqtable)), breaks = 100, xlab = "ASV length", ylab = "N
 
 # Sequences should be between 27F - 338R, so around 311bp (removing the primers lengths).
 
-# Remove any sequence variant below outside 250-350bp
-seqtable <- seqtable[,nchar(colnames(seqtable)) %in% 250:350]
+# Remove any sequence variant below outside 260-360bp
+seqtable <- seqtable[,nchar(colnames(seqtable)) %in% 260:360]
 dim(seqtable)
 hist(nchar(getSequences(seqtable)), breaks = 100, xlab = "ASV length", ylab = "Number of ASVs", main="")
 ```
@@ -297,6 +296,10 @@ The core dada method corrects substitution and indel errors, but chimeras remain
 seqtable.nochim <- removeBimeraDenovo(seqtable, method="consensus", multithread=TRUE, verbose=TRUE)
 
 # Check how many sequence variants we have after removing chimeras
+dim(seqtable.nochim)
+
+# Keep only ASVs that are present in at least 2 samples
+seqtable.nochim <- seqtable.nochim[, colSums(seqtable.nochim > 0) >=2]
 dim(seqtable.nochim)
 
 # Check how many reads we have after removing chimeras (we should keep the vast majority of the reads, like > 80%)
@@ -330,11 +333,20 @@ colnames(track) <- c("input",
                      "denoisedR",
                      'merged',
                      'nonchim',
-                     "%kept_input->output")
+                     "%input->output")
 rownames(track) <- rownames(seqtable.nochim)
 
 # Show final table: for each row/sample, we have shown the initial number of reads, filtered reads, denoised reads, and non chimera reads
 track
+```
+
+
+```{r seqdepth, echo=FALSE, eval=FALSE, include=FALSE}
+# Save nb of reads per sample before / after dada2 pipeline
+nb.reads <- data.frame("before" = raw_stats$reads,
+                       "after" = rowSums(seqtable.nochim),
+                       "dataset" = "Fukui")
+saveRDS(nb.reads, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/DADA2-FILT/seqdepth_fukui.rds")
 ```
 
 
