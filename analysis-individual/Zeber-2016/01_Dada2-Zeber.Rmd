@@ -81,6 +81,7 @@ plot_read_content(rc) + labs(title = "Per base sequence content")
 #_____________________________________________________________________
 
 # out process
+raw_stats <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Zeber-2016/01_Dada2-Zeber/raw_stats.rds")
 out <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Zeber-2016/01_Dada2-Zeber/out.rds")
 # look at quality
 filt_samples <- sort(list.files(file.path(path, "filtered"), pattern=".fastq.gz", full.names = TRUE))
@@ -90,9 +91,9 @@ err_new <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Ze
 # infered sequences
 seq_infered <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Zeber-2016/01_Dada2-Zeber/seq_infered.rds")
 # taxa
-taxa <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/OutputTaxa/taxa_zeber.rds")
+taxa <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/CLUSTER/Taxonomy/output/taxa_zeber.rds")
 # physeq
-physeq <- readRDS("~/Projects/IBS_Meta-analysis_16S/phyloseq-objects/physeq_zeber.rds")
+physeq <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/CLUSTER/PhyloTree/input/physeq_zeber.rds")
 ```
 
 
@@ -243,6 +244,10 @@ seqtable.nochim <- removeBimeraDenovo(seqtable, method="consensus", multithread=
 # Check how many sequence variants we have after removing chimeras
 dim(seqtable.nochim)
 
+# Keep only ASVs that are present in at least 2 samples
+seqtable.nochim <- seqtable.nochim[, colSums(seqtable.nochim > 0) >=2]
+dim(seqtable.nochim)
+
 # Check how many reads we have after removing chimeras (we should keep the vast majority of the reads, like > 80%)
 sum(seqtable.nochim)/sum(seqtable)
 ```
@@ -320,7 +325,7 @@ The preprocessing will be easier to do with ASV, taxonomic and metadata tables c
 
 ```{r phyloseq-object, eval=FALSE}
 # Import metadata
-metadata_table <- read.csv("/Users/scarcy/Desktop/Praktikum/Data/Zeber-Lubecka_2016/ZeberSraRunTable.csv")
+metadata_table <- read.csv("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Zeber-2016/ZeberSraRunTable.csv")
 
 # Simplify data
 rownames(metadata_table) <- metadata_table$Run # have the same sample.names
@@ -351,11 +356,11 @@ physeq <- phyloseq(otu_table(seqtable.nochim, taxa_are_rows=FALSE), # by default
                   sample_data(metadata_table), 
                   tax_table(taxa))
 
-# Remove samples with less than 500 reads
-physeq <- prune_samples(sample_sums(physeq)>=500, physeq)
 # Remove taxa that are eukaryota, or have unassigned Phyla
 physeq <- subset_taxa(physeq, Kingdom != "Eukaryota")
 physeq <- subset_taxa(physeq, !is.na(Phylum))
+# Remove samples with less than 500 reads
+physeq <- prune_samples(sample_sums(physeq)>=500, physeq)
 ```
 
 ### 2. Save to disk
@@ -371,9 +376,10 @@ saveRDS(seq_infered, file.path(path, "01_Dada2-Zeber/seq_infered.rds"))
 saveRDS(otu_table(physeq), file.path(path, "01_Dada2-Zeber/ASVtable_final.rds")) # ASV table
 saveRDS(tax_table(physeq), file.path(path, "01_Dada2-Zeber/taxa_final.rds")) # taxa table
 saveRDS(sample_data(physeq), file.path(path, "01_Dada2-Zeber/metadata_final.rds")) # metadata table
-write.csv(sample_data(physeq), file.path(path, "ZeberMetadata.csv"))
 
-saveRDS(physeq, "/Users/scarcy/Desktop/Praktikum/Data/Zeber-Lubecka_2016/physeq_zeber.rds") # phyloseq object
+# Taxa & Phyloseq object
+saveRDS(taxa, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/CLUSTER/Taxonomy/output/taxa_zeber.rds")
+saveRDS(physeq, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/CLUSTER/PhyloTree/input/physeq_zeber.rds")
 ```
 
 
