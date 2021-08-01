@@ -35,14 +35,17 @@ Mars et al. (_Cell_, 2020) - [Longitudinal Multi-omics Reveals Subset-Specific M
 - 1,738 amplicon sequence variants (ASVs)
 
 ### b) Remove chimeras
-- 1,678 seq variants (but still >90% reads kept)
+- 1,678 seq variants (but still >99% reads kept)
 
-### c) Assign taxonomy
+### c) Remove ASVs present in only 1 sample
+- 827 seq variants (but still >96% reads kept)
+
+### d) Assign taxonomy
 Taxonomy assigned with Silva v138.
-- Bacteria - ...
-- Archaea - ...
-- Eukaryota - ...
-There was ... unassigned phyla. The final ASV table contains **... sequence variants**.
+- Bacteria - 822
+- Archaea - 2
+- Eukaryota - 3
+There was 3 unassigned phyla, and 3 samples below 500 reads. The final ASV table contains **824 sequence variants**.
 
 ## Metadata
 - IBS subtype
