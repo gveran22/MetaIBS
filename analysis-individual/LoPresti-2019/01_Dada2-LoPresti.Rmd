@@ -81,6 +81,7 @@ plot_read_content(rc) + xlim(0,50) + labs(title = "Per base sequence content")
 #____________ THIS IS ONLY FOR (quicker) PDF OUTPUT __________________
 #_____________________________________________________________________
 
+raw_stats <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/LoPresti-2019/01_Dada2-LoPresti/raw_stats.rds")
 # out process
 out1 <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/LoPresti-2019/01_Dada2-LoPresti/out1.rds")
 out2 <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/LoPresti-2019/01_Dada2-LoPresti/out2.rds")
@@ -92,9 +93,9 @@ err <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/LoPres
 # infered ASVs
 seq_infered <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/LoPresti-2019/01_Dada2-LoPresti/seq_infered.rds")
 # taxa
-taxa <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/OutputTaxa/taxa_lopresti.rds")
+taxa <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/CLUSTER/Taxonomy/output/taxa_lopresti.rds")
 #physeq
-physeq <- readRDS("~/Projects/IBS_Meta-analysis_16S/phyloseq-objects/physeq_lopresti.rds")
+physeq <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/CLUSTER/PhyloTree/input/physeq_lopresti.rds")
 ```
 
 
@@ -293,10 +294,6 @@ seqtable.nochim <- removeBimeraDenovo(seqtable.new, method="consensus", multithr
 # Check how many sequence variants we have after removing chimeras
 dim(seqtable.nochim)
 
-# Keep only ASVs that are present in at least 2 samples
-seqtable.nochim <- seqtable.nochim[, colSums(seqtable.nochim > 0) >=2]
-dim(seqtable.nochim)
-
 # Check how many reads we have after removing chimeras (we should keep the vast majority of the reads, like > 80%)
 sum(seqtable.nochim)/sum(seqtable.new)
 ```
@@ -378,7 +375,7 @@ The preprocessing will be easier to do with ASV, taxonomic and metadata tables c
 ```{r phyloseq-preprocess, echo=TRUE, eval=FALSE}
 #_________________________
 # Import metadata
-metadata_table <- read.csv("/Users/scarcy/Desktop/Praktikum/Data/LoPresti_2019/LoPresti_SraRunTable.csv")
+metadata_table <- read.csv("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/LoPresti-2019/LoPresti_SraRunTable.csv")
 colnames(metadata_table)
 
 # Keep relevant covariates
@@ -417,10 +414,11 @@ physeq <- phyloseq(otu_table(seqtable.nochim, taxa_are_rows=FALSE), # by default
                    sample_data(sampledf), 
                    tax_table(taxa))
 
-# Remove samples with less than 500 reads
-physeq <- prune_samples(sample_sums(physeq)>=500, physeq)
 # Remove taxa that are eukaryota, or have unassigned Phyla
 physeq <- subset_taxa(physeq, Kingdom != "Eukaryota" & !is.na(Phylum))
+physeq <- subset_taxa(physeq, !is.na(Phylum))
+# Remove samples with less than 500 reads
+physeq <- prune_samples(sample_sums(physeq)>=500, physeq)
 ```
 
 
@@ -438,9 +436,10 @@ saveRDS(seqtable.nochim, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individ
 saveRDS(otu_table(physeq), file.path(path, "01_Dada2-LoPresti/ASVtable_final.rds")) # ASV table
 saveRDS(tax_table(physeq), file.path(path, "01_Dada2-LoPresti/taxa_final.rds")) # taxa table
 saveRDS(sample_data(physeq), file.path(path, "01_Dada2-LoPresti/metadata_final.rds")) # metadata table
-write.table(sample_data(physeq), file.path(path, "LoPrestiMetadata.csv"))
 
-saveRDS(physeq, "~/Projects/IBS_Meta-analysis_16S/phyloseq-objects/physeq_lopresti.rds") # phyloseq object
+# Taxa & Phyloseq object
+saveRDS(taxa, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/CLUSTER/Taxonomy/output/taxa_lopresti.rds")
+saveRDS(physeq, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/CLUSTER/PhyloTree/input/physeq_lopresti.rds")
 ```
 
 
@@ -448,7 +447,7 @@ saveRDS(physeq, "~/Projects/IBS_Meta-analysis_16S/phyloseq-objects/physeq_lopres
 
 ```{r plot, fig.width = 10, fig.height = 5}
 # Absolute abundance
-plot_bar(physeq, fill = "Phylum")+ facet_wrap("host_disease", scales="free") + theme(axis.text.x = element_blank())
+plot_bar(physeq, fill = "Phylum")+ facet_wrap("host_disease", scales="free_x") + theme(axis.text.x = element_blank())
 
 # Relative abundance for Phylum
 phylum.table <- physeq %>%
@@ -466,7 +465,7 @@ ggplot(phylum.table, aes(x = Sample, y = Abundance, fill = Phylum))+
 # Absolute abundance (only stool samples)
 physeq.stool <- subset_samples(physeq, sample_type == "stool") # keep only stool samples
 plot_bar(physeq.stool, fill = "Phylum")+
-  facet_wrap("host_disease", scales="free") +
+  facet_wrap("host_disease", scales="free_x") +
   theme(axis.text.x = element_blank()) +
   labs(title = "Stool samples")
 
