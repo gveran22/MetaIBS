@@ -41,10 +41,10 @@ Lo Presti et al. (_Frontiers in Microbiology_, 2019) - [Fecal and mucosal microb
 
 ### c) Assign taxonomy
 Taxonomy assigned with Silva v138.
-- Bacteria - ...
-- Archaea - ...
-- Eukaryota - ...
-There was ... unassigned phyla. The final ASV table contains **... sequence variants**.
+- Bacteria - 1,085
+- Archaea - 0
+- Eukaryota - 0
+There was 0 unassigned phyla. There were 106 samples with total read count below 500. The final ASV table contains **1,085 sequence variants**.
 
 ## Metadata
 - age
