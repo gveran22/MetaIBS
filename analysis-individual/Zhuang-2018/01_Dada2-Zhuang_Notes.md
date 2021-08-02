@@ -35,18 +35,18 @@ Zhuang et al. (_Frontiers in Microbiology_, 2018) - [Fecal microbiota alteration
 
 ## Construct ASV table
 ### a) Infer sequence variants
-- 5,613 amplicon sequence variants (ASVs)
+- 6,135 amplicon sequence variants (ASVs)
 
 ### b) Remove chimeras
-- 942 seq variants (but still >88% reads kept)
+- 948 seq variants (but still >88% reads kept)
 
 ### c) Assign taxonomy
 Taxonomy assigned with Silva v138.
-- Bacteria - ...
-- Archaea - ...
-- Eukaryota - ...
+- Bacteria - 948
+- Archaea - 0
+- Eukaryota - 0
 
-All Eukaryota or unassigned phyla were removed (n=...). The final ASV table contains **... sequence variants**.
+All Eukaryota or unassigned phyla were removed (n=4). The final ASV table contains **944 sequence variants**.
 
 ## Metadata
 - IBS subtype (all IBS-D)
