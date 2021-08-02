@@ -37,15 +37,12 @@ Mars et al. (_Cell_, 2020) - [Longitudinal Multi-omics Reveals Subset-Specific M
 ### b) Remove chimeras
 - 1,678 seq variants (but still >99% reads kept)
 
-### c) Remove ASVs present in only 1 sample
-- 827 seq variants (but still >96% reads kept)
-
-### d) Assign taxonomy
+### c) Assign taxonomy
 Taxonomy assigned with Silva v138.
-- Bacteria - 822
-- Archaea - 2
-- Eukaryota - 3
-There was 3 unassigned phyla, and 3 samples below 500 reads. The final ASV table contains **824 sequence variants**.
+- Bacteria - 1,560
+- Archaea - 4
+- Eukaryota - 74
+There was 117 unassigned phyla, and 3 samples below 500 reads. The final ASV table contains **1,561 sequence variants**.
 
 ## Metadata
 - IBS subtype
