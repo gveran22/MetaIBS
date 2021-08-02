@@ -88,6 +88,7 @@ plot_read_content(rcR) + xlim(0,50) + labs(title = "Per base sequence content - 
 #____________ THIS IS ONLY FOR (quicker) PDF/HTML OUTPUT __________________
 #__________________________________________________________________________
 
+raw_stats <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Zhuang-2018/01_Dada2-Zhuang/raw_stats.rds")
 # out process
 out2 <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Zhuang-2018/01_Dada2-Zhuang/out2.rds")
 # quality profiles
@@ -102,9 +103,9 @@ dadaRs <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Zhu
 # mergers
 mergers <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Zhuang-2018/01_Dada2-Zhuang/mergers.rds")
 # taxa
-taxa <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/OutputTaxa/taxa_zhuang.rds")
+taxa <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/CLUSTER/Taxonomy/output/taxa_zhuang.rds")
 # phyloseq object
-physeq <- readRDS("~/Projects/IBS_Meta-analysis_16S/phyloseq-objects/physeq_zhuang.rds")
+physeq <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/CLUSTER/PhyloTree/input/physeq_zhuang.rds")
 ```
 
 
@@ -417,9 +418,10 @@ saveRDS(mergers, file.path(path, "01_Dada2-Zhuang/mergers.rds"))
 saveRDS(otu_table(physeq), file.path(path, "01_Dada2-Zhuang/ASVtable_final.rds")) # ASV table
 saveRDS(tax_table(physeq), file.path(path, "01_Dada2-Zhuang/taxa_final.rds")) # taxa table
 saveRDS(sample_data(physeq), file.path(path, "01_Dada2-Zhuang/metadata_final.rds")) # metadata table
-write.csv(sample_data(physeq), file.path(path, "ZhuangMetadata.csv"))
 
-saveRDS(physeq, "~/Projects/IBS_Meta-analysis_16S/phyloseq-objects/physeq_zhuang.rds") # phyloseq object
+# Taxa & Phyloseq object
+saveRDS(taxa, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/CLUSTER/Taxonomy/output/taxa_zhuang.rds")
+saveRDS(physeq, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/CLUSTER/PhyloTree/input/physeq_zhuang.rds")
 ```
 
 

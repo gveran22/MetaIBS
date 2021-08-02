@@ -93,9 +93,9 @@ err <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Pozuel
 # infered sequences
 seq_infered <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Pozuelo-2015/Rproject_Dada2/seq_infered.rds")
 # taxa
-taxa <- readRDS("/Users/scarcy/Desktop/Praktikum/Data/OutputTaxa/taxa_pozuelo.rds")
+taxa <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/CLUSTER/Taxonomy/output/taxa_pozuelo.rds")
 # phyloseq object
-physeq <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Pozuelo-2015/physeq_pozuelo.rds")
+physeq <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/CLUSTER/PhyloTree/input/physeq_pozuelo.rds")
 ```
 
 
@@ -454,9 +454,10 @@ saveRDS(seq_infered, file.path(path, "01_Dada2-Pozuelo/seq_infered.rds"))
 saveRDS(otu_table(physeq), file.path(path, "01_Dada2-Pozuelo/ASVtable_final.rds")) # ASV table
 saveRDS(tax_table(physeq), file.path(path, "01_Dada2-Pozuelo/taxa_final.rds")) # taxa table
 saveRDS(sample_data(physeq), file.path(path, "01_Dada2-Pozuelo/metadata_final.rds")) # metadata table
-write.csv(sample_data(physeq), file.path(path, "PozueloMetadata.csv"))
 
-saveRDS(physeq, "~/Projects/IBS_Meta-analysis_16S/phyloseq-objects/physeq_pozuelo.rds") # phyloseq object
+# Taxa & Phyloseq object
+saveRDS(taxa, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/CLUSTER/Taxonomy/output/taxa_pozuelo.rds")
+saveRDS(physeq, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/CLUSTER/PhyloTree/input/physeq_pozuelo.rds")
 ```
 
 

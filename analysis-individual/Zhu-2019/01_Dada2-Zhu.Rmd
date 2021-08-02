@@ -105,7 +105,7 @@ mergers <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Zh
 taxa <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/CLUSTER/Taxonomy/output/taxa_zhu.rds")
 taxa.small <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/CLUSTER/Taxonomy/output/taxa_zhu_shortASV.rds")
 # phyloseq object
-physeq <- readRDS("~/Projects/IBS_Meta-analysis_16S/phyloseq-objects/physeq_zhu.rds")
+physeq <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/CLUSTER/PhyloTree/input/physeq_zhu.rds")
 physeq.small <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Zhu-2019/01_Dada2-Zhu/physeq_zhu_shortASV.rds")
 ```
 
@@ -505,15 +505,17 @@ saveRDS(errR, file.path(path, "01_Dada2-Zhu/errR.rds"))
 saveRDS(dadaFs, file.path(path, "01_Dada2-Zhu/infered_seq_F.rds"))
 saveRDS(dadaRs, file.path(path, "01_Dada2-Zhu/infered_seq_R.rds"))
 saveRDS(mergers, file.path(path, "01_Dada2-Zhu/mergers.rds"))
-saveRDS(taxa, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/CLUSTER/Taxonomy/output/taxa_zhu.rds")
-saveRDS(taxa.small, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/CLUSTER/Taxonomy/output/taxa_zhu_shortASV.rds")
 
 saveRDS(otu_table(physeq), file.path(path, "01_Dada2-Zhu/ASVtable_final.rds")) # ASV table
 saveRDS(tax_table(physeq), file.path(path, "01_Dada2-Zhu/taxa_final.rds")) # taxa table
 saveRDS(sample_data(physeq), file.path(path, "01_Dada2-Zhu/metadata_final.rds")) # metadata table
 write.csv(sample_data(physeq), file.path(path, "01_Dada2-Zhu/ZhuMetadata.csv"))
 
-saveRDS(physeq, "~/Projects/IBS_Meta-analysis_16S/phyloseq-objects/physeq_zhu.rds") # phyloseq object
+# Taxa & Phyloseq object
+saveRDS(taxa, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/CLUSTER/Taxonomy/output/taxa_zhu.rds")
+saveRDS(taxa.small, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/CLUSTER/Taxonomy/output/taxa_zhu_shortASV.rds")
+
+saveRDS(physeq, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/CLUSTER/PhyloTree/input/physeq_zhu.rds")
 saveRDS(physeq.small, file.path(path, "01_Dada2-Zhu/physeq_zhu_shortASV.rds")) # phyloseq object with shorter ASVs
 ```
 
