@@ -41,10 +41,10 @@ Pozuelo et al. (_Scientific Reports_, 2015) - [Reduction of butyrate- and methan
 
 ### c) Assign taxonomy
 Taxonomy assigned with Silva v138.
-- Bacteria - ...
-- Archaea - ...
-- Eukaryota - ...
-There was ... unassigned phyla. The final ASV table contains **... sequence variants**.
+- Bacteria - 23,752
+- Archaea - 21
+- Eukaryota - 36
+There was 572 unassigned phyla. The final ASV table contains **23,257 sequence variants**.
 
 ## Metadata
 - 1st or 2nd collection time (1 month apart)
