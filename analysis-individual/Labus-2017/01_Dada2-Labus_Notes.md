@@ -37,10 +37,10 @@ Labus et al. (_Microbiome_, 2017) - [Differences in gut microbial composition co
 
 ### c) Assign taxonomy
 Taxonomy assigned with Silva v138.
-- Bacteria - ...
-- Archaea - ...
-- Eukaryota - ...
-There was ... unassigned phyla. The final ASV table contains **... sequence variants**.
+- Bacteria - 710
+- Archaea - 0
+- Eukaryota - 0
+There was 1 unassigned phyla. The final ASV table contains **709 sequence variants**.
 
 ## Metadata
 - age
