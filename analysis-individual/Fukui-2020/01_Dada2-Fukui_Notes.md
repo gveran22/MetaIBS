@@ -35,16 +35,13 @@ Fukui (_J. Clin. Med_) - [Usefulness of Machine Learning-Based Gut Microbiome An
 ### b) Remove chimeras
 - 6,872 seq variants (but still >97% reads kept)
 
-### c) Remove ASVs present in only 1 sample
-- 2,393 seq variants (but still >84% reads kept)
-
-### d) Assign taxonomy
+### c) Assign taxonomy
 Taxonomy assigned with Silva v138.
-- Bacteria - 2393
+- Bacteria - 6,871
 - Archaea - 0
-- Eukaryota - 0
-There was no unassigned phyla. There was 1 sample below 500 total reads.
-The final ASV table contains **2393 sequence variants**.
+- Eukaryota - 1
+There were 9 unassigned phyla removed There was 1 sample below 500 total reads.
+The final ASV table contains **6,863 sequence variants**.
 
 ## Metadata
 - none (IBS vs HC)
