@@ -82,16 +82,16 @@ plot_read_content(rc) + xlim(0,50) + labs(title = "Per base sequence content")
 #_____________________________________________________________________
 
 # out process
-out1 <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Pozuelo-2015/Rproject_Dada2/out1.rds")
-out2 <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Pozuelo-2015/Rproject_Dada2/out2.rds")
-raw_stats <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Pozuelo-2015/Rproject_Dada2/raw_stats.rds")
+out1 <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Pozuelo-2015/01_Dada2-Pozuelo/out1.rds")
+out2 <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Pozuelo-2015/01_Dada2-Pozuelo/out2.rds")
+raw_stats <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Pozuelo-2015/01_Dada2-Pozuelo/raw_stats.rds")
 # look at quality
 filt1_samples <- sort(list.files(file.path(path, "filtered1"), pattern=".fastq.gz", full.names = TRUE))
 filt2_samples <- sort(list.files(file.path(path, "filtered2"), pattern=".fastq.gz", full.names = TRUE))
 # error rates
-err <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Pozuelo-2015/Rproject_Dada2/err.rds")
+err <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Pozuelo-2015/01_Dada2-Pozuelo/err.rds")
 # infered sequences
-seq_infered <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Pozuelo-2015/Rproject_Dada2/seq_infered.rds")
+seq_infered <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Pozuelo-2015/01_Dada2-Pozuelo/seq_infered.rds")
 # taxa
 taxa <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/CLUSTER/Taxonomy/output/taxa_pozuelo.rds")
 # phyloseq object
@@ -377,7 +377,7 @@ taxa <- addSpecies(taxa, "~/Projects/IBS_Meta-analysis_16S/data/silva_species_as
 
 ```{r taxa-sanity-check}
 # Check how the taxonomy table looks like
-taxa.print <- taxa 
+taxa.print <- taxa
 rownames(taxa.print) <- NULL # Removing sequence rownames for display only
 head(taxa.print)
 
@@ -420,12 +420,13 @@ sampledf$Sample.Name <- gsub("\\.2$", "", sampledf[, 'Sample.Name']) # remove th
 
 colnames(sampledf) <- c("Run", "host_ID", "collection_date", "Collection", "host_disease")
 
+sampledf$sample_type <- "stool"
 sampledf$author <- "Pozuelo"
 sampledf$sequencing_tech <- "Illumina"
 sampledf$variable_region <- "V4"
 
 # Remove .fastq extension in seqtable.nochim
-rownames(seqtable.nochim) <- gsub(".fastq", "", rownames(seqtable.nochim))
+# rownames(seqtable.nochim) <- gsub(".fastq", "", rownames(seqtable.nochim))
 
 #_________________________
 # Create phyloseq object
@@ -433,11 +434,10 @@ physeq <- phyloseq(otu_table(seqtable.nochim, taxa_are_rows=FALSE), # by default
                    sample_data(sampledf), 
                    tax_table(taxa))
 
-# Remove samples with less than 500 reads
-physeq <- prune_samples(sample_sums(physeq)>=500, physeq)
 # Remove taxa that are eukaryota, or have unassigned Phyla
 physeq <- subset_taxa(physeq, Kingdom != "Eukaryota")
 physeq <- subset_taxa(physeq, !is.na(Phylum))
+
 ```
 
 
@@ -465,7 +465,7 @@ saveRDS(physeq, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/CLUST
 
 ```{r plot, fig.width = 10}
 # Absolute abundance
-plot_bar(physeq, fill = "Phylum")+ facet_wrap("host_disease", scales="free") + theme(axis.text.x = element_blank())
+# plot_bar(physeq, fill = "Phylum")+ facet_wrap("host_disease", scales="free_x") + theme(axis.text.x = element_blank())
 
 # Relative abundance for Phylum
 phylum.table <- physeq %>%
