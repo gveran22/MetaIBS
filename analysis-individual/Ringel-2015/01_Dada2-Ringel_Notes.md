@@ -30,20 +30,17 @@ Ringel-Kulka et al. (_Am J Physiol Gastrointest Liver Physiol_, 2016) - [Molecul
 
 ## Construct ASV table
 ### a) Infer sequence variants
-- 3438 amplicon sequence variants (ASVs)
+- 3,438 amplicon sequence variants (ASVs)
 
 ### b) Remove chimeras
-- 3264 seq variants (but still >98% reads kept)
+- 3,264 seq variants (but still >98% reads kept)
 
-### c) Remove ASVs present in only 1 sample
-- 759 seq variants (but still >75% reads kept)
-
-### d) Assign taxonomy
+### c) Assign taxonomy
 Taxonomy assigned with Silva v138.
-- Bacteria - 759
+- Bacteria - 3,264
 - Archaea - 0
 - Eukaryota - 0
-There was 0 unassigned phyla. The final ASV table contains **759 sequence variants**.
+There was 2 unassigned phyla. The final ASV table contains **3,262 sequence variants**.
 
 ## Metadata
 - none (no IBS/HC label)
