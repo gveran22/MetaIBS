@@ -82,6 +82,7 @@ plot_read_content(rc) + xlim(0,50) + labs(title = "Per base sequence content")
 #____________ THIS IS ONLY FOR (quicker) PDF/HTML OUTPUT __________________
 #__________________________________________________________________________
 
+raw_stats <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Labus-2017/01_Dada2-Labus/raw_stats.rds")
 # nb of reads after filtering steps (out variables)
 out1 <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Labus-2017/01_Dada2-Labus/out1.rds")
 out2 <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Labus-2017/01_Dada2-Labus/out2.rds")
@@ -93,9 +94,9 @@ err <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Labus-
 # inferred ASVs
 seq_infered <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Labus-2017/01_Dada2-Labus/seq_infered.rds")
 # taxa
-taxa <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/OutputTaxa/taxa_labus.rds")
+taxa <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/CLUSTER/Taxonomy/output/taxa_labus.rds")
 #physeq
-physeq <- readRDS("~/Projects/IBS_Meta-analysis_16S/phyloseq-objects/physeq_labus.rds")
+physeq <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/CLUSTER/PhyloTree/input/physeq_labus.rds")
 ```
 
 
@@ -348,7 +349,7 @@ taxa <- addSpecies(taxa, "~/Projects/IBS_Meta-analysis_16S/data/silva_species_as
 
 ```{r taxa-sanity-check}
 # Check how the taxonomy table looks like
-taxa.print <- taxa 
+taxa.print <- taxa
 rownames(taxa.print) <- NULL # Removing sequence rownames for display only
 head(taxa.print)
 table(taxa.print[,1]) # Show the different kingdoms (should be only bacteria)
@@ -369,23 +370,11 @@ The preprocessing will be easier to do with ASV, taxonomic and metadata tables c
 ```{r phyloseq-preprocess, echo=TRUE, eval=FALSE}
 #_________________________
 # Import metadata
-metadata_table <- read.csv("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Labus-2017/LabusMetadata.csv")
+metadata_table <- read.csv("~/Projects/IBS_Meta-analysis_16S/analysis-individual/Labus-2017/Metadata-Labus.csv")
 
 # Keep relevant covariates
-sampledf <- metadata_table[, c("Run", "host_disease", "host_subtype", "Host_Age", "host_sex", "host_body_mass_index", "Collection_Date")]
-rownames(sampledf) <- metadata_table$Run # assign sample names as row names
-colnames(sampledf) <- c("Run", "host_disease", "host_subtype", "host_age", "host_sex", "host_bmi", "collection_date")
-
-sampledf$host_disease <- as.character(sampledf$host_disease)
-
-# Simplify data
-sampledf$host_disease[sampledf$host_disease == "None"] <- "Healthy"
-sampledf$host_disease[sampledf$host_disease == "Irritable bowel syndrome"] <- "IBS"
-sampledf$host_subtype[sampledf$host_subtype == "IBS-A"] <- "IBS-M"
-
-sampledf$author <- "Labus"
-sampledf$sequencing_tech <- "454 pyrosequencing"
-sampledf$variable_region <- "V3-V5"
+metadata_table$X <- NULL
+rownames(metadata_table) <- metadata_table$Run # assign sample names as row names
 
 # Remove .fastq.gz extension in seqtable.nochim
 rownames(seqtable.nochim) <- gsub(".fastq.gz", "", rownames(seqtable.nochim))
@@ -393,14 +382,14 @@ rownames(seqtable.nochim) <- gsub(".fastq.gz", "", rownames(seqtable.nochim))
 #_________________________
 # Create phyloseq object
 physeq <- phyloseq(otu_table(seqtable.nochim, taxa_are_rows=FALSE), # by default, in otu_table the sequence variants are in rows
-                  sample_data(sampledf), 
+                  sample_data(metadata_table), 
                   tax_table(taxa))
 
-# Remove samples with less than 500 reads
-physeq <- prune_samples(sample_sums(physeq)>=500, physeq)
 # Remove taxa that are eukaryota, or have unassigned Phyla
 physeq <- subset_taxa(physeq, Kingdom != "Eukaryota")
 physeq <- subset_taxa(physeq, !is.na(Phylum))
+# Remove samples with less than 500 reads
+physeq <- prune_samples(sample_sums(physeq)>=500, physeq)
 ```
 
 
@@ -408,6 +397,7 @@ physeq <- subset_taxa(physeq, !is.na(Phylum))
 
 ```{r save, eval=FALSE}
 # Save to disk
+saveRDS(raw_stats, file.path(path, "01_Dada2-Labus/raw_stats.rds"))
 saveRDS(out1, file.path(path, "01_Dada2-Labus/out1.rds"))
 saveRDS(out2, file.path(path, "01_Dada2-Labus/out2.rds"))
 saveRDS(err, file.path(path, "01_Dada2-Labus/err.rds"))
@@ -416,9 +406,10 @@ saveRDS(seq_infered, file.path(path, "01_Dada2-Labus/seq_infered.rds"))
 saveRDS(otu_table(physeq), file.path(path, "01_Dada2-Labus/ASVtable_final.rds")) # ASV table
 saveRDS(tax_table(physeq), file.path(path, "01_Dada2-Labus/taxa_final.rds")) # taxa table
 saveRDS(sample_data(physeq), file.path(path, "01_Dada2-Labus/metadata_final.rds")) # metadata table
-write.csv(sample_data(physeq), file.path(path, "LabusMetadata.csv")) # metadata table
 
-saveRDS(physeq, "~/Projects/IBS_Meta-analysis_16S/phyloseq-objects/physeq_labus.rds") # phyloseq object
+# Taxa & Phyloseq object
+saveRDS(taxa, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/CLUSTER/Taxonomy/output/taxa_labus.rds")
+saveRDS(physeq, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/CLUSTER/PhyloTree/input/physeq_labus.rds")
 ```
 
 
@@ -427,7 +418,7 @@ saveRDS(physeq, "~/Projects/IBS_Meta-analysis_16S/phyloseq-objects/physeq_labus.
 
 ```{r plot, fig.width = 10, fig.height = 4}
 # Absolute abundance
-plot_bar(physeq, fill = "Phylum")+ facet_wrap("host_disease", scales="free") + theme(axis.text.x = element_blank())
+plot_bar(physeq, fill = "Phylum")+ facet_wrap("host_disease", scales="free_x") + theme(axis.text.x = element_blank())
 
 # Relative abundance for Phylum
 phylum.table <- physeq %>%
