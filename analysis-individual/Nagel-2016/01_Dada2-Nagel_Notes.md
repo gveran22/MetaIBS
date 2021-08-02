@@ -35,16 +35,13 @@ Nagel et al. (_Microbiome_, 2016) - [Comparison of faecal microbiota in Blastocy
 ### b) Remove chimeras
 - 1,092 seq variants (>97% reads kept)
 
-### c) Remove ASVs present in only 1 sample
-- 439 seq variants (but still >86% reads kept)
-
-### d) Assign taxonomy
+### c) Assign taxonomy
 Taxonomy assigned with Silva v138.
-- Bacteria - 438
-- Archaea - 1
+- Bacteria - 1,089
+- Archaea - 3
 - Eukaryota - 0
 
-All unassigned phyla were removed (n=0), samples below 500 total reads (n=0). The final ASV table contains **439 sequence variants**.
+All unassigned phyla were removed (n=1), samples below 500 total reads (n=0). The final ASV table contains **1,091 sequence variants**.
 
 ## Metadata
 - age
