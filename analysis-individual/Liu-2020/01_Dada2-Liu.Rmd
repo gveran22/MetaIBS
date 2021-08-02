@@ -273,10 +273,6 @@ seqtable.nochim <- removeBimeraDenovo(seqtable.new, method="consensus", multithr
 # Check how many sequence variants we have after removing chimeras
 dim(seqtable.nochim)
 
-# Keep only ASVs that are present in at least 2 samples
-seqtable.nochim <- seqtable.nochim[, colSums(seqtable.nochim > 0) >=2]
-dim(seqtable.nochim)
-
 # Check how many reads we have after removing chimeras (we should keep the vast majority of the reads, like > 80%)
 sum(seqtable.nochim)/sum(seqtable.new)
 ```
@@ -412,7 +408,10 @@ saveRDS(physeq, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/CLUST
 
 ```{r plot, fig.width = 10}
 # Absolute abundance
-plot_bar(physeq, fill = "Phylum")+ facet_wrap("host_disease", scales="free_x") + theme(axis.text.x = element_blank()) # long to compute
+plot_bar(physeq, fill = "Phylum")+ facet_wrap("host_disease", scales="free_x") +
+  theme(axis.text.x = element_blank(),
+        legend.text = element_text(size=5),
+        legend.key.size = unit(0.2, 'cm'))
 
 # Relative abundance for Phylum
 phylum.table <- physeq %>%
@@ -424,7 +423,9 @@ ggplot(phylum.table, aes(x = Sample,
                          y = Abundance, fill = Phylum))+
   facet_wrap(~ host_disease, scales = "free") + # scales = "free" removes empty lines
   geom_bar(stat = "identity") +
-  theme(axis.text.x = element_blank())+
+  theme(axis.text.x = element_blank(),
+        legend.text = element_text(size=5),
+        legend.key.size = unit(0.2, 'cm'))+
   labs(x = "Samples", y = "Relative abundance")
 
 ```
