@@ -44,16 +44,13 @@ A few samples have some reads with reverse complement of forward/reverse primer 
 ### b) Remove chimeras
 - 5,893 seq variants (but still >97% reads kept)
 
-### c) Remove ASVs present in only 1 sample
-- 2,573 seq variants (but still >94% reads kept)
-
-### d) Assign taxonomy
+### c) Assign taxonomy
 Taxonomy assigned with Silva v138.
-- Bacteria - 2,571
-- Archaea - 2
+- Bacteria - 5,888
+- Archaea - 5
 - Eukaryota - 0
 
-All unassigned phyla were removed (n=0), samples below 500 total reads (n=79). The final ASV table contains **2,573 sequence variants**.
+All unassigned phyla were removed (n=16), samples below 500 total reads (n=79). The final ASV table contains **5,877 sequence variants**.
 
 ## Metadata
 - age

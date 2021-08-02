@@ -392,10 +392,6 @@ rownames(seqtable.nochim) <- sub("_.*", "", rownames(seqtable.nochim))
 # Check how many sequence variants we have after removing chimeras
 dim(seqtable.nochim)
 
-# Keep only ASVs that are present in at least 2 samples
-seqtable.nochim <- seqtable.nochim[, colSums(seqtable.nochim > 0) >=2]
-dim(seqtable.nochim)
-
 # Check how many reads we have after removing chimeras (we should keep the vast majority of the reads, like > 80%)
 sum(seqtable.nochim)/sum(seqtable.new)
 ```
@@ -522,7 +518,7 @@ saveRDS(mergers, file.path(path, "01_Dada2-Hugerth/mergers.rds"))
 
 saveRDS(otu_table(physeq), file.path(path, "01_Dada2-Hugerth/ASVtable_final.rds")) # ASV table
 saveRDS(tax_table(physeq), file.path(path, "01_Dada2-Hugerth/taxa_final.rds")) # taxa table
-write.csv(sample_data(physeq), file.path(path, "HugerthMetadata.csv")) # metadata table
+saveRDS(sample_data(physeq), file.path(path, "01_Dada2-Hugerth/metadata_final.rds")) # metadata table
 
 # Taxa & Phyloseq object
 saveRDS(taxa, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/CLUSTER/Taxonomy/output/taxa_hugerth.rds")
