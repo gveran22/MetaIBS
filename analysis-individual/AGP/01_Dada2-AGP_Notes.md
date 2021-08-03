@@ -38,16 +38,13 @@ IBS and healthy samples were selected out of the pool of >30,000 samples deposit
 ### b) Remove chimeras
 - 18,673 seq variants (but still >95% reads kept)
 
-### c) Remove ASVs present in only 1 sample
-- 6,512 seq variants (but still >94% reads kept)
-
-### d) Assign taxonomy
+### c) Assign taxonomy
 Taxonomy assigned with Silva v138.
-- Bacteria - 6,458
-- Archaea - 13
-- Eukaryota - 36
+- Bacteria - 17,143
+- Archaea - 47
+- Eukaryota - 1,083
 
-All unassigned phyla were removed (n=67), samples below 500 total reads (n=52). The final ASV table contains **6,432 sequence variants**.
+All unassigned phyla were removed (n=1,763), samples below 500 total reads (n=51). The final ASV table contains **16,832 sequence variants**.
 
 ## Metadata
 - age

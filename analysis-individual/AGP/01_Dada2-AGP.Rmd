@@ -274,10 +274,6 @@ seqtable.nochim <- removeBimeraDenovo(seqtable, method="consensus", multithread=
 # Check how many sequence variants we have after removing chimeras
 dim(seqtable.nochim)
 
-# Keep only ASVs that are present in at least 2 samples
-seqtable.nochim <- seqtable.nochim[, colSums(seqtable.nochim > 0) >=2]
-dim(seqtable.nochim)
-
 # Check how many reads we have after removing chimeras (we should keep the vast majority of the reads, like > 80%)
 sum(seqtable.nochim)/sum(seqtable)
 ```
@@ -380,9 +376,11 @@ metadata <- read.csv(file.path(path, "Metadata-AGP.csv"))
 
 # Keep relevant covariates
 sampledf <- metadata %>%
-  select(-"pcr_primers..exp.")
+  select(-"pcr_primers..exp.") %>%
+  select(-"X")
 rownames(sampledf) <- sampledf$Run
 
+sampledf$sample_type <- "stool"
 sampledf$author <- "AGP"
 sampledf$sequencing_tech <- "Illumina"
 sampledf$variable_region <- "V4"
@@ -437,7 +435,9 @@ ggplot(phylum.table, aes(x = reorder(Sample, Sample, function(x) mean(phylum.tab
                          y = Abundance, fill = Phylum))+
   facet_wrap(~ host_disease, scales = "free") + # scales = "free" removes empty lines
   geom_bar(stat = "identity") +
-  theme(axis.text.x = element_blank())+
+  theme(axis.text.x = element_blank(),
+        legend.text = element_text(size=6),
+        legend.key.size = unit(0.3, 'cm'))+
   labs(x = "Samples", y = "Relative abundance")
 
 ```
