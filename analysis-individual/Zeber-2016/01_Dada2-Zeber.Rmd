@@ -15,7 +15,7 @@ knitr::opts_chunk$set(fig.width = 3.5, fig.height = 3, warning=FALSE, message=FA
 
 
 # Import library
-```{r library-import, echo = FALSE}
+```{r library-import}
 library(dada2)
 packageVersion("dada2") # check dada2 version
 
@@ -244,10 +244,6 @@ seqtable.nochim <- removeBimeraDenovo(seqtable, method="consensus", multithread=
 # Check how many sequence variants we have after removing chimeras
 dim(seqtable.nochim)
 
-# Keep only ASVs that are present in at least 2 samples
-seqtable.nochim <- seqtable.nochim[, colSums(seqtable.nochim > 0) >=2]
-dim(seqtable.nochim)
-
 # Check how many reads we have after removing chimeras (we should keep the vast majority of the reads, like > 80%)
 sum(seqtable.nochim)/sum(seqtable)
 ```
@@ -341,6 +337,7 @@ metadata_table[metadata_table$host_subtype == "Healthy", 'host_subtype'] <- 'HC'
 
 metadata_table$individual <- gsub('\\:0$', '', metadata_table$individual)
 
+metadata_table$sample_type <- "stool"
 metadata_table$author <- "Zeber-Lubecka"
 metadata_table$sequencing_tech <- "Ion Torrent"
 metadata_table$variable_region <- "Ion 16S Metagenomics Kit"

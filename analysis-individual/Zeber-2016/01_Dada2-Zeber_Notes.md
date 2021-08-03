@@ -33,16 +33,13 @@ Zeber-Lubecka et al. (_Gut Microbes_, 2016) - [Limited prolonged effects of rifa
 ### b) Remove chimeras
 - 14,842 seq variants (>96% reads kept)
 
-### c) Remove ASVs present in only 1 sample
-- 5,493 seq variants (but still >84% reads kept)
-
-### d) Assign taxonomy
+### c) Assign taxonomy
 Taxonomy assigned with Silva v138.
-- Bacteria - 5,493
+- Bacteria - 14,834
 - Archaea - 0
-- Eukaryota - 0
+- Eukaryota - 5
 
-All unassigned phyla were removed (n=7), samples below 500 total reads (n=0). The final ASV table contains **5,486 sequence variants**.
+All unassigned phyla were removed (n=30), samples below 500 total reads (n=0). The final ASV table contains **14,812 sequence variants**.
 
 ## Metadata
 - IBS subtype
