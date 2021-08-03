@@ -165,5 +165,97 @@ LogRatios <- function(abundanceTable){
   return(t(ratios))
 }
 ```
+
+
+This table will be useful to save covariates for UMAP plotting.
+
+```{r covariates}
+covariates <- data.frame(disease = sample_data(physeq.pseudocts)[,'host_disease'],
+                        seq_tech = sample_data(physeq.pseudocts)[,'sequencing_tech'],
+                        author = sample_data(physeq.pseudocts)[,'author'],
+                        variable_region = sample_data(physeq.pseudocts)[,'variable_region'],
+                        age = sample_data(physeq.pseudocts)[,'host_age'],
+                        bmi = sample_data(physeq.pseudocts)[,'host_bmi'],
+                        subtype = sample_data(physeq.pseudocts)[,'host_subtype'])
+table(covariates$host_subtype, useNA="ifany")
+```
+
+
+## FAMILY AGGLOMERATION
+
+First, let's get a table with samples as rows and family log ratios as columns
+
+```{r agglom-family}
+# Get the familyTable
+fam.agg <- physeq.pseudocts %>%
+  tax_glom(taxrank = "Family") %>%
+  psmelt()
+familyTable <- acast(fam.agg, Family ~ Sample, value.var = 'Abundance')
+# saveRDS(fam.agg, "~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/02_UMAP/family_agg.rds")
+
+# sanity checks
+# dim(familyTable)
+# table(familyTable == 0)
+
+# Get log-ratios for family table
+ratiosFam <- LogRatios(familyTable)
+# saveRDS(ratiosFam, "~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/02_UMAP/ratiosFam.rds")
+
+# Mean centering
+ratiosFam.scaled <- scale(ratiosFam, center = TRUE, scale = FALSE)
+table(is.na(ratiosFam.scaled)) # sanity check
+```
+
+
+
+Now we can run UMAP.
+
+```{r umap-family}
+# Run UMAP
+umapFam <- umap(ratiosFam.scaled, n_neighbors=50) # umap on samples (rows) and families abundances (columns)
+#30min
+# saveRDS(umapFam, "~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/02_UMAP/umapFam.rds")
+
+# Get the (x,y) coordinates from the UMAP
+dims.umapFam <- umapFam$layout
+colnames(dims.umapFam) <- c("UMAP_1", "UMAP_2")
+
+# Add covariates
+dims.umapFam <- merge(as.data.frame(dims.umapFam), covariates, by="row.names") # umap+covariates
+```
+
+Plot UMAP.
+
+```{r umap-plot-family}
+# PLOT host_disease
+ggplot(dims.umapFam, aes(x = UMAP_1, y = UMAP_2, color = host_disease))+
+  geom_point(size = 2, alpha = 0.7)+
+  scale_color_manual(values = c('blue', 'red', 'black'))+
+  labs(title = 'Agglomeration at Family level')+
+  theme_bw()
+
+# PLOT host_subtype
+ggplot(dims.umapFam, aes(x = UMAP_1, y = UMAP_2, color = host_subtype))+
+  geom_point(size = 1, alpha = 0.7)+
+  scale_color_manual(values = c('#99CCFF', '#FF3300', '#990000', '#FF66CC','#FFFF66', '#CCCCCC'))+
+  labs(title = 'Agglomeration at Family level')+
+  theme_bw()
+
+# PLOT author
+ggplot(dims.umapFam, aes(x = UMAP_1, y = UMAP_2, color = author))+
+  geom_point(size = 2, alpha = 0.7)+
+  theme_bw()
+
+# PLOT seqtech
+ggplot(dims.umapFam, aes(x = UMAP_1, y = UMAP_2, color = sequencing_tech))+
+  geom_point(size = 2, alpha = 0.7)+
+  scale_color_manual(values = c('#6600FF', '#33CC33', '#006600', '#FF6633'))+
+  theme_bw()
+
+# PLOT variable region
+ggplot(dims.umapFam, aes(x = UMAP_1, y = UMAP_2, color = variable_region))+
+  geom_point(size = 2, alpha = 0.7)+
+  theme_bw()
+```
 ```
 
