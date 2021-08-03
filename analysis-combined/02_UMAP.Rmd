@@ -14,6 +14,9 @@ output: html_notebook
 library(phyloseq)
 library(ggplot2)
 library(umap)
+library(tidyverse)
+library(reshape2)
+library(gtools)
 ```
 
 
@@ -23,6 +26,7 @@ library(umap)
 path.phy <- "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/CLUSTER/PhyloTree/input"
 
 # Import phyloseq objects
+physeq.ringel <- readRDS(file.path(path.phy, "physeq_ringel.rds"))
 physeq.labus <- readRDS(file.path(path.phy, "physeq_labus.rds"))
 physeq.lopresti <- readRDS(file.path(path.phy, "physeq_lopresti.rds"))
 physeq.pozuelo <- readRDS(file.path(path.phy, "physeq_pozuelo.rds"))
@@ -36,6 +40,11 @@ physeq.agp <- readRDS(file.path(path.phy, "physeq_agp.rds"))
 physeq.nagel <- readRDS(file.path(path.phy, "physeq_nagel.rds"))
 physeq.zeber <- readRDS(file.path(path.phy, "physeq_zeber.rds"))
 
+# Little changes
+# sample_data(physeq.labus)[sample_data(physeq.labus)$host_disease == "None","host_disease"] <- "Healthy"
+# sample_data(physeq.labus)$sample_type <- "stool"
+# sample_data(physeq.zhu)$sample_type <- "stool"
+
 # Sanity checks
 # table(tax_table(physeq.zeber)[,1])
 # table(is.na(tax_table(physeq.zeber)[,2]))
@@ -48,7 +57,51 @@ physeq.zeber <- readRDS(file.path(path.phy, "physeq_zeber.rds"))
 # MERGE DATASETS #
 ##################
 
+## Merge datasets
+
 ```{r merge-datasets}
+# Merge phyloseq objects
+colnames(sample_data(physeq.hugerth))[5] <- "host_sex"
+colnames(sample_data(physeq.lopresti))[6] <- "host_subtype"
+physeq <- merge_phyloseq(physeq.ringel,
+                         physeq.labus,
+                         physeq.lopresti,
+                         physeq.pozuelo,
+                         physeq.zhuang,
+                         physeq.zhu,
+                         physeq.hugerth,
+                         physeq.fukui,
+                         physeq.mars,
+                         physeq.liu,
+                         physeq.agp,
+                         physeq.nagel,
+                         physeq.zeber)
+
+# Adjust sample_data
+colnames(sample_data(physeq))
+#sample_data(physeq)[is.na(sample_data(physeq)$sample_type), 'sample_type'] <- 'stool'
+sample_data(physeq)[is.na(sample_data(physeq)$host_disease), "host_disease"] <- "NA"
+sample_data(physeq)[is.na(sample_data(physeq)$host_sex), "host_sex"] <- "unknown"
+sample_data(physeq)[sample_data(physeq)$host_disease == "Healthy", "host_subtype"] <- "HC"
+sample_data(physeq)[sample_data(physeq)$host_disease == "NA", "host_subtype"] <- "NA"
+sample_data(physeq)[is.na(sample_data(physeq)$host_subtype), "host_subtype"] <- "IBS-unspecified"
+sample_data(physeq)[sample_data(physeq)$author %in% c("Zhuang", "Zhu", "Hugerth", "Fukui", "Mars"), "sequencing_tech"] <- "Illumina MiSeq paired-end"
+sample_data(physeq)[sample_data(physeq)$author %in% c("Pozuelo", "Liu", "AGP"), "sequencing_tech"] <- "Illumina MiSeq single-end"
+
+# check on sample_data
+sample_data(physeq)
+table(sample_data(physeq)$author, useNA="ifany") #ok
+table(sample_data(physeq)$sequencing_tech, useNA="ifany") #ok
+table(sample_data(physeq)$variable_region, useNA="ifany") # ok
+table(sample_data(physeq)$host_disease, useNA="ifany") # ok
+table(sample_data(physeq)$host_sex, useNA="ifany") # ok
+
+table(sample_data(physeq)$host_age, useNA="ifany") # ok
+table(sample_data(physeq)$host_bmi, useNA="ifany") # ok
+table(sample_data(physeq)$host_subtype, useNA="ifany") # ok
+table(sample_data(physeq)$sample_type, useNA="ifany") # ok
+
+```
 
 ```
 
