@@ -9,7 +9,6 @@ output: html_notebook
 ####################
 
 ```{r, echo = FALSE}
-library(dada2) # manage fastq file
 library(ShortRead) # manage fastq file
 library(Biostrings) # to manage dna sequences as strings
 library(seqTools) # analyse read length in fastq file

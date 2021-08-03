@@ -417,7 +417,7 @@ saveRDS(physeq.CSN, file.path(path, "data/analysis-individual/Zhu-2019/02_EDA-Zh
 #____________________________________________________________________
 # PHYLOSEQ OBJECT WITH CENTERED LOG RATIO COUNT
 physeq.clr <- physeq.zhu
-physeq.clr <- microbiome::transform(physeq.zhu, "clr") # the function adds pseudocounts itself
+physeq.clr <- microbiome::transform(physeq.clr, "clr") # the function adds pseudocounts itself
 
 # Compare the otu tables in the original phyloseq object and the new one after CLR transformation
 otu_table(physeq.zhu)[1:5, 1:5] # should contain absolute counts
@@ -473,11 +473,12 @@ ggsave("../../data/analysis-individual/PLOTS/plots-Zhu-EDA/heatmap_ASVs.jpg", he
 # Measure distances
 getDistances <- function(){
   set.seed(123) # for unifrac, need to set a seed
-  glom.UniF <- UniFrac(physeq.rel, weighted=TRUE, normalized=TRUE) # weighted unifrac
+  # glom.UniF <- UniFrac(physeq.rel, weighted=TRUE, normalized=TRUE) # weighted unifrac
   glom.ait <- phyloseq::distance(physeq.clr, method = 'euclidean') # aitchison
   glom.bray <- phyloseq::distance(physeq.CSN, method = "bray") # bray-curtis
   glom.can <- phyloseq::distance(physeq.NZcomp, method = "canberra") # canberra
-  dist.list <- list("UniF" = glom.UniF, "Ait" = glom.ait, "Canb" = glom.can, "Bray" = glom.bray)
+  dist.list <- list(#"UniF" = glom.UniF,
+                    "Ait" = glom.ait, "Canb" = glom.can, "Bray" = glom.bray)
   
   return(dist.list)
 }
@@ -487,32 +488,34 @@ getDistances <- function(){
 # Plot in 2D the distances
 plotDistances2D <- function(dlist, ordination="MDS"){
   plist <- NULL
-  plist <- vector("list", 4)
-  names(plist) <- c("Weighted Unifrac", "Aitchison", "Bray-Curtis", "Canberra")
+  # plist <- vector("list", 4)
+  # names(plist) <- c("Weighted Unifrac", "Aitchison", "Bray-Curtis", "Canberra")
+  plist <- vector("list", 3)
+  names(plist) <- c("Aitchison", "Bray-Curtis", "Canberra")
   
-  print("Unifrac")
-  # Weighted UniFrac
-  set.seed(123)
-  iMDS.UniF <- ordinate(physeq.rel, ordination, distance=dlist$UniF)
-  plist[[1]] <- plot_ordination(physeq.rel, iMDS.UniF, color="host_disease")
+  # print("Unifrac")
+  # # Weighted UniFrac
+  # set.seed(123)
+  # iMDS.UniF <- ordinate(physeq.rel, ordination, distance=dlist$UniF)
+  # plist[[1]] <- plot_ordination(physeq.rel, iMDS.UniF, color="host_disease")
   
   print("Aitchison")
   # Aitchison
   set.seed(123)
   iMDS.Ait <- ordinate(physeq.clr, ordination, distance=dlist$Ait)
-  plist[[2]] <- plot_ordination(physeq.clr, iMDS.Ait, color="host_disease")
+  plist[[1]] <- plot_ordination(physeq.clr, iMDS.Ait, color="host_disease")
   
   print("Bray")
   # Bray-Curtis
   set.seed(123)
   iMDS.Bray <- ordinate(physeq.CSN, ordination, distance=dlist$Bray)
-  plist[[3]] <- plot_ordination(physeq.CSN, iMDS.Bray, color="host_disease")
+  plist[[2]] <- plot_ordination(physeq.CSN, iMDS.Bray, color="host_disease")
   
   print("Canberra")
   # Canberra
   set.seed(123)
   iMDS.Can <- ordinate(physeq.NZcomp, ordination, distance=dlist$Can)
-  plist[[4]] <- plot_ordination(physeq.NZcomp, iMDS.Can, color="host_disease")
+  plist[[3]] <- plot_ordination(physeq.NZcomp, iMDS.Can, color="host_disease")
   
   # Creating a dataframe to plot everything
   plot.df = ldply(plist, function(x) x$data)
