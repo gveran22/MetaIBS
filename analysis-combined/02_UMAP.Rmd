@@ -332,5 +332,98 @@ ggplot(dims.umapFam.sigmoid, aes(x = UMAP_1, y = UMAP_2, color = variable_region
   theme_bw()
 ```
 
+
+
+
+XXXXXXXXXXXXXXXXXX
+# Test to delete
+```{r umap-famGlom, fig.width=8, fig.height = 4}
+umap.famGlom <- umap(t(familyTable), n_neighbors=500) #umap
+dims_umap.famGlom <- umap.famGlom$layout # extract coordinates
+colnames(dims_umap.famGlom) <- c("UMAP_1", "UMAP_2")
+
+dims_umap.famGlom <- merge(as.data.frame(dims_umap.famGlom), covariates, by="row.names") # add metadata
+# dims_umap.famGlom <- dims_umap.famGlom[samples_order,] # reorder samples
+
+ggplot(dims_umap.famGlom, aes(x = UMAP_1, y = UMAP_2, color = host_disease))+
+  geom_point(size = 1, alpha = 0.7)+
+  scale_color_manual(values = c('blue', 'red'))+
+  labs(title = 'Agglomeration at Family level')+
+  theme_bw()
+
+ggplot(dims_umap.famGlom, aes(x = UMAP_1, y = UMAP_2, color = author))+
+  geom_point(size = 4, alpha = 0.7)+
+  theme_bw()
+
+ggplot(dims_umap.famGlom, aes(x = UMAP_1, y = UMAP_2, color = sequencing_tech))+
+  geom_point(size = 1, alpha = 0.7)+
+  scale_color_manual(values = c('#6600FF', '#00CC66', '#FF6633'))+
+  theme_bw()
+```
+XXXXXXXXXXXXXXXXXX
+
+Obtain log ratios
+
+
+# Reproduce master thesis
+
+```{r}
+# Get phyloseq object
+physeq.small <- merge_phyloseq(physeq.ringel,
+                               physeq.labus,
+                               physeq.lopresti,
+                               physeq.pozuelo,
+                               physeq.zhuang,
+                               physeq.zhu,
+                               physeq.zeber)
+# Keep only fecal samples
+physeq.small <- subset_samples(physeq.small, sample_type == 'stool') # 612 samples
+
+# Get the familyTable
+physeq.small.pseudocts <- physeq.small
+otu_table(physeq.small.pseudocts)[otu_table(physeq.small.pseudocts) == 0] <- 0.5
+agg.small <- physeq.small.pseudocts %>%
+  tax_glom(taxrank = "Family") %>%                     # agglomerate at genus level
+  psmelt()                                             # Melt to long format
+familyTable.small <- acast(agg.small, Family ~ Sample, value.var = 'Abundance')
+# familyTable.small[familyTable.small == 0] <- 10e-7 # add pseudocounts for heatmap
+dim(familyTable.small)
+
+# Get log-ratios for family table
+ratiosFam.small <- LogRatios(familyTable.small)
+
+# Mean centering
+ratiosFam.small <- scale(ratiosFam.small, center = TRUE, scale = TRUE)
+table(is.na(ratiosFam.small))
+
+# UMAP
+umap.small <- umap(ratiosFam.small, n_neighbors=100) #umap on samples (rows) and families abundances (columns)
+dims_umap.small <- umap.small$layout # extract coordinates
+colnames(dims_umap.small) <- c("UMAP_1", "UMAP_2")
+
+# Add covariates
+mat_col <- data.frame(disease = sample_data(physeq.small)[,'host_disease'],
+                        seq_tech = sample_data(physeq.small)[,'sequencing_tech'],
+                        author = sample_data(physeq.small)[,'author'])
+mat_col[is.na(mat_col$host_disease), "host_disease"] <- "NA"
+mat_col[mat_col$author == "Pozuelo", "sequencing_tech"] <- "Illumina MiSeq single-end"
+mat_col[mat_col$author %in% c("Zhuang", "Zhu"), "sequencing_tech"] <- "Illumina MiSeq paired-end"
+dims_umap.small <- merge(as.data.frame(dims_umap.small), mat_col, by="row.names") # umap+covariates
+
+# PLOT
+ggplot(dims_umap.small, aes(x = UMAP_1, y = UMAP_2, color = host_disease))+
+  geom_point(size = 1, alpha = 0.7)+
+  scale_color_manual(values = c('blue', 'red', 'black'))+
+  labs(title = 'Agglomeration at Family level')+
+  theme_bw()
+
+ggplot(dims_umap.small, aes(x = UMAP_1, y = UMAP_2, color = author))+
+  geom_point(size = 2, alpha = 0.7)+
+  theme_bw()
+
+ggplot(dims_umap.small, aes(x = UMAP_1, y = UMAP_2, color = sequencing_tech))+
+  geom_point(size = 1, alpha = 0.7)+
+  scale_color_manual(values = c('#6600FF', '#33CC33', '#006600', '#FF6633'))+
+  theme_bw()
 ```
 
