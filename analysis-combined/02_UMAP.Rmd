@@ -257,5 +257,80 @@ ggplot(dims.umapFam, aes(x = UMAP_1, y = UMAP_2, color = variable_region))+
   geom_point(size = 2, alpha = 0.7)+
   theme_bw()
 ```
+
+
+## SIGMOID DATA
+
+```{r sigmoid}
+# Pseudocounts physeq sigmoid
+physeq.sigmoid.pseudocts <- physeq.sigmoid
+otu_table(physeq.sigmoid.pseudocts)[otu_table(physeq.sigmoid.pseudocts) == 0] <- 0.5
+
+# Get the familyTable
+fam.agg.sigmoid <- physeq.sigmoid.pseudocts %>%
+  tax_glom(taxrank = "Family") %>%
+  psmelt()
+familyTable.sigmoid <- acast(fam.agg.sigmoid, Family ~ Sample, value.var = 'Abundance')
+
+# sanity checks
+dim(familyTable.sigmoid)
+table(familyTable.sigmoid == 0)
+
+# Get log-ratios for family table
+ratiosFam.sigmoid <- LogRatios(familyTable.sigmoid)
+
+# Mean centering
+ratiosFam.sigmoid.scaled <- scale(ratiosFam.sigmoid, center = TRUE, scale = FALSE)
+table(is.na(ratiosFam.sigmoid.scaled)) # sanity check
+
+# Run UMAP
+umapFam.sigmoid <- umap(ratiosFam.sigmoid.scaled, n_neighbors=50) # umap on samples (rows) and families abundances (columns)
+#30min
+# Get the (x,y) coordinates from the UMAP
+dims.umapFam.sigmoid <- umapFam.sigmoid$layout
+colnames(dims.umapFam.sigmoid) <- c("UMAP_1", "UMAP_2")
+
+# Add covariates
+cov.sigmoid <- data.frame(disease = sample_data(physeq.sigmoid.pseudocts)[,'host_disease'],
+                        seq_tech = sample_data(physeq.sigmoid.pseudocts)[,'sequencing_tech'],
+                        author = sample_data(physeq.sigmoid.pseudocts)[,'author'],
+                        variable_region = sample_data(physeq.sigmoid.pseudocts)[,'variable_region'],
+                        age = sample_data(physeq.sigmoid.pseudocts)[,'host_age'],
+                        bmi = sample_data(physeq.sigmoid.pseudocts)[,'host_bmi'],
+                        subtype = sample_data(physeq.sigmoid.pseudocts)[,'host_subtype'])
+
+dims.umapFam.sigmoid <- merge(as.data.frame(dims.umapFam.sigmoid), cov.sigmoid, by="row.names") # umap+covariates
+
+# PLOT host_disease
+ggplot(dims.umapFam.sigmoid, aes(x = UMAP_1, y = UMAP_2, color = host_disease))+
+  geom_point(size = 2, alpha = 0.7)+
+  scale_color_manual(values = c('blue', 'red', 'black'))+
+  labs(title = 'Agglomeration at Family level')+
+  theme_bw()
+
+# PLOT host_subtype
+ggplot(dims.umapFam.sigmoid, aes(x = UMAP_1, y = UMAP_2, color = host_subtype))+
+  geom_point(size = 1, alpha = 0.7)+
+  scale_color_manual(values = c('#99CCFF', '#FF3300', '#990000', '#FF66CC','#FFFF66', '#CCCCCC'))+
+  labs(title = 'Agglomeration at Family level')+
+  theme_bw()
+
+# PLOT author
+ggplot(dims.umapFam.sigmoid, aes(x = UMAP_1, y = UMAP_2, color = author))+
+  geom_point(size = 2, alpha = 0.7)+
+  theme_bw()
+
+# PLOT seqtech
+ggplot(dims.umapFam.sigmoid, aes(x = UMAP_1, y = UMAP_2, color = sequencing_tech))+
+  geom_point(size = 2, alpha = 0.7)+
+  scale_color_manual(values = c('#6600FF', '#33CC33', '#006600', '#FF6633'))+
+  theme_bw()
+
+# PLOT variable region
+ggplot(dims.umapFam.sigmoid, aes(x = UMAP_1, y = UMAP_2, color = variable_region))+
+  geom_point(size = 2, alpha = 0.7)+
+  theme_bw()
+```
+
 ```
 
