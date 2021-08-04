@@ -467,8 +467,13 @@ sampledf$host_disease <- as.character(sampledf$host_disease)
 sampledf$host_disease[substr(sampledf$host_disease, start = 1, stop = 2) == "N_"] <- "Healthy" # Replace with better names
 sampledf$host_disease[substr(sampledf$host_disease, start = 1, stop = 2) == "F_"] <- "IBS" # Replace with better names
 
+sampledf[sampledf$host_disease == "Healthy", "host_subtype"] <- "HC"
+sampledf[sampledf$host_disease == "IBS", "host_subtype"] <- "IBS-unspecified"
+
+sampledf$Collection <- "1st" # only 1 collection point per individual
+sampledf$sample_type <- "stool"
 sampledf$author <- "Zhu"
-sampledf$sequencing_tech <- "Illumina"
+sampledf$sequencing_tech <- "Illumina paired-end"
 sampledf$variable_region <- "V4"
 
 #_________________________
@@ -492,6 +497,7 @@ physeq.small <- subset_taxa(physeq.small, !is.na(Phylum))
 # Remove samples with less than 500 reads
 physeq.small <- prune_samples(sample_sums(physeq.small)>=500, physeq.small)
 ```
+
 
 
 ### 2. Save to disk

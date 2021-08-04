@@ -394,7 +394,7 @@ rownames(metadata_table) <- metadata_table$Run
 
 # Add a few covariates
 metadata_table$author <- "Mars"
-metadata_table$sequencing_tech <- "Illumina"
+metadata_table$sequencing_tech <- "Illumina paired-end"
 metadata_table$variable_region <- "V4"
 
 # Remove _F_filt2.fastq.gz from rownames

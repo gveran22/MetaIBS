@@ -386,9 +386,10 @@ sampledf$host_disease[substr(sampledf$host_disease, start = 1, stop = 3) == "IBS
 sampledf[sampledf$host_disease == "Healthy", "host_subtype"] <- "HC"
 sampledf[sampledf$host_disease == "IBS", "host_subtype"] <- "IBS-D" # only IBS-diarrhea patients in this cohort
 
+sampledf$Collection <- "1st" # only 1 collection time per individual
 sampledf$sample_type <- "stool"
 sampledf$author <- "Zhuang"
-sampledf$sequencing_tech <- "Illumina"
+sampledf$sequencing_tech <- "Illumina paired-end"
 sampledf$variable_region <- "V3-V4"
 
 #_________________________
@@ -403,6 +404,7 @@ physeq <- subset_taxa(physeq, !is.na(Phylum))
 # Remove samples with less than 500 reads
 physeq <- prune_samples(sample_sums(physeq)>=500, physeq)
 ```
+
 
 
 ### 2. Save to disk

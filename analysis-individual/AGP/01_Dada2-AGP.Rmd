@@ -380,9 +380,13 @@ sampledf <- metadata %>%
   select(-"X")
 rownames(sampledf) <- sampledf$Run
 
+sampledf[sampledf$host_disease == "Healthy", "host_subtype"] <- "HC"
+sampledf[sampledf$host_disease == "IBS", "host_subtype"] <- "IBS-unspecified"
+
+sampledf$Collection <- "1st" # only 1 time point per individual
 sampledf$sample_type <- "stool"
 sampledf$author <- "AGP"
-sampledf$sequencing_tech <- "Illumina"
+sampledf$sequencing_tech <- "Illumina single-end"
 sampledf$variable_region <- "V4"
 
 #_________________________
@@ -396,6 +400,43 @@ physeq <- subset_taxa(physeq, Kingdom != "Eukaryota")
 physeq <- subset_taxa(physeq, !is.na(Phylum))
 # Remove samples with less than 500 reads
 physeq <- prune_samples(sample_sums(physeq)>=500, physeq)
+```
+
+```{r}
+# INPUT
+# physeq <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/CLUSTER/PhyloTree/input/physeq_agp.rds")
+sample_data(physeq)
+table(sample_data(physeq)$author, useNA="ifany") #ok
+table(sample_data(physeq)$sequencing_tech, useNA="ifany") #ok
+table(sample_data(physeq)$variable_region, useNA="ifany") # ok
+table(sample_data(physeq)$host_disease, useNA="ifany") # ok
+table(sample_data(physeq)$host_subtype, useNA="ifany") # ok
+table(sample_data(physeq)$host_sex, useNA="ifany") # ok
+table(sample_data(physeq)$host_age, useNA="ifany") # ok
+table(sample_data(physeq)$host_bmi, useNA="ifany") # ok
+table(sample_data(physeq)$sample_type, useNA="ifany") # ok
+table(sample_data(physeq)$Collection, useNA="ifany") # ok
+
+# saveRDS(physeq, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/CLUSTER/PhyloTree/input/physeq_agp.rds")
+# saveRDS(sample_data(physeq), file.path(path, "01_Dada2-AGP/metadata_final.rds")) # metadata table
+
+#___________________________
+# MODIFY
+sample_data(physeq)[sample_data(physeq)$host_disease == "Healthy", "host_subtype"] <- "HC"
+sample_data(physeq)[sample_data(physeq)$host_disease == "IBS", "host_subtype"] <- "IBS-unspecified"
+sample_data(physeq)$sequencing_tech <- "Illumina single-end"
+sample_data(physeq)$Collection <- "1st"
+
+# sample_data(physeq)[sample_data(physeq)$host_disease == "None", "host_disease"] <- "Healthy"
+# sample_data(physeq)$host_subtype <- "..."
+# sample_data(physeq)$sample_type <- "stool"
+
+#___________________________
+# OUTPUT (TO-DO)
+physeq <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/CLUSTER/PhyloTree/output/physeq_agp.rds")
+sample_data(physeq)
+saveRDS(physeq, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/CLUSTER/PhyloTree/output/physeq_agp.rds")
+saveRDS(physeq, "~/Projects/IBS_Meta-analysis_16S/phyloseq-objects/physeq_agp.rds")
 ```
 
 

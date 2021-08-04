@@ -365,8 +365,9 @@ rownames(metadata) <- metadata$Run
 metadata[grep("IBS*",metadata$host_disease), "host_disease"] <- "IBS"
 
 metadata$author <- "Liu"
-metadata$sequencing_tech <- "Illumina"
+metadata$sequencing_tech <- "Illumina single-end"
 metadata$variable_region <- "V3-V4"
+metadata$Collection <- "1st" # only 1 time point per individual
 
 # Remove .fastq extension in seqtable.nochim
 rownames(seqtable.nochim) <- gsub(".fastq.gz", "", rownames(seqtable.nochim))
@@ -383,6 +384,7 @@ physeq <- subset_taxa(physeq, !is.na(Phylum))
 # Remove samples with less than 500 reads
 physeq <- prune_samples(sample_sums(physeq)>=500, physeq)
 ```
+
 
 
 ### 2. Save to disk

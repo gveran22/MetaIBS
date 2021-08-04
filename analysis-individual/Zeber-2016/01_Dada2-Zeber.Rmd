@@ -325,7 +325,7 @@ metadata_table <- read.csv("~/Projects/IBS_Meta-analysis_16S/data/analysis-indiv
 
 # Simplify data
 rownames(metadata_table) <- metadata_table$Run # have the same sample.names
-colnames(metadata_table) <- c("Run", "individual", "host_disease", "host_subtype", "host_sex")
+colnames(metadata_table) <- c("Run", "host_ID", "host_disease", "host_subtype", "host_sex")
 
 metadata_table$host_sex <- as.character(metadata_table$host_sex)
 metadata_table[is.na(metadata_table[, 'host_sex']), 'host_sex'] <- 'unknown' # replace the 'NA'
@@ -335,9 +335,10 @@ metadata_table[metadata_table[, 'host_sex'] == "F", 'host_sex'] <- 'female'
 metadata_table$host_subtype <- as.character(metadata_table$host_subtype)
 metadata_table[metadata_table$host_subtype == "Healthy", 'host_subtype'] <- 'HC'
 
-metadata_table$individual <- gsub('\\:0$', '', metadata_table$individual)
+metadata_table$host_ID <- gsub('\\:0$', '', metadata_table$host_ID)
 
 metadata_table$sample_type <- "stool"
+metadata_table$Collection <- "1st" # only 1 collection time point per individual
 metadata_table$author <- "Zeber-Lubecka"
 metadata_table$sequencing_tech <- "Ion Torrent"
 metadata_table$variable_region <- "Ion 16S Metagenomics Kit"
@@ -359,6 +360,45 @@ physeq <- subset_taxa(physeq, !is.na(Phylum))
 # Remove samples with less than 500 reads
 physeq <- prune_samples(sample_sums(physeq)>=500, physeq)
 ```
+
+```{r}
+# INPUT
+# physeq <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/CLUSTER/PhyloTree/input/physeq_zeber.rds")
+sample_data(physeq)
+table(sample_data(physeq)$author, useNA="ifany") #ok
+table(sample_data(physeq)$sequencing_tech, useNA="ifany") #ok
+table(sample_data(physeq)$variable_region, useNA="ifany") # ok
+table(sample_data(physeq)$host_disease, useNA="ifany") # ok
+table(sample_data(physeq)$host_subtype, useNA="ifany") # ok
+table(sample_data(physeq)$host_sex, useNA="ifany") # ok
+table(sample_data(physeq)$host_age, useNA="ifany") # ok
+table(sample_data(physeq)$host_bmi, useNA="ifany") # ok
+table(sample_data(physeq)$sample_type, useNA="ifany") # ok
+table(sample_data(physeq)$Collection, useNA="ifany") # ok
+
+# saveRDS(physeq, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/CLUSTER/PhyloTree/input/physeq_zeber.rds")
+# saveRDS(sample_data(physeq), file.path(path, "01_Dada2-Zeber/metadata_final.rds")) # metadata table
+
+#___________________________
+# MODIFY
+# sample_data(physeq)[sample_data(physeq)$host_disease == "Healthy", "host_subtype"] <- "HC"
+# sample_data(physeq)[sample_data(physeq)$host_disease == "IBS", "host_subtype"] <- "IBS-unspecified"
+# sample_data(physeq)$sequencing_tech <- "Illumina single-end"
+colnames(sample_data(physeq))[2] <- "host_ID"
+sample_data(physeq)$Collection <- "1st"
+
+# sample_data(physeq)[sample_data(physeq)$host_disease == "None", "host_disease"] <- "Healthy"
+# sample_data(physeq)$host_subtype <- "..."
+# sample_data(physeq)$sample_type <- "stool"
+
+#___________________________
+# OUTPUT (TO-DO)
+physeq <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/CLUSTER/PhyloTree/output/physeq_zeber.rds")
+sample_data(physeq)
+saveRDS(physeq, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/CLUSTER/PhyloTree/output/physeq_zeber.rds")
+saveRDS(physeq, "~/Projects/IBS_Meta-analysis_16S/phyloseq-objects/physeq_zeber.rds")
+```
+
 
 ### 2. Save to disk
 

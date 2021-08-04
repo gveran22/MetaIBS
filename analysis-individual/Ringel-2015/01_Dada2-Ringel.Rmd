@@ -380,7 +380,10 @@ sampledf <- data.frame(metadata_table[,"Run"])
 rownames(sampledf) <- metadata_table$Run
 colnames(sampledf) <- "Run"
 
+sampledf$host_disease <- "NA"
+sampledf$host_subtype <- "NA"
 sampledf$sample_type <- "stool"
+sampledf$Collection <- "1st"
 sampledf$author <- "Ringel"
 sampledf$sequencing_tech <- "454 pyrosequencing"
 sampledf$variable_region <- "V1-V2"
@@ -400,6 +403,8 @@ physeq <- subset_taxa(physeq, !is.na(Phylum))
 # Remove samples with less than 500 reads
 physeq <- prune_samples(sample_sums(physeq)>=500, physeq)
 ```
+
+
 
 ### 2. Save to disk
 

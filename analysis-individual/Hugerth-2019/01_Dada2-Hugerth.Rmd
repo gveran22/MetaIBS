@@ -484,8 +484,17 @@ metadata_table <- read.csv("~/Projects/IBS_Meta-analysis_16S/data/analysis-indiv
 rownames(metadata_table) <- metadata_table$Run
 head(metadata_table)
 
+# Designate sex_stringent and ID_stringent as host_sex and host_ID
+colnames(metadata_table)[5] <- "host_sex"
+colnames(metadata_table)[10] <- "host_ID"
+
+# Add IBS subtype
+metadata_table[metadata_table$host_disease == "Healthy", "host_subtype"] <- "HC"
+metadata_table[metadata_table$host_disease == "IBS", "host_subtype"] <- "IBS-unspecified"
+
+metadata_table$Collection <- "1st" # only 1 collection time point per patient
 metadata_table$author <- "Hugerth"
-metadata_table$sequencing_tech <- "Illumina"
+metadata_table$sequencing_tech <- "Illumina paired-end"
 metadata_table$variable_region <- "V3-V4"
 
 #_________________________

@@ -394,8 +394,13 @@ metadata_table <- metadata_table[, c("Run", "Sample.Name", "Collection_date")]
 
 metadata_table[grep("IBS*",metadata_table$Sample.Name), "host_disease"] <- "IBS"
 metadata_table[grep("HC*",metadata_table$Sample.Name), "host_disease"] <- "Healthy"
+
+metadata_table[metadata_table$host_disease == "Healthy", "host_subtype"] <- "HC"
+metadata_table[metadata_table$host_disease == "IBS", "host_subtype"] <- "IBS-unspecified"
+
 # Sanity check
 table(metadata_table$host_disease) # 85 IBS & 26 HC
+table(metadata_table$host_subtype) # 85 IBS & 26 HC
 
 metadata_table$Sample.Name <- NULL
 colnames(metadata_table)[2] <- "collection_date"
@@ -404,8 +409,9 @@ head(metadata_table)
 
 metadata_table$sample_type <- "stool"
 metadata_table$author <- "Fukui"
-metadata_table$sequencing_tech <- "Illumina"
+metadata_table$sequencing_tech <- "Illumina paired-end"
 metadata_table$variable_region <- "V1-V2"
+metadata_table$Collection <- "1st" # only 1 collection time point per individual
 
 #_________________________
 # Create phyloseq object
@@ -419,7 +425,6 @@ physeq <- subset_taxa(physeq, !is.na(Phylum))
 # Remove samples with less than 500 reads
 physeq <- prune_samples(sample_sums(physeq)>=500, physeq) # 1 sample discarded
 ```
-
 
 
 ### 2. Save to disk

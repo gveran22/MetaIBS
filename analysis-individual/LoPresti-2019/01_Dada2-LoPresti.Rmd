@@ -382,10 +382,10 @@ colnames(metadata_table)
 sampledf <- metadata_table[, c("Run", "host_disease", "env_material", "Host_Age", "host_sex",
                                "gastrointest_disord", "Sample_Label", "Collection_Date")]
 rownames(sampledf) <- metadata_table$Run
-colnames(sampledf) <- c("Run", "host_disease", "sample_type", "host_age", "host_sex", "subtype", "host_ID", "collection_date")
+colnames(sampledf) <- c("Run", "host_disease", "sample_type", "host_age", "host_sex", "host_subtype", "host_ID", "collection_date")
 sampledf$host_disease <- as.character(sampledf$host_disease)
 sampledf$sample_type <- as.character(sampledf$sample_type)
-sampledf$subtype <- as.character(sampledf$subtype)
+sampledf$host_subtype <- as.character(sampledf$host_subtype)
 
 
 # Simplify data
@@ -393,14 +393,15 @@ sampledf$host_disease[sampledf$host_disease == "Healthy subject"] <- "Healthy"
 sampledf$host_disease[sampledf$host_disease == "Irritable Bowel Syndrome"] <- "IBS"
 sampledf$sample_type[sampledf$sample_type == "intestinal mucosa"] <- "sigmoid"
 
-sampledf$subtype[sampledf$subtype == "Absence"] <- "HC"
-sampledf$subtype[sampledf$subtype == "Alternating constipation and diarrhea"] <- "IBS-M"
-sampledf$subtype[sampledf$subtype == "diarrhea"] <- "IBS-D"
-sampledf$subtype[sampledf$subtype == "constipation"] <- "IBS-C"
+sampledf$host_subtype[sampledf$host_subtype == "Absence"] <- "HC"
+sampledf$host_subtype[sampledf$host_subtype == "Alternating constipation and diarrhea"] <- "IBS-M"
+sampledf$host_subtype[sampledf$host_subtype == "diarrhea"] <- "IBS-D"
+sampledf$host_subtype[sampledf$host_subtype == "constipation"] <- "IBS-C"
 
 sampledf$host_ID <- gsub("\\.A$", '', sampledf$host_ID)
 sampledf$host_ID <- gsub("\\A$", '', sampledf$host_ID)
 
+sampledf$Collection <- "1st" # only 1 collection time point per individual
 sampledf$author <- "LoPresti"
 sampledf$sequencing_tech <- "454 pyrosequencing"
 sampledf$variable_region <- "V1-V3"

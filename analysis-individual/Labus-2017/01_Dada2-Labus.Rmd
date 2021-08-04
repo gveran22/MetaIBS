@@ -373,8 +373,13 @@ The preprocessing will be easier to do with ASV, taxonomic and metadata tables c
 metadata_table <- read.csv("~/Projects/IBS_Meta-analysis_16S/analysis-individual/Labus-2017/Metadata-Labus.csv")
 
 # Keep relevant covariates
-metadata_table$X <- NULL
-rownames(metadata_table) <- metadata_table$Run # assign sample names as row names
+sampledf <- metadata_table
+sampledf$X <- NULL
+rownames(sampledf) <- sampledf$Run # assign sample names as row names
+sampledf[sampledf$host_disease == "None", "host_disease"] <- "Healthy"
+
+sampledf$sample_type <- "stool"
+sampledf$Collection <- "1st"
 
 # Remove .fastq.gz extension in seqtable.nochim
 rownames(seqtable.nochim) <- gsub(".fastq.gz", "", rownames(seqtable.nochim))
@@ -382,7 +387,7 @@ rownames(seqtable.nochim) <- gsub(".fastq.gz", "", rownames(seqtable.nochim))
 #_________________________
 # Create phyloseq object
 physeq <- phyloseq(otu_table(seqtable.nochim, taxa_are_rows=FALSE), # by default, in otu_table the sequence variants are in rows
-                  sample_data(metadata_table), 
+                  sample_data(sampledf), 
                   tax_table(taxa))
 
 # Remove taxa that are eukaryota, or have unassigned Phyla
