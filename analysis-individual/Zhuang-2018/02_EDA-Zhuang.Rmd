@@ -14,9 +14,11 @@ knitr::opts_chunk$set(fig.width = 15, fig.height = 5, warning=FALSE, message=FAL
 
 
 
-#######################
-## IMPORT LIBRAIRIES ##
-#######################
+############
+## IMPORT ##
+############
+
+## Librairies
 
 ```{r library-import}
 library(phyloseq) # for phyloseq object
@@ -33,9 +35,7 @@ library(pheatmap) # for heatmap
 ```
 
 
-#################
-## IMPORT DATA ##
-#################
+## Data
 
 ```{r import-data}
 # Set path

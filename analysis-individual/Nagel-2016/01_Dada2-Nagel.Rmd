@@ -3,14 +3,14 @@ title: "Dada2_Nagel2016"
 params:
   date: "!r Sys.Date()"
 output:
-  pdf_document: default
   html_document:
     df_print: paged
+    toc: true
 ---
 
 ```{r, include=FALSE}
 knitr::opts_chunk$set(fig.width = 3.5, fig.height = 3, warning=FALSE, message=FALSE,
-                      root.dir = "/Users/scarcy/Desktop/Praktikum/Data/Nagel_2016")
+                      root.dir = "~/Projects/IBS_Meta-analysis_16S/")
 ```
 
 
@@ -35,23 +35,25 @@ library(stringr)
 #_____________________________________________________________________
 #____________ THIS IS ONLY FOR (quicker) PDF OUTPUT __________________
 #_____________________________________________________________________
-path <- "/Users/scarcy/Desktop/Praktikum/Data/Nagel_2016/"
+path <- "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Nagel-2016"
+
+raw_stats <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Nagel-2016/01_Dada2-Nagel/raw_stats.rds")
 # out process
-out1 <- readRDS("/Users/scarcy/Desktop/Praktikum/Data/Nagel_2016/Rproject_Dada2/out1.rds")
-out2 <- readRDS("/Users/scarcy/Desktop/Praktikum/Data/Nagel_2016/Rproject_Dada2/out2.rds")
+out1 <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Nagel-2016/01_Dada2-Nagel/out1.rds")
+out2 <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Nagel-2016/01_Dada2-Nagel/out2.rds")
 # look at quality
 trim_samples <- sort(list.files(file.path(path, "original_trim"), pattern=".fastq.gz", full.names = TRUE))
 filt1_samples <- sort(list.files(file.path(path, "filtered1"), pattern=".fastq.gz", full.names = TRUE))
 filt2_samples <- sort(list.files(file.path(path, "filtered2"), pattern=".fastq.gz", full.names = TRUE))
 # error rates
-err <- readRDS("/Users/scarcy/Desktop/Praktikum/Data/Nagel_2016/Rproject_Dada2/errorRates.rds")
-err_new <- readRDS("/Users/scarcy/Desktop/Praktikum/Data/Nagel_2016/Rproject_Dada2/errorRates_modif.rds")
+err <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Nagel-2016/01_Dada2-Nagel/errorRates.rds")
+err_new <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Nagel-2016/01_Dada2-Nagel/errorRates_modif.rds")
 # infered sequences
-seq_infered <- readRDS("/Users/scarcy/Desktop/Praktikum/Data/Nagel_2016/Rproject_Dada2/seq_infered.rds")
+seq_infered <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Nagel-2016/01_Dada2-Nagel/seq_infered.rds")
 # taxa
-taxa <- readRDS("/Users/scarcy/Desktop/Praktikum/Data/OutputTaxa/taxa_nagel.rds")
+taxa <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/CLUSTER/Taxonomy/output/taxa_nagel.rds")
 # phyloseq object
-physeq <- readRDS("/Users/scarcy/Desktop/Praktikum/Data/Nagel_2016/physeq_nagel.rds")
+physeq <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/CLUSTER/PhyloTree/input/physeq_nagel.rds")
 ```
 
 
@@ -60,19 +62,19 @@ physeq <- readRDS("/Users/scarcy/Desktop/Praktikum/Data/Nagel_2016/physeq_nagel.
 ##  QUALITY CHECK  ##
 #####################
 
-First, we import the fastq files containing the raw reads. The samples were shared by the author. 
+First, we import the fastq files containing the raw reads. The samples were kindly shared by the author. 
 
 ```{r quality-check, echo=TRUE, results="hide", fig.height=3, fig.width=4}
 # Save the path to the directory containing the fastq zipped files
-path <- "/Users/scarcy/Desktop/Praktikum/Data/Nagel_2016/"
-#list.files(path) # check we are in the right directory
+path <- "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Nagel-2016"
+# list.files(path) # check we are in the right directory
 
 # fastq filenames have format: SAMPLENAME.fastq
 # Saves the whole directory path to each file name
 FNs <- sort(list.files(file.path(path, "original"), pattern=".fastq", full.names = TRUE))
 show(FNs[1:5])
 
-# Extract sample names, assuming filenames have format: SAMPLENAME.fastq.gz
+# Extract sample names, assuming filenames have format: SAMPLENAME.fastq
 sample.names <- sapply(strsplit(basename(FNs), "_"), `[`, 1)
 show(sample.names) # saves only the file name (without the path)
 
@@ -108,11 +110,11 @@ for (i in 1:4){ # 1:length(trim_samples)
 }
 
 # Look at nb of reads per sample
-raw_stats <- data.frame('sample' = sample.names,
-                        'reads' = fastqq(trim_samples)@nReads)
-min(raw_stats$reads)
-max(raw_stats$reads)
-mean(raw_stats$reads)
+# raw_stats <- data.frame('sample' = sample.names,
+#                         'reads' = fastqq(trim_samples)@nReads)
+# min(raw_stats$reads)
+# max(raw_stats$reads)
+# mean(raw_stats$reads)
 ```
 
 We will have a quick peak at the per base sequence content of the reads in some samples, to make sure there is no anomaly.
@@ -143,7 +145,7 @@ allOrients <- function(primer) {
     dna <- DNAString(primer)  # The Biostrings works w/ DNAString objects rather than character vectors
     orients <- c(Forward = dna, Complement = complement(dna), Reverse = reverse(dna), 
         RevComp = reverseComplement(dna))
-    return(sapply(orients, toString))  # Convert back to character vector
+    return(sapply(orients, toString))
 }
 
 # Get all combinations of the primer sequences
@@ -177,7 +179,7 @@ for (i in 1:5){
 
 ### 1. Primer removal
 
-The reads indeed contain the forward primer. We will keep only reads containing the forward primer, and then trim the primer! For the reverse primer, the last 20bp of each read will be trimmed off.
+The reads indeed contain both primers. We will keep only reads containing both primers, and trim the primers.
 
 ```{r primer-filter, eval = FALSE, echo = TRUE}
 # KEEP READS WITH PRIMER AND REMOVE PRIMER
@@ -188,8 +190,10 @@ names(filt1_samples) <- sample.names
 
 # Filter first to take out primer
 out1 <- removePrimers(fn = trim_samples, fout = filt1_samples,
-                      primer.fwd = FWD, # forward primer is found at the beginning of the reads
+                      primer.fwd = FWD.orients['Forward'],
+                      primer.rev = REV.orients['RevComp'],
                       trim.fwd = TRUE,
+                      trim.rev = TRUE,
                       orient = FALSE, # keep the reads in their original orientation
                       compress = TRUE, verbose = TRUE)
 ```
@@ -218,11 +222,10 @@ filt2_samples <- file.path(path, "filtered2", paste0(sample.names, "_filt.fastq.
 names(filt2_samples) <- sample.names
 
 # Filter
-out2 <- filterAndTrim(fwd = filt1_FNs, filt = filt2_samples,
-                      trimRight = 20, # remove the reverse complement of the reverse primer at the end of the reads
-                      maxEE=4, # reads with more than 4 expected errors (sum(10e(-Q/10))) are discarded
+out2 <- filterAndTrim(fwd = filt1_samples, filt = filt2_samples,
+                      maxEE=3, # reads with more than 3 expected errors (sum(10e(-Q/10))) are discarded
                       truncQ=10, # Truncate reads at the first instance of a quality score less than or equal to truncQ.
-                      minLen = 200, # Discard reads shorter than 200 bp. This is done after trimming and truncation.
+                      minLen = 150, # Discard reads shorter than 150 bp.
                       compress=TRUE,
                       multithread=TRUE,
                       verbose=TRUE)
@@ -251,7 +254,7 @@ Now we will build the parametric error model, to be able to infer amplicon seque
 err <- learnErrors(filt2_samples, multithread=TRUE, randomize=TRUE, verbose = 1)
 ```
 
-The error rates for each possible transition (A→C, A→G, …) are shown. Points are the observed error rates for each consensus quality score. The black line shows the estimated error rates after convergence of the machine-learning algorithm. The red line shows the error rates expected under the nominal definition of the Q-score. Here the estimated error rates (black line) are a good fit to the observed rates (points), and the error rates drop with increased quality as expected.
+The error rates for each possible transition (A→C, A→G, …) are shown. Points are the observed error rates for each consensus quality score. The black line shows the estimated error rates after convergence of the machine-learning algorithm. The red line shows the error rates expected under the nominal definition of the Q-score.
 
 ```{r plot-errors, fig.height=5, fig.width=5}
 plotErrors(err, nominalQ = TRUE)
@@ -264,22 +267,28 @@ As the error rate model doesn’t fit well the observations for high quality sco
 err_new <- err
 
 # G2T
-err_new$err_out['G2T','36'] <- 0.0014
-err_new$err_out['G2T','37'] <- 0.0012
-err_new$err_out['G2T','38':'46'] <- 0.001
+err_new$err_out['G2T','35':'38'] <- 0.0016
+err_new$err_out['G2T','38'] <- 0.0014
+err_new$err_out['G2T','39'] <- 0.0013
+err_new$err_out['G2T','40'] <- 0.00115
+err_new$err_out['G2T','41'] <- 0.0010
+err_new$err_out['G2T','42'] <- 0.00085
+err_new$err_out['G2T','43'] <- 0.0007
+err_new$err_out['G2T','44'] <- 0.00055
+err_new$err_out['G2T','45'] <- 0.0004
 
 # All the other transitions/transversions
-err_new$err_out['A2C','35':'46'] <- 0.0006
-err_new$err_out['A2G','38':'46'] <- 0.006
-err_new$err_out['A2T','37':'46'] <- 0.0015
+err_new$err_out['A2C','35':'46'] <- 0.0008
+err_new$err_out['A2G','38':'46'] <- 0.007
+err_new$err_out['A2T','37':'46'] <- 0.002
 err_new$err_out['C2A','37':'46'] <- 0.0008
-err_new$err_out['C2G','40':'46'] <- 0.002
-err_new$err_out['C2T','38':'46'] <- 0.006
-err_new$err_out['G2A','36':'46'] <- 0.003
+err_new$err_out['C2G','39':'46'] <- 0.0025
+err_new$err_out['C2T','38':'46'] <- 0.007
+err_new$err_out['G2A','36':'46'] <- 0.0035
 err_new$err_out['G2C','36':'46'] <- 0.0006
-err_new$err_out['T2A','38':'46'] <- 0.002
-err_new$err_out['T2C','36':'46'] <- 0.006
-err_new$err_out['T2G','36':'46'] <- 0.002
+err_new$err_out['T2A','38':'46'] <- 0.0025
+err_new$err_out['T2C','36':'46'] <- 0.0065
+err_new$err_out['T2G','36':'46'] <- 0.0025
 ```
 
 ```{r plot-new-errors, fig.height=5, fig.width=5}
@@ -305,7 +314,7 @@ names(seq_infered) <- sample.names # names of each row will be the sample names
 
 # Iterate through the 30 samples
 for(sampl in sample.names) {
-  cat("Processing:", sampl, "\n") # print which sample is being processed
+  cat("Processing:", sampl, "\n")
   derep <- derepFastq(filt2_samples[[sampl]]) # dereplicate the reads in the sample
   seq_infered[[sampl]] <- dada(derep, err=err_new, multithread=TRUE, # default parameters
                                HOMOPOLYMER_GAP_PENALTY=-1, BAND_SIZE=32) # parameters for Ion Torrent recommended
@@ -368,11 +377,19 @@ track <- cbind(out1, out2[,2], sapply(seq_infered, getN), rowSums(seqtable.nochi
                lapply(rowSums(seqtable.nochim)*100/out1[,1], as.integer))
 
 # Assign column and row names
-colnames(track) <- c("input", "primer-filt", "quality-filt", "denoised", "nonchim", "%kept_input->output")
+colnames(track) <- c("input", "primer-filt", "quality-filt", "denoised", "nonchim", "%input->output")
 rownames(track) <- sample.names
 
 # Show final table: for each row/sample, we have shown the initial number of reads, filtered reads, denoised reads, and non chimera reads
 track
+```
+
+```{r seqdepth, echo=FALSE, eval=FALSE, include=FALSE}
+# Save nb of reads per sample before / after dada2 pipeline
+nb.reads <- data.frame("before" = raw_stats$reads,
+                       "after" = rowSums(seqtable.nochim),
+                       "dataset" = "Nagel")
+saveRDS(nb.reads, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/DADA2-FILT/seqdepth_nagel.rds")
 ```
 
 
@@ -385,17 +402,17 @@ Extensions: The dada2 package also implements a method to make species level ass
 
 ```{r assign-taxonomy, eval = FALSE}
 # Assign taxonomy (with silva v138)
-taxa <- assignTaxonomy(seqtable.nochim, "/Users/scarcy/Desktop/Praktikum/Data/silva_nr_v138_train_set.fa.gz",
+taxa <- assignTaxonomy(seqtable.nochim, "~/Projects/IBS_Meta-analysis_16S/data/silva_nr_v138_train_set.fa.gz",
                        tryRC = TRUE, # try reverse complement of the sequences
                        multithread=TRUE, verbose = TRUE)
 
 # Add species assignment
-taxa <- addSpecies(taxa, "/Users/scarcy/Desktop/Praktikum/Data/silva_species_assignment_v138.fa.gz")
+taxa <- addSpecies(taxa, "~/Projects/IBS_Meta-analysis_16S/data/silva_species_assignment_v138.fa.gz")
 ```
 
 ```{r taxa-sanity-check}
 # Check how the taxonomy table looks like
-taxa.print <- taxa 
+taxa.print <- taxa
 rownames(taxa.print) <- NULL # Removing sequence rownames for display only
 head(taxa.print)
 
@@ -416,7 +433,7 @@ The preprocessing will be easier to do with ASV, taxonomic and metadata tables c
 ```{r phyloseq-preprocess, echo=TRUE, eval=FALSE}
 #_________________________
 # Import metadata
-metadata_table <- read.table("/Users/scarcy/Desktop/Praktikum/Data/Nagel_2016/Nagel_metadata.csv", header = TRUE, sep = ",")
+metadata_table <- read.table("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Nagel-2016/Metadata-Nagel.csv", header = TRUE, sep = ",")
 colnames(metadata_table)
 
 # Keep relevant data
@@ -425,9 +442,15 @@ rownames(sampledf) <- metadata_table$Run # have the same sample.names
 sampledf$host_disease <- as.character(sampledf$host_disease)
 sampledf[sampledf[, 'host_disease'] == "healthy", 'host_disease'] <- 'Healthy'
 
+# Add host_subtype
+sampledf[sampledf[, 'host_disease'] == "Healthy", 'host_subtype'] <- "HC"
+sampledf[sampledf[, 'host_disease'] == "IBS", 'host_subtype'] <- "IBS-D"
+
+sampledf$sample_type <- "stool"
 sampledf$author <- "Nagel"
 sampledf$sequencing_tech <- "Ion Torrent"
 sampledf$variable_region <- "V4"
+sampledf$Collection <- "1st" # only 1 collection time point per individual
 
 
 #_________________________
@@ -436,38 +459,32 @@ physeq <- phyloseq(otu_table(seqtable.nochim, taxa_are_rows=FALSE), # by default
                   sample_data(sampledf), 
                   tax_table(taxa))
 
-# Remove samples with less than 500 reads
-physeq <- prune_samples(sample_sums(physeq)>=500, physeq)
 # Remove taxa that are eukaryota, or have unassigned Phyla
 physeq <- subset_taxa(physeq, Kingdom != "Eukaryota")
 physeq <- subset_taxa(physeq, !is.na(Phylum))
+# Remove samples with less than 500 reads
+physeq <- prune_samples(sample_sums(physeq)>=500, physeq)
 ```
+
 
 ### 2. Save to disk
 
 ```{r save, eval=FALSE}
 # Save to disk
-saveRDS(out1, "/Users/scarcy/Desktop/Praktikum/Data/Nagel_2016/Rproject_Dada2/out1.rds")
-saveRDS(out2, "/Users/scarcy/Desktop/Praktikum/Data/Nagel_2016/Rproject_Dada2/out2.rds")
-saveRDS(err, "/Users/scarcy/Desktop/Praktikum/Data/Nagel_2016/Rproject_Dada2/errorRates.rds")
-saveRDS(err_new, "/Users/scarcy/Desktop/Praktikum/Data/Nagel_2016/Rproject_Dada2/errorRates_modif.rds")
-saveRDS(seq_infered, "/Users/scarcy/Desktop/Praktikum/Data/Nagel_2016/Rproject_Dada2/seq_infered.rds")
+saveRDS(raw_stats, file.path(path, "01_Dada2-Nagel/raw_stats.rds"))
+saveRDS(out1, file.path(path, "01_Dada2-Nagel/out1.rds"))
+saveRDS(out2, file.path(path, "01_Dada2-Nagel/out2.rds"))
+saveRDS(err, file.path(path, "01_Dada2-Nagel/errorRates.rds"))
+saveRDS(err_new, file.path(path, "01_Dada2-Nagel/errorRates_modif.rds"))
+saveRDS(seq_infered, file.path(path, "01_Dada2-Nagel/seq_infered.rds"))
 
+saveRDS(otu_table(physeq), file.path(path, "01_Dada2-Nagel/ASVtable_final.rds")) # ASV table
+saveRDS(tax_table(physeq), file.path(path, "01_Dada2-Nagel/taxa_final.rds")) # taxa table
+saveRDS(sample_data(physeq), file.path(path, "01_Dada2-Nagel/metadata_final.rds")) # metadata table
 
-saveRDS(otu_table(physeq), "/Users/scarcy/Desktop/Praktikum/Data/Nagel_2016/Rproject_Dada2/ASVtable_final.rds") # ASV table
-saveRDS(tax_table(physeq), "/Users/scarcy/Desktop/Praktikum/Data/Nagel_2016/Rproject_Dada2/taxa_final.rds") # taxa table
-saveRDS(sample_data(physeq), "/Users/scarcy/Desktop/Praktikum/Data/Nagel_2016/Rproject_Dada2/metadata_final.rds") # metadata table
-write.csv(sample_data(physeq), "/Users/scarcy/Desktop/Praktikum/Data/Nagel_2016/Rproject_Dada2/NagelMetadata.csv")
-
-saveRDS(physeq, "/Users/scarcy/Desktop/Praktikum/Data/Nagel_2016/physeq_nagel.rds") # phyloseq object
-
-# Save nb of reads per sample before / after dada2 pipeline
-nb.reads <- readRDS("/Users/scarcy/Desktop/Praktikum/Data/nb_reads.rds")
-nb.reads[1:30, 'Nagel_before'] <- fastqq(trim_samples)@nReads
-nb.reads[1:30, 'Nagel_after'] <- rowSums(seqtable.nochim)
-median(na.omit(nb.reads$Nagel_before)) # sanity check
-median(na.omit(nb.reads$Nagel_after)) # sanity check
-saveRDS(nb.reads, "/Users/scarcy/Desktop/Praktikum/Data/nb_reads.rds")
+# Taxa & Phyloseq object
+saveRDS(taxa, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/CLUSTER/Taxonomy/output/taxa_nagel.rds")
+saveRDS(physeq, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/CLUSTER/PhyloTree/input/physeq_nagel.rds")
 ```
 
 
@@ -475,7 +492,7 @@ saveRDS(nb.reads, "/Users/scarcy/Desktop/Praktikum/Data/nb_reads.rds")
 
 ```{r plot, fig.width = 10, fig.height = 4}
 # Absolute abundance
-plot_bar(physeq, fill = "Phylum")+ facet_wrap("host_disease", scales="free") + theme(axis.text.x = element_blank())
+plot_bar(physeq, fill = "Phylum")+ facet_wrap("host_disease", scales="free_x") + theme(axis.text.x = element_blank())
 
 # Relative abundance for Phylum
 phylum.table <- physeq %>%

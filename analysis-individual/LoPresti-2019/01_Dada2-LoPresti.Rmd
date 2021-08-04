@@ -3,13 +3,14 @@ title: "Dada2_LoPresti2019"
 params:
   date: "!r Sys.Date()"
 output:
-  pdf_document: default
-  html_document: default
+  html_document:
+    toc: true
+    df_print: paged
 ---
 
 ```{r, include=FALSE}
 knitr::opts_chunk$set(fig.width = 3.5, fig.height = 3, warning=FALSE, message=FALSE,
-                      root.dir = "/Users/scarcy/Desktop/Praktikum/Data/LoPresti_2019/")
+                      root.dir = "~/Projects/IBS_Meta-analysis_16S/")
 ```
 
 
@@ -39,8 +40,8 @@ First, we import the fastq files containing the raw reads. The samples were down
 
 ```{r quality-check, echo=TRUE, results="hide"}
 # Save the path to the directory containing the fastq zipped files
-path <- "/Users/scarcy/Desktop/Praktikum/Data/LoPresti_2019/"
-list.files(path) # check we are in the right directory
+path <- "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/LoPresti-2019"
+# list.files(path) # check we are in the right directory
 
 # fastq filenames have format: SAMPLENAME.fastq.gz
 # Saves the whole directory path to each file name
@@ -49,7 +50,7 @@ show(FNs[1:5])
 
 # Extract sample names, assuming filenames have format: SAMPLENAME.fastq.gz
 sample.names <- sapply(strsplit(basename(FNs), "_"), `[`, 1)
-show(sample.names) # saves only the file name (without the path)
+show(sample.names[1:5]) # saves only the file name (without the path)
 
 # Look at quality of all files
 for (i in 3:6){ # 1:length(FNs)
@@ -57,11 +58,11 @@ for (i in 3:6){ # 1:length(FNs)
 }
 
 # Look at nb of reads per sample
-raw_stats <- data.frame('sample' = sample.names,
-                        'reads' = fastqq(FNs)@nReads)
-min(raw_stats$reads)
-max(raw_stats$reads)
-mean(raw_stats$reads)
+# raw_stats <- data.frame('sample' = sample.names,
+#                         'reads' = fastqq(FNs)@nReads)
+# min(raw_stats$reads)
+# max(raw_stats$reads)
+# mean(raw_stats$reads)
 ```
 
 We will have a quick peak at the per base sequence content of the reads in some samples, to make sure there is no anomaly (i.e. all reads having the same sequence).
@@ -80,20 +81,21 @@ plot_read_content(rc) + xlim(0,50) + labs(title = "Per base sequence content")
 #____________ THIS IS ONLY FOR (quicker) PDF OUTPUT __________________
 #_____________________________________________________________________
 
+raw_stats <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/LoPresti-2019/01_Dada2-LoPresti/raw_stats.rds")
 # out process
-out1 <- readRDS("/Users/scarcy/Desktop/Praktikum/Data/LoPresti_2019/Rproject_Dada2/out1.rds")
-out2 <- readRDS("/Users/scarcy/Desktop/Praktikum/Data/LoPresti_2019/Rproject_Dada2/out2.rds")
+out1 <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/LoPresti-2019/01_Dada2-LoPresti/out1.rds")
+out2 <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/LoPresti-2019/01_Dada2-LoPresti/out2.rds")
 # look at quality
 filt1_samples <- sort(list.files(file.path(path, "filtered1"), pattern=".fastq.gz", full.names = TRUE))
 filt2_samples <- sort(list.files(file.path(path, "filtered2"), pattern=".fastq.gz", full.names = TRUE))
 # error rates
-err <- readRDS("/Users/scarcy/Desktop/Praktikum/Data/LoPresti_2019/Rproject_Dada2/err.rds")
+err <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/LoPresti-2019/01_Dada2-LoPresti/err.rds")
 # infered ASVs
-seq_infered <- readRDS("/Users/scarcy/Desktop/Praktikum/Data/LoPresti_2019/Rproject_Dada2/seq_infered.rds")
+seq_infered <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/LoPresti-2019/01_Dada2-LoPresti/seq_infered.rds")
 # taxa
-taxa <- readRDS("/Users/scarcy/Desktop/Praktikum/Data/OutputTaxa/taxa_lopresti.rds")
+taxa <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/CLUSTER/Taxonomy/output/taxa_lopresti.rds")
 #physeq
-physeq <- readRDS("/Users/scarcy/Desktop/Praktikum/Data/LoPresti_2019/physeq_lopresti.rds")
+physeq <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/CLUSTER/PhyloTree/input/physeq_lopresti.rds")
 ```
 
 
@@ -116,7 +118,7 @@ allOrients <- function(primer) {
     dna <- DNAString(primer)  # The Biostrings works w/ DNAString objects rather than character vectors
     orients <- c(Forward = dna, Complement = complement(dna), Reverse = reverse(dna), 
         RevComp = reverseComplement(dna))
-    return(sapply(orients, toString))  # Convert back to character vector
+    return(sapply(orients, toString))
 }
 
 # Get all combinations of the primer sequences
@@ -161,7 +163,7 @@ names(filt1_samples) <- sample.names
 
 # Filter first to take out primer
 out1 <- removePrimers(fn = FNs, fout = filt1_samples,
-                      primer.fwd = FWD, # forward primer is found at the beginning of the reads
+                      primer.fwd = FWD.orients['Forward'], # forward primer is found at the beginning of the reads
                       trim.fwd = TRUE, 
                       orient = FALSE, # keep the reads in their original orientation
                       compress = TRUE, verbose = TRUE)
@@ -188,21 +190,22 @@ filt2_samples <- file.path(path, "filtered2", paste0(sample.names, "_filt.fastq.
 # Assign names for the filtered fastq.gz files
 names(filt2_samples) <- sample.names
 
-out2 <- filterAndTrim(fwd = filt1_FNs, filt = filt2_samples,
-                      maxEE = 4, # reads with more than 4 expected errors (sum(10e(-Q/10))) are discarded
+out2 <- filterAndTrim(fwd = filt1_samples, filt = filt2_samples,
+                      maxEE = 3, # reads with more than 3 expected errors (sum(10e(-Q/10))) are discarded
                       truncQ = 10, # Truncate reads at the first instance of a quality score less than or equal to truncQ.
-                      minLen = 200, # Discard reads shorter than 200 bp. This is done after trimming and truncation.
-                      compress=TRUE, # Output files in gzip format
-                      verbose=TRUE) # give a message saying the percentage of filtered sequences
+                      minLen = 150, # Discard reads shorter than 150 bp. This is done after trimming and truncation.
+                      compress=TRUE,
+                      multithread = TRUE,
+                      verbose=TRUE)
 ```
 
 
 
 ```{r quality-filter-check}
-out2[1:4,] # show how many reads were filtered in each file
+out2[3:6,] # show how many reads were filtered in each file
 
 # Look at quality profile of filtered files
-for (i in 1:4){
+for (i in 3:6){
   show(plotQualityProfile(filt2_samples[i]))
 }
 ```
@@ -238,20 +241,20 @@ De-replication is a common step in almost all modern ASV inference (or OTU picki
 ```{r infer-sample-composition, eval = FALSE}
 # Prepare empty vector for the infered sequences
 seq_infered <- vector("list", length(sample.names))
-names(seq_infered) <- sample.names # names of each row will be the sample names
+names(seq_infered) <- sample.names
 
 # Iterate through the 163 samples
 for(sampl in sample.names) {
-  cat("Processing:", sampl, "\n") # print which sample is being processed
+  cat("Processing:", sampl, "\n")
   derep <- derepFastq(filt2_samples[[sampl]]) # dereplicate the reads in the sample
-  seq_infered[[sampl]] <- dada(derep, err=err, multithread=TRUE, # default parameters
+  seq_infered[[sampl]] <- dada(derep, err=err, multithread=TRUE,
                                HOMOPOLYMER_GAP_PENALTY=-1, BAND_SIZE=32) # parameters for 454 sequencing recommended
 }
 ```
 
 ```{r}
-# Inspect the infered sequence variants from sample 1:6
-for (i in 1:5){
+# Inspect the infered sequence variants from sample 1:3
+for (i in 1:3){
   print(seq_infered[[i]])
   print("________________")
 }
@@ -271,6 +274,13 @@ dim(seqtable)
 
 # Inspect distribution of sequence lengths
 hist(nchar(getSequences(seqtable)), breaks = 100, xlab = "ASV length", ylab = "Number of ASVs", main="")
+
+# Sequences should be between 28F - 519R, so around ~450bp (removing the primers lengths).
+# We kept reads that contain the forward primer, so V3-V5 regions should not be much longer than 450bp
+# Remove any sequence variant beyond 500bp
+seqtable.new <- seqtable[,nchar(colnames(seqtable)) <= 500]
+dim(seqtable.new)
+hist(nchar(getSequences(seqtable.new)), breaks = 100, xlab = "ASV length", ylab = "Number of ASVs", main="")
 ```
 
 
@@ -279,13 +289,13 @@ hist(nchar(getSequences(seqtable)), breaks = 100, xlab = "ASV length", ylab = "N
 The core dada method corrects substitution and indel errors, but chimeras remain. Fortunately, the accuracy of sequence variants after denoising makes identifying chimeric ASVs simpler than when dealing with fuzzy OTUs. Chimeric sequences are identified if they can be exactly reconstructed by combining a left-segment and a right-segment from two more abundant “parent” sequences.
 
 ```{r remove-chimeras}
-seqtable.nochim <- removeBimeraDenovo(seqtable, method="consensus", multithread=TRUE, verbose=TRUE)
+seqtable.nochim <- removeBimeraDenovo(seqtable.new, method="consensus", multithread=TRUE, verbose=TRUE)
 
 # Check how many sequence variants we have after removing chimeras
 dim(seqtable.nochim)
 
 # Check how many reads we have after removing chimeras (we should keep the vast majority of the reads, like > 80%)
-sum(seqtable.nochim)/sum(seqtable)
+sum(seqtable.nochim)/sum(seqtable.new)
 ```
 
 
@@ -301,15 +311,26 @@ Sanity check before assigning taxonomy.
 getN <- function(x) sum(getUniques(x))
 
 # Table that will count number of reads for each process of interest (input reads, filtered reads, denoised reads, non chimera reads)
-track <- cbind(out1, out2[,2], sapply(seq_infered, getN), rowSums(seqtable.nochim),
+track <- cbind(out1,
+               out2[,2],
+               sapply(seq_infered, getN),
+               rowSums(seqtable.nochim),
                lapply(rowSums(seqtable.nochim)*100/out1[,1], as.integer))
 
 # Assign column and row names
-colnames(track) <- c("input", "primer-filt", "quality-filt", "denoised", "nonchim", "%kept_input->output")
+colnames(track) <- c("input", "primer-filt", "quality-filt", "denoised", "nonchim", "%input->output")
 rownames(track) <- sample.names
 
 # Show final table: for each row/sample, we have shown the initial number of reads, filtered reads, denoised reads, and non chimera reads
 track
+```
+
+```{r seqdepth, echo=FALSE, eval=FALSE, include=FALSE}
+# Save nb of reads per sample before / after dada2 pipeline
+nb.reads <- data.frame("before" = raw_stats$reads,
+                       "after" = rowSums(seqtable.nochim),
+                       "dataset" = "LoPresti")
+saveRDS(nb.reads, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/DADA2-FILT/seqdepth_lopresti.rds")
 ```
 
 
@@ -322,12 +343,12 @@ Extensions: The dada2 package also implements a method to make species level ass
 
 ```{r assign-taxonomy, eval = FALSE}
 # Assign taxonomy (with silva v138)
-taxa <- assignTaxonomy(seqtable.nochim, "/Users/scarcy/Desktop/Praktikum/Data/silva_nr_v138_train_set.fa.gz",
+taxa <- assignTaxonomy(seqtable.nochim, "~/Projects/IBS_Meta-analysis_16S/data/silva_nr_v138_train_set.fa.gz",
                        tryRC = TRUE, # try reverse complement of the sequences
                        multithread=TRUE, verbose = TRUE)
 
 # Add species assignment
-taxa <- addSpecies(taxa, "/Users/scarcy/Desktop/Praktikum/Data/silva_species_assignment_v138.fa.gz")
+taxa <- addSpecies(taxa, "~/Projects/IBS_Meta-analysis_16S/data/silva_species_assignment_v138.fa.gz")
 ```
 
 ```{r taxa-sanity-check}
@@ -354,17 +375,17 @@ The preprocessing will be easier to do with ASV, taxonomic and metadata tables c
 ```{r phyloseq-preprocess, echo=TRUE, eval=FALSE}
 #_________________________
 # Import metadata
-metadata_table <- read.csv("/Users/scarcy/Desktop/Praktikum/Data/LoPresti_2019/LoPresti_SraRunTable.csv")
+metadata_table <- read.csv("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/LoPresti-2019/LoPresti_SraRunTable.csv")
 colnames(metadata_table)
 
 # Keep relevant covariates
 sampledf <- metadata_table[, c("Run", "host_disease", "env_material", "Host_Age", "host_sex",
                                "gastrointest_disord", "Sample_Label", "Collection_Date")]
 rownames(sampledf) <- metadata_table$Run
-colnames(sampledf) <- c("Run", "host_disease", "sample_type", "host_age", "host_sex", "subtype", "host_ID", "collection_date")
+colnames(sampledf) <- c("Run", "host_disease", "sample_type", "host_age", "host_sex", "host_subtype", "host_ID", "collection_date")
 sampledf$host_disease <- as.character(sampledf$host_disease)
 sampledf$sample_type <- as.character(sampledf$sample_type)
-sampledf$subtype <- as.character(sampledf$subtype)
+sampledf$host_subtype <- as.character(sampledf$host_subtype)
 
 
 # Simplify data
@@ -372,14 +393,15 @@ sampledf$host_disease[sampledf$host_disease == "Healthy subject"] <- "Healthy"
 sampledf$host_disease[sampledf$host_disease == "Irritable Bowel Syndrome"] <- "IBS"
 sampledf$sample_type[sampledf$sample_type == "intestinal mucosa"] <- "sigmoid"
 
-sampledf$subtype[sampledf$subtype == "Absence"] <- "HC"
-sampledf$subtype[sampledf$subtype == "Alternating constipation and diarrhea"] <- "IBS-M"
-sampledf$subtype[sampledf$subtype == "diarrhea"] <- "IBS-D"
-sampledf$subtype[sampledf$subtype == "constipation"] <- "IBS-C"
+sampledf$host_subtype[sampledf$host_subtype == "Absence"] <- "HC"
+sampledf$host_subtype[sampledf$host_subtype == "Alternating constipation and diarrhea"] <- "IBS-M"
+sampledf$host_subtype[sampledf$host_subtype == "diarrhea"] <- "IBS-D"
+sampledf$host_subtype[sampledf$host_subtype == "constipation"] <- "IBS-C"
 
 sampledf$host_ID <- gsub("\\.A$", '', sampledf$host_ID)
 sampledf$host_ID <- gsub("\\A$", '', sampledf$host_ID)
 
+sampledf$Collection <- "1st" # only 1 collection time point per individual
 sampledf$author <- "LoPresti"
 sampledf$sequencing_tech <- "454 pyrosequencing"
 sampledf$variable_region <- "V1-V3"
@@ -393,10 +415,11 @@ physeq <- phyloseq(otu_table(seqtable.nochim, taxa_are_rows=FALSE), # by default
                    sample_data(sampledf), 
                    tax_table(taxa))
 
-# Remove samples with less than 500 reads
-physeq <- prune_samples(sample_sums(physeq)>=500, physeq)
 # Remove taxa that are eukaryota, or have unassigned Phyla
 physeq <- subset_taxa(physeq, Kingdom != "Eukaryota" & !is.na(Phylum))
+physeq <- subset_taxa(physeq, !is.na(Phylum))
+# Remove samples with less than 500 reads
+physeq <- prune_samples(sample_sums(physeq)>=500, physeq)
 ```
 
 
@@ -404,28 +427,20 @@ physeq <- subset_taxa(physeq, Kingdom != "Eukaryota" & !is.na(Phylum))
 
 ```{r save, eval=FALSE}
 # Save to disk
-saveRDS(out1, "/Users/scarcy/Desktop/Praktikum/Data/LoPresti_2019/Rproject_Dada2/out1.rds")
-saveRDS(out2, "/Users/scarcy/Desktop/Praktikum/Data/LoPresti_2019/Rproject_Dada2/out2.rds")
-saveRDS(err, "/Users/scarcy/Desktop/Praktikum/Data/LoPresti_2019/Rproject_Dada2/err.rds")
-saveRDS(seq_infered, "/Users/scarcy/Desktop/Praktikum/Data/LoPresti_2019/Rproject_Dada2/seq_infered.rds")
+saveRDS(raw_stats, file.path(path, "01_Dada2-LoPresti/raw_stats.rds"))
+saveRDS(out1, file.path(path, "01_Dada2-LoPresti/out1.rds"))
+saveRDS(out2, file.path(path, "01_Dada2-LoPresti/out2.rds"))
+saveRDS(err, file.path(path, "01_Dada2-LoPresti/err.rds"))
+saveRDS(seq_infered, file.path(path, "01_Dada2-LoPresti/seq_infered.rds"))
+saveRDS(seqtable.nochim, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/CLUSTER/Taxonomy/input/seqtable_lopresti.rds")
 
-saveRDS(otu_table(physeq), "/Users/scarcy/Desktop/Praktikum/Data/LoPresti_2019/Rproject_Dada2/ASVtable_final.rds") # ASV table
-saveRDS(tax_table(physeq), "/Users/scarcy/Desktop/Praktikum/Data/LoPresti_2019/Rproject_Dada2/taxa_final.rds") # taxa table
-saveRDS(sample_data(physeq), "/Users/scarcy/Desktop/Praktikum/Data/LoPresti_2019/Rproject_Dada2/metadata_final.rds") # metadata table
-write.table(sample_data(physeq), "/Users/scarcy/Desktop/Praktikum/Data/LoPresti_2019/Rproject_Dada2/LoPrestiMetadata.csv")
+saveRDS(otu_table(physeq), file.path(path, "01_Dada2-LoPresti/ASVtable_final.rds")) # ASV table
+saveRDS(tax_table(physeq), file.path(path, "01_Dada2-LoPresti/taxa_final.rds")) # taxa table
+saveRDS(sample_data(physeq), file.path(path, "01_Dada2-LoPresti/metadata_final.rds")) # metadata table
 
-saveRDS(physeq, "/Users/scarcy/Desktop/Praktikum/Data/LoPresti_2019/physeq_lopresti.rds") # phyloseq object
-
-
-#_______________
-# Save nb of reads per sample before / after dada2 pipeline
-nb.reads <- readRDS("/Users/scarcy/Desktop/Praktikum/Data/nb_reads.rds")
-nb.reads[53:300,] <- NA # add rows
-nb.reads[1:163, 'LoPresti_before'] <- fastqq(FNs)@nReads
-nb.reads[1:163, 'LoPresti_after'] <- rowSums(seqtable.nochim)
-median(na.omit(nb.reads$LoPresti_before)) # sanity check
-median(na.omit(nb.reads$LoPresti_after)) # sanity check
-saveRDS(nb.reads, "/Users/scarcy/Desktop/Praktikum/Data/nb_reads.rds")
+# Taxa & Phyloseq object
+saveRDS(taxa, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/CLUSTER/Taxonomy/output/taxa_lopresti.rds")
+saveRDS(physeq, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/CLUSTER/PhyloTree/input/physeq_lopresti.rds")
 ```
 
 
@@ -433,7 +448,7 @@ saveRDS(nb.reads, "/Users/scarcy/Desktop/Praktikum/Data/nb_reads.rds")
 
 ```{r plot, fig.width = 10, fig.height = 5}
 # Absolute abundance
-plot_bar(physeq, fill = "Phylum")+ facet_wrap("host_disease", scales="free") + theme(axis.text.x = element_blank())
+plot_bar(physeq, fill = "Phylum")+ facet_wrap("host_disease", scales="free_x") + theme(axis.text.x = element_blank())
 
 # Relative abundance for Phylum
 phylum.table <- physeq %>%
@@ -451,7 +466,7 @@ ggplot(phylum.table, aes(x = Sample, y = Abundance, fill = Phylum))+
 # Absolute abundance (only stool samples)
 physeq.stool <- subset_samples(physeq, sample_type == "stool") # keep only stool samples
 plot_bar(physeq.stool, fill = "Phylum")+
-  facet_wrap("host_disease", scales="free") +
+  facet_wrap("host_disease", scales="free_x") +
   theme(axis.text.x = element_blank()) +
   labs(title = "Stool samples")
 

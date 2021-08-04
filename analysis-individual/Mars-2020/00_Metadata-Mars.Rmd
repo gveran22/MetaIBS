@@ -1,0 +1,119 @@
+---
+title: "00_Metadata-Mars"
+output:
+  html_document:
+    df_print: paged
+    toc: true
+---
+
+
+```{r, include=FALSE}
+knitr::opts_chunk$set(warning=FALSE, message=FALSE,
+                      root.dir = "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Mars-2020/00_Metadata-Mars/")
+```
+
+##########
+# IMPORT #
+##########
+
+## 1. Libraries
+```{r import-libraries}
+library("readxl")
+library(data.table)
+library(tidyverse)
+```
+
+## 2. Data
+```{r import-data}
+path <- "~/Projects/IBS_Meta-analysis_16S"
+
+# Metadata table downloaded from the SRA
+sra_metadata <- read.csv(file.path(path, "data/analysis-individual/Mars-2020/MarsSraRunTable.txt"), header=TRUE, sep = ",")
+head(sra_metadata)
+
+# Import the supplementary ASV table from the paper
+paper_supp <- read_excel(file.path(path, "data/analysis-individual/Mars-2020/00_Metadata-Mars/1-s2.0-S0092867420309983-mmc1.xlsx"),
+                         sheet=3) # import sheet with info on biopsy metadata
+head(paper_supp)
+
+```
+
+##################
+# CLEANUP TABLES #
+##################
+
+Let's keep only the necessary information in the tables.
+
+```{r cleanup-metadata}
+# CLEANUP SRADF
+sraDF <- sra_metadata %>%
+  filter(Assay.Type == "AMPLICON") %>%
+  select(all_of(c("Run", "title"))) %>%
+  separate(col=title, into=c("host_ID", "time_point"), sep="v", remove=TRUE)
+head(sraDF)
+
+# CLEANUP PAPER SUPP
+suppDF <- paper_supp %>%
+  # Keep relevant columns
+  rename(host_subtype = "Cohort",
+         study_ID = "Study ID",
+         time_point = "Time point",
+         host_sex = "Gender",
+         host_age = "Age",
+         host_bmi = "BMI") %>%
+  select(all_of(c("host_subtype", "study_ID", "time_point", "host_sex", "host_age", "host_bmi"))) %>%
+  mutate(time_point = as.character(time_point)) %>%
+  # Get host_ID
+  separate(col=study_ID, into=c("void", "host_ID"), sep=4, remove=TRUE) %>%
+  select(-void) %>%
+  # Add host_disease
+  mutate(host_disease=gsub("IBS.*", "IBS", host_subtype)) %>%
+  mutate(host_subtype=replace(host_subtype, host_subtype=="Healthy", "HC")) %>%
+  # Rename host_sex
+  mutate(host_sex=replace(host_sex, host_sex=="F", "female"),
+         host_sex=replace(host_sex, host_sex=="M", "male"))
+head(suppDF)
+```
+
+
+
+################
+# MERGE TABLES #
+################
+
+Let's merge tables to get a metadata table we will use for downstream analyses.
+
+```{r create-metadata-df}
+# MERGE TABLES
+clean.df <- left_join(sraDF, suppDF, by=c("host_ID", "time_point")) %>%
+  # Fill in the few NAs (covariates missing for a few 2nd time points)
+  group_by(host_ID) %>%
+  fill(host_subtype, .direction="down") %>%
+  fill(host_sex, .direction="down") %>%
+  fill(host_age, .direction="down") %>%
+  fill(host_bmi, .direction="down") %>%
+  fill(host_disease, .direction="down") %>%
+  ungroup() %>%
+  # Add some covariates
+  mutate(sample_type = "sigmoid") %>%
+  rename(Collection = "time_point") %>%
+  mutate(Collection=replace(Collection, Collection=="1", "1st"),
+         Collection=replace(Collection, Collection=="2", "2nd"))
+head(clean.df)
+```
+
+
+#################
+# SAVE METADATA #
+#################
+
+```{r save-data, echo=TRUE, eval=FALSE}
+# Export metadata table
+write.csv(clean.df, file.path(path, "data/analysis-individual/Mars-2020/00_Metadata-Mars/modif_metadata(R).csv"))
+
+# Export the list of Runs to download
+write.table(clean.df$Run, file.path(path, "data/analysis-individual/Mars-2020/original/list_files.txt"),
+            sep="\t", row.names=FALSE, col.names=FALSE, quote=FALSE)
+```
+
+

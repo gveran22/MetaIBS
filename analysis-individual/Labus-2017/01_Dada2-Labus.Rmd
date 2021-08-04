@@ -3,9 +3,9 @@ title: "Dada2_Labus2017"
 params:
   date: "!r Sys.Date()"
 output:
-  pdf_document: default
   html_document:
     df_print: paged
+    toc: true
 ---
 
 
@@ -42,7 +42,7 @@ First, we import the fastq files containing the raw reads. The samples were down
 ```{r quality-check, echo=TRUE, results="hide", message=FALSE}
 # Save the path to the directory containing the fastq zipped files
 path <- "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Labus-2017"
-list.files(path) # check we are in the right directory
+# list.files(path) # check we are in the right directory
 
 # fastq filenames have format: SAMPLENAME.fastq.gz
 # Saves the whole directory path to each file name
@@ -51,7 +51,7 @@ show(FNs[1:5])
 
 # Extract sample names, assuming filenames have format: SAMPLENAME.fastq.gz
 sample.names <- sapply(strsplit(basename(FNs), "_"), `[`, 1)
-show(sample.names) # saves only the file name (without the path)
+show(sample.names[1:5]) # saves only the file name (without the path)
 
 # Look at quality of all files
 for (i in 1:4){ # 1:length(FNs)
@@ -59,11 +59,11 @@ for (i in 1:4){ # 1:length(FNs)
 }
 
 # Look at number of reads per sample
-raw_stats <- data.frame('sample' = sample.names,
-                        'reads' = fastqq(FNs)@nReads)
-min(raw_stats$reads)
-max(raw_stats$reads)
-print(mean(raw_stats$reads))
+# raw_stats <- data.frame('sample' = sample.names,
+#                         'reads' = fastqq(FNs)@nReads)
+# min(raw_stats$reads)
+# max(raw_stats$reads)
+# mean(raw_stats$reads)
 ```
 
 We will have a quick peak at the per base sequence content of the reads in some samples, to make sure there is no anomaly (i.e. all reads having the same sequence).
@@ -82,6 +82,7 @@ plot_read_content(rc) + xlim(0,50) + labs(title = "Per base sequence content")
 #____________ THIS IS ONLY FOR (quicker) PDF/HTML OUTPUT __________________
 #__________________________________________________________________________
 
+raw_stats <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Labus-2017/01_Dada2-Labus/raw_stats.rds")
 # nb of reads after filtering steps (out variables)
 out1 <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Labus-2017/01_Dada2-Labus/out1.rds")
 out2 <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Labus-2017/01_Dada2-Labus/out2.rds")
@@ -93,9 +94,9 @@ err <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Labus-
 # inferred ASVs
 seq_infered <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Labus-2017/01_Dada2-Labus/seq_infered.rds")
 # taxa
-taxa <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/OutputTaxa/taxa_labus.rds")
+taxa <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/CLUSTER/Taxonomy/output/taxa_labus.rds")
 #physeq
-physeq <- readRDS("~/Projects/IBS_Meta-analysis_16S/phyloseq-objects/physeq_labus.rds")
+physeq <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/CLUSTER/PhyloTree/input/physeq_labus.rds")
 ```
 
 
@@ -144,7 +145,6 @@ for (i in 1:5){
 
 
 
-
 #####################
 ## FILTER AND TRIM ##
 #####################
@@ -162,13 +162,12 @@ names(filt1_samples) <- sample.names
 
 # Filter first to take out primer
 out1 <- removePrimers(fn = FNs, fout = filt1_samples,
-                      primer.fwd = REV, # reverse primer is found at the beginning of the reads
+                      primer.fwd = REV.orients['Forward'], # reverse primer is found at the beginning of the reads
                       trim.fwd = TRUE,
                       orient = FALSE, # keep the reads in their original orientation
                       compress = TRUE, verbose = TRUE)
 
 ```
-
 
 ```{r primer-filter-check, fig.width = 3, fig.height = 2}
 # Primer removal
@@ -177,16 +176,6 @@ out1[1:4,]
 # Quality profile after primer removal
 for (i in 1:4){
   show(plotQualityProfile(filt1_samples[i]))
-}
-
-# Sanity check if we still find the primers in the reads
-for (i in 1:4){
-  cat("SAMPLE", sample.names[i], "with total number of", raw_stats[i,'reads'], "reads\n\n")
-  # Get a table to know how many times the 357F and 926R primers are found (in how many reads)
-  x <-  rbind(ForwardPrimer = sapply(FWD.orients, primerHits, fn = filt1_samples[[i]]), 
-              ReversePrimer = sapply(REV.orients, primerHits, fn = filt1_samples[[i]]))
-  print(x)
-  cat("\n____________________________________________\n\n")
 }
 ```
 
@@ -203,12 +192,13 @@ filt2_samples <- file.path(path, "filtered2", paste0(sample.names, "_filt.fastq.
 names(filt2_samples) <- sample.names
 
 # Filter
-out2 <- filterAndTrim(fwd = filt1_FNs, filt = filt2_samples,
-                      maxEE=4, # reads with more than 4 expected errors (sum(10e(-Q/10))) are discarded
+out2 <- filterAndTrim(fwd = filt1_samples, filt = filt2_samples,
+                      maxEE=3, # reads with more than 3 expected errors (sum(10e(-Q/10))) are discarded
                       truncQ=10, # Truncate reads at the first instance of a quality score less than or equal to truncQ.
-                      minLen = 200, # Discard reads shorter than 200 bp. This is done after trimming and truncation.
-                      compress=TRUE, # Output files in gzip format
-                      verbose=TRUE) # give a message saying the percentage of filtered sequences
+                      minLen=150, # Discard reads shorter than 150 bp. This is done after trimming and truncation.
+                      compress=TRUE,
+                      multithread=TRUE,
+                      verbose=TRUE)
 ```
 
 Let's look at the output filtered fastq files as sanity check.
@@ -220,13 +210,6 @@ out2[1:4,] # show how many reads were filtered in each file
 for (i in 1:4){
   show(plotQualityProfile(filt2_samples[i]))
 }
-
-# Look at number of reads per sample
-#raw_stats_filt <- data.frame('sample' = sample.names,
-#                             'reads' = fastqq(filt2_samples)@nReads)
-#min(raw_stats_filt$reads)
-#max(raw_stats_filt$reads)
-#mean(raw_stats_filt$reads)
 ```
 
 
@@ -260,7 +243,7 @@ De-replication is a common step in almost all modern ASV inference (or OTU picki
 ```{r infer-sample-composition, eval = FALSE}
 # Prepare empty vector for the infered sequences
 seq_infered <- vector("list", length(sample.names))
-names(seq_infered) <- sample.names # names of each row will be the sample names
+names(seq_infered) <- sample.names
 
 # Iterate through the 52 samples
 for(sampl in sample.names) {
@@ -323,15 +306,27 @@ Sanity check before assigning taxonomy.
 getN <- function(x) sum(getUniques(x))
 
 # Table that will count number of reads for each process of interest (input reads, filtered reads, denoised reads, non chimera reads)
-track <- cbind(out1, out2[,2], sapply(seq_infered, getN), rowSums(seqtable.nochim),
+track <- cbind(out1,
+               out2[,2],
+               sapply(seq_infered, getN),
+               rowSums(seqtable.nochim),
                lapply(rowSums(seqtable.nochim)*100/out1[,1], as.integer))
 
 # Assign column and row names
-colnames(track) <- c("input", "primer-filt", "quality-filt", "denoised", "nonchim", "%kept_input->output")
+colnames(track) <- c("input", "primer-filt", "quality-filt", "denoised", "nonchim", "%input->output")
 rownames(track) <- sample.names
 
 # Show final table
 track
+```
+
+
+```{r seqdepth, echo=FALSE, eval=FALSE, include=FALSE}
+# Save nb of reads per sample before / after dada2 pipeline
+nb.reads <- data.frame("before" = raw_stats$reads,
+                       "after" = rowSums(seqtable.nochim),
+                       "dataset" = "Labus")
+saveRDS(nb.reads, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/DADA2-FILT/seqdepth_labus.rds")
 ```
 
 
@@ -354,7 +349,7 @@ taxa <- addSpecies(taxa, "~/Projects/IBS_Meta-analysis_16S/data/silva_species_as
 
 ```{r taxa-sanity-check}
 # Check how the taxonomy table looks like
-taxa.print <- taxa 
+taxa.print <- taxa
 rownames(taxa.print) <- NULL # Removing sequence rownames for display only
 head(taxa.print)
 table(taxa.print[,1]) # Show the different kingdoms (should be only bacteria)
@@ -375,23 +370,16 @@ The preprocessing will be easier to do with ASV, taxonomic and metadata tables c
 ```{r phyloseq-preprocess, echo=TRUE, eval=FALSE}
 #_________________________
 # Import metadata
-metadata_table <- read.csv("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Labus-2017/LabusMetadata.csv")
+metadata_table <- read.csv("~/Projects/IBS_Meta-analysis_16S/analysis-individual/Labus-2017/Metadata-Labus.csv")
 
 # Keep relevant covariates
-sampledf <- metadata_table[, c("Run", "host_disease", "host_subtype", "Host_Age", "host_sex", "host_body_mass_index", "Collection_Date")]
-rownames(sampledf) <- metadata_table$Run # assign sample names as row names
-colnames(sampledf) <- c("Run", "host_disease", "host_subtype", "host_age", "host_sex", "host_bmi", "collection_date")
+sampledf <- metadata_table
+sampledf$X <- NULL
+rownames(sampledf) <- sampledf$Run # assign sample names as row names
+sampledf[sampledf$host_disease == "None", "host_disease"] <- "Healthy"
 
-sampledf$host_disease <- as.character(sampledf$host_disease)
-
-# Simplify data
-sampledf$host_disease[sampledf$host_disease == "None"] <- "Healthy"
-sampledf$host_disease[sampledf$host_disease == "Irritable bowel syndrome"] <- "IBS"
-sampledf$host_subtype[sampledf$host_subtype == "IBS-A"] <- "IBS-M"
-
-sampledf$author <- "Labus"
-sampledf$sequencing_tech <- "454 pyrosequencing"
-sampledf$variable_region <- "V3-V5"
+sampledf$sample_type <- "stool"
+sampledf$Collection <- "1st"
 
 # Remove .fastq.gz extension in seqtable.nochim
 rownames(seqtable.nochim) <- gsub(".fastq.gz", "", rownames(seqtable.nochim))
@@ -402,11 +390,11 @@ physeq <- phyloseq(otu_table(seqtable.nochim, taxa_are_rows=FALSE), # by default
                   sample_data(sampledf), 
                   tax_table(taxa))
 
-# Remove samples with less than 500 reads
-physeq <- prune_samples(sample_sums(physeq)>=500, physeq)
 # Remove taxa that are eukaryota, or have unassigned Phyla
 physeq <- subset_taxa(physeq, Kingdom != "Eukaryota")
 physeq <- subset_taxa(physeq, !is.na(Phylum))
+# Remove samples with less than 500 reads
+physeq <- prune_samples(sample_sums(physeq)>=500, physeq)
 ```
 
 
@@ -414,24 +402,19 @@ physeq <- subset_taxa(physeq, !is.na(Phylum))
 
 ```{r save, eval=FALSE}
 # Save to disk
-saveRDS(out1, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Labus-2017/01_Dada2-Labus/out1.rds")
-saveRDS(out2, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Labus-2017/01_Dada2-Labus/out2.rds")
-saveRDS(err, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Labus-2017/01_Dada2-Labus/err.rds")
-saveRDS(seq_infered, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Labus-2017/01_Dada2-Labus/seq_infered.rds")
+saveRDS(raw_stats, file.path(path, "01_Dada2-Labus/raw_stats.rds"))
+saveRDS(out1, file.path(path, "01_Dada2-Labus/out1.rds"))
+saveRDS(out2, file.path(path, "01_Dada2-Labus/out2.rds"))
+saveRDS(err, file.path(path, "01_Dada2-Labus/err.rds"))
+saveRDS(seq_infered, file.path(path, "01_Dada2-Labus/seq_infered.rds"))
 
+saveRDS(otu_table(physeq), file.path(path, "01_Dada2-Labus/ASVtable_final.rds")) # ASV table
+saveRDS(tax_table(physeq), file.path(path, "01_Dada2-Labus/taxa_final.rds")) # taxa table
+saveRDS(sample_data(physeq), file.path(path, "01_Dada2-Labus/metadata_final.rds")) # metadata table
 
-saveRDS(otu_table(physeq), "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Labus-2017/01_Dada2-Labus/ASVtable_final.rds") # ASV table
-saveRDS(tax_table(physeq), "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Labus-2017/01_Dada2-Labus/taxa_final.rds") # taxa table
-saveRDS(sample_data(physeq), "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Labus-2017/01_Dada2-Labus/metadata_final.rds") # metadata table
-write.csv(sample_data(physeq), "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Labus-2017/01_Dada2-Labus/LabusMetadata.csv") # metadata table
-
-saveRDS(physeq, "~/Projects/IBS_Meta-analysis_16S/phyloseq-objects/physeq_labus.rds") # phyloseq object
-
-
-# Save nb of reads per sample before / after dada2 pipeline
-nb.reads <- data.frame('Labus_before' = fastqq(FNs)@nReads,
-                       'Labus_after' = rowSums(seqtable.nochim))
-saveRDS(nb.reads, "~/Projects/IBS_Meta-analysis_16S/data/nb_reads.rds")
+# Taxa & Phyloseq object
+saveRDS(taxa, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/CLUSTER/Taxonomy/output/taxa_labus.rds")
+saveRDS(physeq, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/CLUSTER/PhyloTree/input/physeq_labus.rds")
 ```
 
 
@@ -440,7 +423,7 @@ saveRDS(nb.reads, "~/Projects/IBS_Meta-analysis_16S/data/nb_reads.rds")
 
 ```{r plot, fig.width = 10, fig.height = 4}
 # Absolute abundance
-plot_bar(physeq, fill = "Phylum")+ facet_wrap("host_disease", scales="free") + theme(axis.text.x = element_blank())
+plot_bar(physeq, fill = "Phylum")+ facet_wrap("host_disease", scales="free_x") + theme(axis.text.x = element_blank())
 
 # Relative abundance for Phylum
 phylum.table <- physeq %>%

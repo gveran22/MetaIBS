@@ -599,7 +599,6 @@ dev.off()
 ```
 
 
-
 ```{r aggregate-phylum}
 #physeq.rel.phylum <- tax_glom(physeq.rel, "Phylum")
 phylum.agg <- physeq.fecal %>%

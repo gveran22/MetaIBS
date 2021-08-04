@@ -3,19 +3,19 @@ title: "Dada2_Zeber2016"
 params:
   date: "!r Sys.Date()"
 output:
-  pdf_document: default
   html_document:
     df_print: paged
+    toc: true
 ---
 
 ```{r, include=FALSE}
 knitr::opts_chunk$set(fig.width = 3.5, fig.height = 3, warning=FALSE, message=FALSE,
-                      root.dir = "/Users/scarcy/Desktop/Praktikum/Data/Zeber-Lubecka_2016/")
+                      root.dir = "~/Projects/IBS_Meta-analysis_16S")
 ```
 
 
 # Import library
-```{r library-import, echo = FALSE}
+```{r library-import}
 library(dada2)
 packageVersion("dada2") # check dada2 version
 
@@ -40,8 +40,8 @@ First, we import the fastq files containing the raw reads. The samples were down
 
 ```{r quality-check, echo=TRUE, results="hide"}
 # Save the path to the directory containing the fastq zipped files
-path <- "/Users/scarcy/Desktop/Praktikum/Data/Zeber-Lubecka_2016/"
-list.files(path) # check we are in the right directory
+path <- "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Zeber-2016"
+# list.files(path) # check we are in the right directory
 
 # fastq filenames have format: SAMPLENAME.fastq.gz
 # Saves the whole directory path to each file name
@@ -50,7 +50,7 @@ show(FNs[1:5])
 
 # Extract sample names, assuming filenames have format: SAMPLENAME.fastq.gz
 sample.names <- sapply(strsplit(basename(FNs), "_"), `[`, 1)
-show(sample.names) # saves only the file name (without the path)
+show(sample.names[1:5])
 
 # Look at quality of all files
 for (i in 1:4){
@@ -58,11 +58,11 @@ for (i in 1:4){
 }
 
 # Look at nb of reads per sample
-raw_stats <- data.frame('sample' = sample.names,
-                        'reads' = fastqq(FNs)@nReads)
-min(raw_stats$reads)
-max(raw_stats$reads)
-mean(raw_stats$reads)
+# raw_stats <- data.frame('sample' = sample.names,
+#                         'reads' = fastqq(FNs)@nReads)
+# min(raw_stats$reads)
+# max(raw_stats$reads)
+# mean(raw_stats$reads)
 ```
 
 We will have a quick peak at the per base sequence content of the reads in some samples, to make sure there is no anomaly (i.e. all reads having the same sequence).
@@ -81,18 +81,19 @@ plot_read_content(rc) + labs(title = "Per base sequence content")
 #_____________________________________________________________________
 
 # out process
-out <- readRDS("/Users/scarcy/Desktop/Praktikum/Data/Zeber-Lubecka_2016/Rproject_Dada2/out.rds")
+raw_stats <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Zeber-2016/01_Dada2-Zeber/raw_stats.rds")
+out <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Zeber-2016/01_Dada2-Zeber/out.rds")
 # look at quality
 filt_samples <- sort(list.files(file.path(path, "filtered"), pattern=".fastq.gz", full.names = TRUE))
 # error rates
-err <- readRDS("/Users/scarcy/Desktop/Praktikum/Data/Zeber-Lubecka_2016/Rproject_Dada2/error_rates.rds")
-err_new <- readRDS("/Users/scarcy/Desktop/Praktikum/Data/Zeber-Lubecka_2016/Rproject_Dada2/error_rates_modified.rds")
+err <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Zeber-2016/01_Dada2-Zeber/error_rates.rds")
+err_new <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Zeber-2016/01_Dada2-Zeber/error_rates_modified.rds")
 # infered sequences
-seq_infered <- readRDS("/Users/scarcy/Desktop/Praktikum/Data/Zeber-Lubecka_2016/Rproject_Dada2/seq_infered.rds")
+seq_infered <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Zeber-2016/01_Dada2-Zeber/seq_infered.rds")
 # taxa
-taxa <- readRDS("/Users/scarcy/Desktop/Praktikum/Data/OutputTaxa/taxa_zeber.rds")
+taxa <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/CLUSTER/Taxonomy/output/taxa_zeber.rds")
 # physeq
-physeq <- readRDS("/Users/scarcy/Desktop/Praktikum/Data/Zeber-Lubecka_2016/physeq_zeber.rds")
+physeq <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/CLUSTER/PhyloTree/input/physeq_zeber.rds")
 ```
 
 
@@ -120,9 +121,9 @@ names(filt_samples) <- sample.names
 # Filter
 out <- filterAndTrim(fwd = FNs, filt = filt_samples,
                      trimLeft = 15, # as recommanded on QIIME forum
-                     maxEE=4, # reads with more than 4 expected errors (sum(10e(-Q/10))) are discarded
+                     maxEE=3, # reads with more than 3 expected errors (sum(10e(-Q/10))) are discarded
                      truncQ=10, # Truncate reads at the first instance of a quality score less than or equal to truncQ.
-                     minLen=200, # Discard reads shorter than 200 bp. This is done after trimming and truncation.
+                     minLen=150, # Discard reads shorter than 150 bp.
                      compress=TRUE,
                      multithread=TRUE,
                      verbose=TRUE)
@@ -152,7 +153,7 @@ Now we will build the parametric error model, to be able to infer amplicon seque
 err <- learnErrors(filt_samples, multithread=TRUE, randomize=TRUE, verbose = 1)
 ```
 
-The error rates for each possible transition (A→C, A→G, …) are shown. Points are the observed error rates for each consensus quality score. The black line shows the estimated error rates after convergence of the machine-learning algorithm. The red line shows the error rates expected under the nominal definition of the Q-score. Here the estimated error rates (black line) are a good fit to the observed rates (points), and the error rates drop with increased quality as expected.
+The error rates for each possible transition (A→C, A→G, …) are shown. Points are the observed error rates for each consensus quality score. The black line shows the estimated error rates after convergence of the machine-learning algorithm. The red line shows the error rates expected under the nominal definition of the Q-score.
 
 ```{r plot-errors, fig.height = 5, fig.width = 5}
 plotErrors(err, nominalQ = TRUE)
@@ -165,18 +166,18 @@ As the error rate model doesn't fit well the observations for high quality score
 # Modify error rate model
 err_new <- err
 
-err_new$err_out['A2C','40':'45'] <- 0.005
-err_new$err_out['A2G','40':'45'] <- 0.015
-err_new$err_out['A2T','39':'45'] <- 0.004
-err_new$err_out['C2A','40':'45'] <- 0.0035
-err_new$err_out['C2G','39':'45'] <- 0.0035
-err_new$err_out['C2T','39':'45'] <- 0.0075
-err_new$err_out['G2A','39':'45'] <- 0.008
-err_new$err_out['G2C','39':'45'] <- 0.0045
-err_new$err_out['G2T','39':'45'] <- 0.003
-err_new$err_out['T2A','39':'45'] <- 0.0045
-err_new$err_out['T2C','40':'45'] <- 0.012
-err_new$err_out['T2G','40':'45'] <- 0.0045
+err_new$err_out['A2C','40':'45'] <- 0.0025
+err_new$err_out['A2G','40':'45'] <- 0.01
+err_new$err_out['A2T','39':'45'] <- 0.0025
+err_new$err_out['C2A','40':'45'] <- 0.002
+err_new$err_out['C2G','39':'45'] <- 0.002
+err_new$err_out['C2T','39':'45'] <- 0.007
+err_new$err_out['G2A','39':'45'] <- 0.0075
+err_new$err_out['G2C','39':'45'] <- 0.002
+err_new$err_out['G2T','39':'45'] <- 0.0015
+err_new$err_out['T2A','39':'45'] <- 0.003
+err_new$err_out['T2C','40':'45'] <- 0.01
+err_new$err_out['T2G','40':'45'] <- 0.0035
 ```
 
 ```{r plot-new-errors, fig.height = 5, fig.width = 5}
@@ -197,11 +198,11 @@ De-replication is a common step in almost all modern ASV inference (or OTU picki
 ```{r infer-sample-composition, eval = FALSE}
 # Prepare empty vector for the infered sequences
 seq_infered <- vector("list", length(sample.names))
-names(seq_infered) <- sample.names # names of each row will be the sample names
+names(seq_infered) <- sample.names
 
 # Iterate through the 90 samples
 for(sampl in sample.names) {
-  cat("Processing:", sampl, "\n") # print which sample is being processed
+  cat("Processing:", sampl, "\n")
   derep <- derepFastq(filt_samples[[sampl]]) # dereplicate the reads in the sample
   seq_infered[[sampl]] <- dada(derep, err=err_new, multithread=TRUE, # default parameters
                                HOMOPOLYMER_GAP_PENALTY=-1, BAND_SIZE=32) # parameters for Ion Torrent recommended
@@ -229,7 +230,7 @@ seqtable <- makeSequenceTable(seq_infered)
 dim(seqtable)
 
 # Inspect distribution of sequence lengths
-hist(nchar(getSequences(seqtable)), breaks = 100, xlab = "Read length", ylab = "Number of reads", main="")
+hist(nchar(getSequences(seqtable)), breaks = 100, xlab = "ASV length", ylab = "Number of ASVs", main="")
 ```
 
 
@@ -264,13 +265,20 @@ track <- cbind(out, sapply(seq_infered, getN), rowSums(seqtable.nochim),
                lapply(rowSums(seqtable.nochim)*100/out[,1], as.integer))
 
 # Assign column and row names
-colnames(track) <- c("input", "quality-filt", "denoised", "nonchim", "%kept_input->output")
+colnames(track) <- c("input", "quality-filt", "denoised", "nonchim", "%input->output")
 rownames(track) <- sample.names
 
 # Show final table: for each row/sample, we have shown the initial number of reads, filtered reads, denoised reads, and non chimera reads
 track
 ```
 
+```{r seqdepth, echo=FALSE, eval=FALSE, include=FALSE}
+# Save nb of reads per sample before / after dada2 pipeline
+nb.reads <- data.frame("before" = raw_stats$reads,
+                       "after" = rowSums(seqtable.nochim),
+                       "dataset" = "Zeber")
+saveRDS(nb.reads, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/DADA2-FILT/seqdepth_zeber.rds")
+```
 
 
 #####################
@@ -281,12 +289,12 @@ Extensions: The dada2 package also implements a method to make species level ass
 
 ```{r assign-taxonomy, eval = FALSE}
 # Assign taxonomy (with silva v138)
-taxa <- assignTaxonomy(seqtable.nochim, "/Users/scarcy/Desktop/Praktikum/Data/silva_nr_v138_train_set.fa.gz",
+taxa <- assignTaxonomy(seqtable.nochim, "~/Projects/IBS_Meta-analysis_16S/data/silva_nr_v138_train_set.fa.gz",
                        tryRC = TRUE, # try reverse complement of the sequences
                        multithread=TRUE, verbose = TRUE)
 
 # Add species assignment
-taxa <- addSpecies(taxa, "/Users/scarcy/Desktop/Praktikum/Data/silva_species_assignment_v138.fa.gz")
+taxa <- addSpecies(taxa, "~/Projects/IBS_Meta-analysis_16S/data/silva_species_assignment_v138.fa.gz")
 ```
 
 
@@ -313,11 +321,11 @@ The preprocessing will be easier to do with ASV, taxonomic and metadata tables c
 
 ```{r phyloseq-object, eval=FALSE}
 # Import metadata
-metadata_table <- read.csv("/Users/scarcy/Desktop/Praktikum/Data/Zeber-Lubecka_2016/ZeberSraRunTable.csv")
+metadata_table <- read.csv("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Zeber-2016/ZeberSraRunTable.csv")
 
 # Simplify data
 rownames(metadata_table) <- metadata_table$Run # have the same sample.names
-colnames(metadata_table) <- c("Run", "individual", "host_disease", "host_subtype", "host_sex")
+colnames(metadata_table) <- c("Run", "host_ID", "host_disease", "host_subtype", "host_sex")
 
 metadata_table$host_sex <- as.character(metadata_table$host_sex)
 metadata_table[is.na(metadata_table[, 'host_sex']), 'host_sex'] <- 'unknown' # replace the 'NA'
@@ -327,8 +335,10 @@ metadata_table[metadata_table[, 'host_sex'] == "F", 'host_sex'] <- 'female'
 metadata_table$host_subtype <- as.character(metadata_table$host_subtype)
 metadata_table[metadata_table$host_subtype == "Healthy", 'host_subtype'] <- 'HC'
 
-metadata_table$individual <- gsub('\\:0$', '', metadata_table$individual)
+metadata_table$host_ID <- gsub('\\:0$', '', metadata_table$host_ID)
 
+metadata_table$sample_type <- "stool"
+metadata_table$Collection <- "1st" # only 1 collection time point per individual
 metadata_table$author <- "Zeber-Lubecka"
 metadata_table$sequencing_tech <- "Ion Torrent"
 metadata_table$variable_region <- "Ion 16S Metagenomics Kit"
@@ -344,37 +354,69 @@ physeq <- phyloseq(otu_table(seqtable.nochim, taxa_are_rows=FALSE), # by default
                   sample_data(metadata_table), 
                   tax_table(taxa))
 
-# Remove samples with less than 500 reads
-physeq <- prune_samples(sample_sums(physeq)>=500, physeq)
 # Remove taxa that are eukaryota, or have unassigned Phyla
 physeq <- subset_taxa(physeq, Kingdom != "Eukaryota")
 physeq <- subset_taxa(physeq, !is.na(Phylum))
+# Remove samples with less than 500 reads
+physeq <- prune_samples(sample_sums(physeq)>=500, physeq)
 ```
+
+```{r}
+# INPUT
+# physeq <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/CLUSTER/PhyloTree/input/physeq_zeber.rds")
+sample_data(physeq)
+table(sample_data(physeq)$author, useNA="ifany") #ok
+table(sample_data(physeq)$sequencing_tech, useNA="ifany") #ok
+table(sample_data(physeq)$variable_region, useNA="ifany") # ok
+table(sample_data(physeq)$host_disease, useNA="ifany") # ok
+table(sample_data(physeq)$host_subtype, useNA="ifany") # ok
+table(sample_data(physeq)$host_sex, useNA="ifany") # ok
+table(sample_data(physeq)$host_age, useNA="ifany") # ok
+table(sample_data(physeq)$host_bmi, useNA="ifany") # ok
+table(sample_data(physeq)$sample_type, useNA="ifany") # ok
+table(sample_data(physeq)$Collection, useNA="ifany") # ok
+
+# saveRDS(physeq, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/CLUSTER/PhyloTree/input/physeq_zeber.rds")
+# saveRDS(sample_data(physeq), file.path(path, "01_Dada2-Zeber/metadata_final.rds")) # metadata table
+
+#___________________________
+# MODIFY
+# sample_data(physeq)[sample_data(physeq)$host_disease == "Healthy", "host_subtype"] <- "HC"
+# sample_data(physeq)[sample_data(physeq)$host_disease == "IBS", "host_subtype"] <- "IBS-unspecified"
+# sample_data(physeq)$sequencing_tech <- "Illumina single-end"
+colnames(sample_data(physeq))[2] <- "host_ID"
+sample_data(physeq)$Collection <- "1st"
+
+# sample_data(physeq)[sample_data(physeq)$host_disease == "None", "host_disease"] <- "Healthy"
+# sample_data(physeq)$host_subtype <- "..."
+# sample_data(physeq)$sample_type <- "stool"
+
+#___________________________
+# OUTPUT (TO-DO)
+physeq <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/CLUSTER/PhyloTree/output/physeq_zeber.rds")
+sample_data(physeq)
+saveRDS(physeq, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/CLUSTER/PhyloTree/output/physeq_zeber.rds")
+saveRDS(physeq, "~/Projects/IBS_Meta-analysis_16S/phyloseq-objects/physeq_zeber.rds")
+```
+
 
 ### 2. Save to disk
 
 ```{r save, eval=FALSE}
 # Save to disk
-saveRDS(out, "/Users/scarcy/Desktop/Praktikum/Data/Zeber-Lubecka_2016/Rproject_Dada2/out.rds")
-saveRDS(err, "/Users/scarcy/Desktop/Praktikum/Data/Zeber-Lubecka_2016/Rproject_Dada2/error_rates.rds")
-saveRDS(err_new, "/Users/scarcy/Desktop/Praktikum/Data/Zeber-Lubecka_2016/Rproject_Dada2/error_rates_modified.rds")
-saveRDS(seq_infered, "/Users/scarcy/Desktop/Praktikum/Data/Zeber-Lubecka_2016/Rproject_Dada2/seq_infered.rds")
+saveRDS(raw_stats, file.path(path, "01_Dada2-Zeber/raw_stats.rds"))
+saveRDS(out, file.path(path, "01_Dada2-Zeber/out.rds"))
+saveRDS(err, file.path(path, "01_Dada2-Zeber/error_rates.rds"))
+saveRDS(err_new, file.path(path, "01_Dada2-Zeber/error_rates_modified.rds"))
+saveRDS(seq_infered, file.path(path, "01_Dada2-Zeber/seq_infered.rds"))
 
-saveRDS(otu_table(physeq), "/Users/scarcy/Desktop/Praktikum/Data/Zeber-Lubecka_2016/Rproject_Dada2/ASVtable_final.rds") # ASV table
-saveRDS(tax_table(physeq), "/Users/scarcy/Desktop/Praktikum/Data/Zeber-Lubecka_2016/Rproject_Dada2/taxa_final.rds") # taxa table
-saveRDS(sample_data(physeq), "/Users/scarcy/Desktop/Praktikum/Data/Zeber-Lubecka_2016/Rproject_Dada2/metadata_final.rds") # metadata table
-write.csv(sample_data(physeq), "/Users/scarcy/Desktop/Praktikum/Data/Zeber-Lubecka_2016/Rproject_Dada2/ZeberMetadata.csv")
+saveRDS(otu_table(physeq), file.path(path, "01_Dada2-Zeber/ASVtable_final.rds")) # ASV table
+saveRDS(tax_table(physeq), file.path(path, "01_Dada2-Zeber/taxa_final.rds")) # taxa table
+saveRDS(sample_data(physeq), file.path(path, "01_Dada2-Zeber/metadata_final.rds")) # metadata table
 
-saveRDS(physeq, "/Users/scarcy/Desktop/Praktikum/Data/Zeber-Lubecka_2016/physeq_zeber.rds") # phyloseq object
-
-
-# Save nb of reads per sample before / after dada2 pipeline
-nb.reads <- readRDS("/Users/scarcy/Desktop/Praktikum/Data/nb_reads.rds")
-nb.reads[1:90, 'Zeber_before'] <- fastqq(FNs)@nReads
-nb.reads[1:90, 'Zeber_after'] <- rowSums(seqtable.nochim_test)
-median(na.omit(nb.reads$Zeber_before)) # sanity check
-median(na.omit(nb.reads$Zeber_after)) # sanity check
-saveRDS(nb.reads, "/Users/scarcy/Desktop/Praktikum/Data/nb_reads.rds")
+# Taxa & Phyloseq object
+saveRDS(taxa, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/CLUSTER/Taxonomy/output/taxa_zeber.rds")
+saveRDS(physeq, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/CLUSTER/PhyloTree/input/physeq_zeber.rds")
 ```
 
 
