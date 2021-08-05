@@ -194,19 +194,19 @@ ratiosFam.scaled <- scale(ratiosFam, center = TRUE, scale = FALSE)
 table(is.na(ratiosFam.scaled)) # sanity check
 ```
 
-
-
 Now we can run UMAP.
 
 ```{r umap-family}
 # Run UMAP
-umapFam <- umap(ratiosFam.scaled, n_neighbors=50) # umap on samples (rows) and families abundances (columns)
+umapFam <- uwot::umap(ratiosFam.scaled, # umap on samples (rows) and families abundances (columns)
+                      n_neighbors=50, n_components=2, n_threads=8)
 #30min
 # saveRDS(umapFam, "~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/02_UMAP/umapFam.rds")
 
 # Get the (x,y) coordinates from the UMAP
-dims.umapFam <- umapFam$layout
+dims.umapFam <- umapFam %>% as.data.frame()
 colnames(dims.umapFam) <- c("UMAP_1", "UMAP_2")
+rownames(dims.umapFam) <- rownames(ratiosFam.scaled)
 
 # Add covariates
 dims.umapFam <- merge(as.data.frame(dims.umapFam), covariates, by="row.names") # umap+covariates
@@ -239,6 +239,7 @@ ggplot(dims.umapFam, aes(x = UMAP_1, y = UMAP_2, color = sequencing_tech))+
   geom_point(size = 2, alpha = 0.7)+
   scale_color_manual(values = c('#6600FF', '#33CC33', '#006600', '#FF6633'))+
   theme_bw()
+# plotly::plot_ly(dims.umapFam_fecal_clr, x=~UMAP_1, y=~UMAP_2, z=~UMAP_3, color=~sequencing_tech, type="scatter3d", mode="markers")
 
 # PLOT variable region
 ggplot(dims.umapFam, aes(x = UMAP_1, y = UMAP_2, color = variable_region))+
@@ -247,6 +248,7 @@ ggplot(dims.umapFam, aes(x = UMAP_1, y = UMAP_2, color = variable_region))+
 ```
 
 
+#___________________
 ## SIGMOID DATA
 
 ```{r sigmoid}
@@ -414,4 +416,75 @@ ggplot(dims_umap.small, aes(x = UMAP_1, y = UMAP_2, color = sequencing_tech))+
   scale_color_manual(values = c('#6600FF', '#33CC33', '#006600', '#FF6633'))+
   theme_bw()
 ```
+
+
+
+#########################
+# UMAP ON CLR TRANSFORM #
+#########################
+
+## FAMILY AGGLOMERATION
+```{r}
+# CLR-TRANSFORM DATA
+physeq_fecal.clr <- microbiome::transform(physeq.fecal, "clr") # the function adds pseudocounts itself
+
+
+# GET THE FAMILY TABLE
+agg_fam_fecal.clr <- physeq_fecal.clr %>%
+  tax_glom(taxrank = "Family") %>%
+  psmelt()
+familyTable_fecal.clr <- acast(agg_fam_fecal.clr, Sample ~ Family, value.var = 'Abundance')
+# saveRDS(familyTable_fecal.clr, "~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/02_UMAP/familyTable_fecal_clr.rds")
+
+# RUN UMAP
+umapFam_fecal.clr <- uwot::umap(familyTable_fecal.clr, # umap on samples (rows) and families abundances (columns)
+                                n_neighbors=100, n_components=3, n_threads=8)
+# saveRDS(umapFam_fecal.clr, "~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/02_UMAP/umapFam_fecal_clr.rds")
+
+# Add covariates
+covariates_fecal <- data.frame(disease = sample_data(physeq_fecal.clr)[,'host_disease'],
+                               subtype = sample_data(physeq_fecal.clr)[,'host_subtype'],
+                               seq_tech = sample_data(physeq_fecal.clr)[,'sequencing_tech'],
+                               author = sample_data(physeq_fecal.clr)[,'author'],
+                               variable_region = sample_data(physeq_fecal.clr)[,'variable_region'],
+                               age = sample_data(physeq_fecal.clr)[,'host_age'],
+                               bmi = sample_data(physeq_fecal.clr)[,'host_bmi'])
+
+# Get the (x,y) coordinates from the UMAP
+dims.umapFam_fecal_clr <- umapFam_fecal.clr %>% as.data.frame()
+colnames(dims.umapFam_fecal_clr) <- c("UMAP_1", "UMAP_2", "UMAP_3")
+rownames(dims.umapFam_fecal_clr) <- rownames(familyTable_fecal.clr)
+dims.umapFam_fecal_clr <- merge(as.data.frame(dims.umapFam_fecal_clr), covariates_fecal, by="row.names") # umap+covariates
+
+
+# PLOT host_disease
+ggplot(dims.umapFam_fecal_clr, aes(x = UMAP_1, y = UMAP_2, color = host_disease))+
+  geom_point(size = 2, alpha = 0.7)+
+  scale_color_manual(values = c('blue', 'red', 'black'))+
+  labs(title = 'Agglomeration at Family level')+
+  theme_bw()
+
+# PLOT host_subtype
+ggplot(dims.umapFam_fecal_clr, aes(x = UMAP_1, y = UMAP_2, color = host_subtype))+
+  geom_point(size = 1, alpha = 0.7)+
+  scale_color_manual(values = c('#99CCFF', '#FF3300', '#990000', '#FF66CC','#FFFF66', '#CCCCCC'))+
+  labs(title = 'Agglomeration at Family level')+
+  theme_bw()
+
+# PLOT author
+ggplot(dims.umapFam_fecal_clr, aes(x = UMAP_1, y = UMAP_2, color = author))+
+  geom_point(size = 2, alpha = 0.7)+
+  theme_bw()
+
+# PLOT seqtech
+ggplot(dims.umapFam_fecal_clr, aes(x = UMAP_1, y = UMAP_2, color = sequencing_tech))+
+  geom_point(size = 2, alpha = 0.7)+
+  scale_color_manual(values = c('#6600FF', '#33CC33', '#006600', '#FF6633'))+
+  theme_bw()
+plotly::plot_ly(dims.umapFam_fecal_clr, x=~UMAP_1, y=~UMAP_2, z=~UMAP_3, color=~author, type="scatter3d", mode="markers")
+```
+
+
+
+
 
