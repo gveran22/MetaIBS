@@ -324,40 +324,11 @@ ggplot(dims.umapFam.sigmoid, aes(x = UMAP_1, y = UMAP_2, color = variable_region
 
 
 
+###########################
+# REPRODUCE MASTER THESIS #
+###########################
 
-XXXXXXXXXXXXXXXXXX
-# Test to delete
-```{r umap-famGlom, fig.width=8, fig.height = 4}
-umap.famGlom <- umap(t(familyTable), n_neighbors=500) #umap
-dims_umap.famGlom <- umap.famGlom$layout # extract coordinates
-colnames(dims_umap.famGlom) <- c("UMAP_1", "UMAP_2")
-
-dims_umap.famGlom <- merge(as.data.frame(dims_umap.famGlom), covariates, by="row.names") # add metadata
-# dims_umap.famGlom <- dims_umap.famGlom[samples_order,] # reorder samples
-
-ggplot(dims_umap.famGlom, aes(x = UMAP_1, y = UMAP_2, color = host_disease))+
-  geom_point(size = 1, alpha = 0.7)+
-  scale_color_manual(values = c('blue', 'red'))+
-  labs(title = 'Agglomeration at Family level')+
-  theme_bw()
-
-ggplot(dims_umap.famGlom, aes(x = UMAP_1, y = UMAP_2, color = author))+
-  geom_point(size = 4, alpha = 0.7)+
-  theme_bw()
-
-ggplot(dims_umap.famGlom, aes(x = UMAP_1, y = UMAP_2, color = sequencing_tech))+
-  geom_point(size = 1, alpha = 0.7)+
-  scale_color_manual(values = c('#6600FF', '#00CC66', '#FF6633'))+
-  theme_bw()
-```
-XXXXXXXXXXXXXXXXXX
-
-Obtain log ratios
-
-
-# Reproduce master thesis
-
-```{r}
+```{r master-thesis}
 # Get phyloseq object
 physeq.small <- merge_phyloseq(physeq.ringel,
                                physeq.labus,
@@ -483,6 +454,7 @@ ggplot(dims.umapFam_fecal_clr, aes(x = UMAP_1, y = UMAP_2, color = sequencing_te
   theme_bw()
 plotly::plot_ly(dims.umapFam_fecal_clr, x=~UMAP_1, y=~UMAP_2, z=~UMAP_3, color=~author, type="scatter3d", mode="markers")
 ```
+
 
 
 
