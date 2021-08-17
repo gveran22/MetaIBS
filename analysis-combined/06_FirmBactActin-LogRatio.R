@@ -97,8 +97,8 @@ ratioFB <- left_join(x=bacter, y=firmi,
 ## PLOT
 # Set order
 author.order <- c('Labus', 'LoPresti',
-                   'Pozuelo', 'Zhuang', 'Zhu', 'Hugerth', 'Fukui', 'Mars', 'Liu', 'AGP',
-                   'Nagel', 'Zeber-Lubecka')
+                  'Pozuelo', 'Zhuang', 'Zhu', 'Hugerth', 'Fukui', 'Mars', 'Liu', 'AGP',
+                  'Nagel', 'Zeber-Lubecka')
 author_disease.order <- c("Labus_Healthy", "Labus_IBS",
                           "LoPresti_Healthy", "LoPresti_IBS",
                           "Pozuelo_Healthy", "Pozuelo_IBS",
@@ -199,7 +199,22 @@ ggsave("~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/06_FirmBactActin
 # PLOT FIRMICUTES/ACTINOBACTERIOTA LOG RATIO #
 ##############################################
 
+##________________________________________
+## BUILD DATAFRAME
+# Extract abundance of Bacteroidota and Firmicutes
+actino <- phylumTable %>%
+  filter(Phylum == "Actinobacteriota") %>%
+  select(c('Sample', 'Abundance', 'Phylum', 'host_disease', 'host_subtype', 'sample_type', 'Collection',
+           'author', 'sequencing_tech', 'bowel_movement_quality')) %>%
+  rename(Actinobacteriota = Abundance) %>%
+  select(-Phylum)
 
+# Compute log ratio
+ratioFBA <- left_join(x=ratioFB, y=actino,
+                     by=c("Sample", "host_disease", "host_subtype", "sample_type", "Collection", "author", "sequencing_tech", "bowel_movement_quality")) %>%
+  mutate(LogRatioFA = log2(Firmicutes/Actinobacteriota),
+         LogRatioBA = log2(Bacteroidota/Actinobacteriota)) %>%
+  relocate(Actinobacteriota, .after=Bacteroidota)
 
 
 
