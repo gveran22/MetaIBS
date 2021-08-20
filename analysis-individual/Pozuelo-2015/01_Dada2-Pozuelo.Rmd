@@ -401,31 +401,8 @@ The preprocessing will be easier to do with ASV, taxonomic and metadata tables c
 ```{r phyloseq-preprocess, echo=TRUE, eval=FALSE}
 #_________________________
 # Import metadata
-metadata_table <- read.table("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Pozuelo-2015/PozueloSraRunTable.txt", header = TRUE, sep = ",")
-
-# Keep relevant covariates
-sampledf <- metadata_table[, c("Run", "Sample.Name", "Collection_Date")]
-rownames(sampledf) <- sampledf$Run
-
-sampledf$Sample.Name <- as.character(sampledf$Sample.Name)
-
-# Simplify data
-sampledf$Collection <- "1st" # add column to specify if sample is from first or 2nd collection
-sampledf[gsub('.*(?=.{2}$)', '', sampledf$Sample.Name, perl=T) == '.2', 'Collection'] <- "2nd"
-
-sampledf$host_disease <- "Healthy" # add column for host_disease
-sampledf[substr(sampledf$Sample.Name, 1, 2) == "MO", 'host_disease'] <- "IBS"
-sampledf[, 'Sample.Name'] <- gsub("MO", "IBS", sampledf[, 'Sample.Name']) # replace 'MO' by 'IBS' in the sample.names
-sampledf$Sample.Name <- gsub("\\.2$", "", sampledf[, 'Sample.Name']) # remove the '.2' at the end of some of the sample.names (indicating it is the 2nd collection)
-
-colnames(sampledf) <- c("Run", "host_ID", "collection_date", "Collection", "host_disease")
-
-sampledf[sampledf$host_disease == "Healthy", "host_subtype"] <- "HC"
-sampledf[sampledf$host_disease == "IBS", "host_subtype"] <- "IBS-unspecified"
-sampledf$sample_type <- "stool"
-sampledf$author <- "Pozuelo"
-sampledf$sequencing_tech <- "Illumina single-end"
-sampledf$variable_region <- "V4"
+metadata_table <- read.csv("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Pozuelo-2015/00_Metadata-Pozuelo/Pozuelo-Metadata.csv", header = TRUE, sep = ",") %>% select(-X)
+rownames(metadata_table) <- metadata_table$Run
 
 # Remove .fastq extension in seqtable.nochim
 # rownames(seqtable.nochim) <- gsub(".fastq", "", rownames(seqtable.nochim))
@@ -433,15 +410,19 @@ sampledf$variable_region <- "V4"
 #_________________________
 # Create phyloseq object
 physeq <- phyloseq(otu_table(seqtable.nochim, taxa_are_rows=FALSE), # by default, in otu_table the sequence variants are in rows
-                   sample_data(sampledf), 
+                   sample_data(metadata_table), 
                    tax_table(taxa))
 
+# Remove samples that are not IBS or healthy
+physeq <- subset_samples(physeq, host_subtype != "TO-DISCARD") # n=273
+physeq <- prune_taxa(taxa_sums(physeq)>0, physeq)
 # Remove taxa that are eukaryota, or have unassigned Phyla
 physeq <- subset_taxa(physeq, Kingdom != "Eukaryota")
 physeq <- subset_taxa(physeq, !is.na(Phylum))
 # Remove samples with less than 500 reads
 physeq <- prune_samples(sample_sums(physeq)>=500, physeq)
 ```
+
 
 
 ### 2. Save to disk
