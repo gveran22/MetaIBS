@@ -75,22 +75,49 @@ phylumTable <- physeq %>%
 bacter <- phylumTable %>%
   filter(Phylum == "Bacteroidota") %>%
   select(c('Sample', 'Abundance', 'Phylum', 'host_disease', 'host_subtype', 'sample_type', 'Collection',
-           'author', 'sequencing_tech', 'bowel_movement_quality')) %>%
+           'author', 'sequencing_tech', 'bowel_movement_quality','bowel_movement_frequency', 'Bristol')) %>%
   rename(Bacteroidota = Abundance) %>%
   select(-Phylum)
 firmi <- phylumTable %>%
   filter(Phylum == "Firmicutes") %>%
   select(c('Sample', 'Abundance', 'Phylum', 'host_disease', 'host_subtype', 'sample_type', 'Collection',
-           'author', 'sequencing_tech', 'bowel_movement_quality')) %>%
+           'author', 'sequencing_tech', 'bowel_movement_quality','bowel_movement_frequency', 'Bristol')) %>%
   rename(Firmicutes = Abundance) %>%
   select(-Phylum)
 
-# Compute log ratio
+# Check if there are any count 0 (would prevent from calculating ratio)
+table(bacter$Bacteroidota == 0)
+table(firmi$Firmicutes == 0)
+min(bacter[bacter$Bacteroidota > 0, "Bacteroidota"]) # 3
+min(firmi[bacter$Firmicutes > 0, "Firmicutes"]) # 40
+
+# Compute log ratio (add 0.5 pseudocounts for the few 0 counts in Firmicutes and Bacteroidota)
 ratioFB <- left_join(x=bacter, y=firmi,
-                  by=c("Sample", "host_disease", "host_subtype", "sample_type", "Collection", "author", "sequencing_tech", "bowel_movement_quality")) %>%
+                  by=c("Sample", "host_disease", "host_subtype", "sample_type", "Collection", "author", "sequencing_tech",
+                       "bowel_movement_quality", "bowel_movement_frequency","Bristol")) %>%
+  # mutate(Firmicutes=replace(Firmicutes, Firmicutes==0, 0.5),
+  #        Bacteroidota=replace(Bacteroidota, Bacteroidota==0, 0.5)) %>%
   mutate(author_disease=paste0(author, sep="_", host_disease),
          LogRatioFB = log2(Firmicutes/Bacteroidota)) %>%
   relocate(Bacteroidota, .after=Firmicutes)
+
+# Add IBS subtype to AGP
+# table(ratioFB$host_subtype)
+ratioFB <- ratioFB %>%
+  mutate(host_subtype=replace(host_subtype,
+                              author=="AGP" & host_disease=="IBS" & bowel_movement_quality=="Constipated",
+                              "IBS-C")) %>%
+  mutate(host_subtype=replace(host_subtype,
+                              author=="AGP" & host_disease=="IBS" & bowel_movement_quality=="Diarrhea",
+                              "IBS-D")) %>%
+  mutate(host_subtype=replace(host_subtype,
+                              author=="AGP" & host_disease=="Healthy" & bowel_movement_quality!="Normal",
+                              "HC-unknown"))
+# sanity check
+# ratioFB %>%
+#   filter(author=="AGP") %>%
+#   group_by(host_subtype, bowel_movement_quality) %>%
+#   count()
 
 
 ##________________________________________
