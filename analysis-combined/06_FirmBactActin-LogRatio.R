@@ -138,7 +138,7 @@ author_disease.order <- c("Labus_Healthy", "Labus_IBS",
                           "AGP_Healthy", "AGP_IBS",
                           "Nagel_Healthy", "Nagel_IBS",
                           "Zeber-Lubecka_Healthy", "Zeber-Lubecka_IBS")
-ratioFB$author_disease <- factor(ratioFB$author_disease, levels=author_disease.order)
+ratioFBA$author_disease <- factor(ratioFBA$author_disease, levels=author_disease.order)
 
 # Plot Firm/Bact ratio PER DATASET, HEALTHY/IBS, with FACET_WRAP
 ggplot(ratioFB %>% filter(sample_type == "stool", Collection=="1st"),
@@ -157,9 +157,9 @@ ggplot(ratioFB %>% filter(sample_type == "stool", Collection=="1st"),
 ggsave("~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/06_FirmBactActin-LogRatio/firm_bact_01.jpg", width=8, height=6)
 
 # Plot Firm/Bact ratio PER DATASET, HEALTHY/IBS, with BOXPLOTS
-ggplot(ratioFB %>% filter(sample_type == "stool", Collection=="1st"),
-       aes(x = author_disease, y = LogRatioFB,
-       color=factor(author, levels = authors.order)))+
+ggplot(ratioFBA %>% filter(Collection=="1st"),
+       aes(x = author_disease, y = LogRatioFA,
+       color=factor(author, levels = author.order)))+
   # geom_violin()+
   geom_boxplot(outlier.shape = NA, width = 0.4, lwd=1)+
   geom_jitter(width = 0.1, size = 0.3)+
@@ -167,7 +167,7 @@ ggplot(ratioFB %>% filter(sample_type == "stool", Collection=="1st"),
   scale_x_discrete(breaks=author_disease.order, labels= rep(c("Healthy", "IBS"), times = 12))+
   theme(axis.text.x = element_text(angle = 45, hjust=1),
         axis.line = element_line(arrow = arrow(length = unit(0.1, "inches"))))+
-  labs(x = '', y = "Log2(Firmicutes/Bacteroidota)", color="author")
+  labs(x = '', y = "Log2(Firmicutes/Actino)", color="author", title="All samples (sigmoid & stool")
 ggsave("~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/06_FirmBactActin-LogRatio/firm_bact_02.jpg", width=12, height=5)
 
 # Plot Firm/Bact ratio PER SEQUENCING TECH, HEALTHY/IBS
@@ -186,8 +186,8 @@ ggplot(ratioFB %>% filter(sample_type == "stool", Collection=="1st"),
 ggsave("~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/06_FirmBactActin-LogRatio/firm_bact_03.jpg", width=12, height=5)
 
 # Plot Firm/Bact ratio pooled together (HEALTHY/IBS)
-ggplot(ratioFB %>% filter(sample_type == "stool", Collection=="1st"),
-       aes(x = host_disease, y = LogRatioFB, fill=host_disease))+
+ggplot(ratioFBA %>% filter(sample_type == "stool", Collection=="1st"),
+       aes(x = host_disease, y = LogRatioBA, fill=host_disease))+
   geom_violin(alpha = 0.5)+
   geom_boxplot(lwd = 1, width = 0.2, fill = "white")+
   # geom_jitter(width = 0.1, size = 0.3)+
@@ -201,22 +201,64 @@ ggplot(ratioFB %>% filter(sample_type == "stool", Collection=="1st"),
 ggsave("~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/06_FirmBactActin-LogRatio/firm_bact_04.jpg", width=5, height=4)
 
 # Plot Firm/Bact ratio pooled together (IBS SUBTYPE)
-ggplot(ratioFB %>% filter(Collection=="1st", host_subtype != "IBS-unspecified",
-                          sample_type == "stool",
-                          author %in% c("Labus", "LoPresti", "Zhuang", "Zeber-Lubecka", "Nagel", "Mars")),
+ggplot(ratioFB %>% filter(#Collection=="1st",
+                          host_subtype != "IBS-unspecified", host_subtype != "HC-unknown",
+                          #sample_type == "stool",
+                          author %in% c("Labus", "LoPresti", "Zhuang", "Zeber-Lubecka", "Nagel", "Mars", "Liu", "AGP")),
        aes(x = host_subtype, y = LogRatioFB))+
   # geom_violin(alpha = 0.5)+
+  facet_wrap(~author, scales="fixed")+
+  ylim(c(-3,7))+
   geom_boxplot(lwd = 1, width=0.3, outlier.shape=NA, fill = "white")+
-  geom_jitter(aes(color = factor(author, levels = authors_order)), width = 0.05, size=0.6)+
-  scale_color_discrete(name = "author")+
-  # scale_fill_manual(values=c("blue", "red"))+
-  labs(title="Stool samples only",
-       x = '', y = "Log2(Firmicutes/Bacteroidota)")+
+  geom_jitter(aes(color = factor(author, levels = author.order)), width = 0.05, size=0.6)+
+  labs(title="",
+       x = '', y = "Log2(Firmicutes/Bacteroidota)",
+       color="author")+
   theme_classic()+
   theme(axis.text = element_text(size=10, color="black"),
-        axis.title = element_text(size=10),
-        axis.line = element_line(arrow = arrow(length = unit(0.1, "inches"))))
+        axis.title = element_text(size=10)
+        #axis.line = element_line(arrow = arrow(length = unit(0.1, "inches")))
+        )
 ggsave("~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/06_FirmBactActin-LogRatio/firm_bact_06.jpg", width=5, height=4)
+
+#XXXXXXXXX TO REMOVE XXXXXXXXX
+# Liu Bristol stool scale
+ggplot(ratioFB %>% filter(author == "Liu") %>% mutate(LogRatioBF = log2(Bacteroidota/Firmicutes)),
+       aes(x = Bristol, y = LogRatioBF))+
+  # geom_violin(alpha = 0.5)+
+  geom_boxplot(aes(group=Bristol), lwd = 1, width=0.3, outlier.shape=NA, fill = "white")+
+  geom_jitter(aes(color=host_disease), alpha=0.5, width = 0.05, size=3)+
+  scale_color_manual(name = "disease", values=c("blue", "red"))+
+  # scale_fill_manual(values=c("blue", "red"))+
+  labs(title="Liu dataset (2020)",
+       x = 'Bristol stool scale', y = "Log2(Bacteroidota/Firmicutes)")+
+  theme_classic()+
+  theme(axis.text = element_text(size=20, color="black"),
+        axis.title = element_text(size=20),
+        axis.line = element_line(arrow = arrow(length = unit(0.1, "inches"))))
+
+# AGP
+ggplot(ratioFB %>% filter(author == "AGP" & bowel_movement_quality != "Unknown") %>%
+         filter((host_disease=="Healthy" & bowel_movement_quality=="Normal") | 
+                  (host_disease=="IBS" & bowel_movement_quality=="Constipated") |
+                  (host_disease=="IBS" & bowel_movement_quality=="Diarrhea")) %>%
+         mutate(LogRatioBF = log2(Bacteroidota/Firmicutes),
+                #bowel_movement_frequency=factor(bowel_movement_frequency, levels=c("Less than one", "One", "Two", "Three", "Four", "Five or more"))),
+                bowel_movement_quality=factor(bowel_movement_quality, levels=c("Normal", "Constipated", "Diarrhea"))
+                ),
+       aes(x = bowel_movement_quality, y = LogRatioFB))+
+  #geom_violin(alpha = 0.5)+
+  geom_boxplot(aes(group=bowel_movement_quality), lwd = 1, width=0.3, outlier.shape=NA, fill = "white")+
+  geom_jitter(aes(color=host_disease), alpha=0.5, width = 0.05, size=2)+
+  scale_color_manual(name = "disease", values=c("blue", "red"))+
+  # scale_fill_manual(values=c("blue", "red"))+
+  labs(title="AGP dataset (2021)",
+       x = 'bowel_movement_quality', y = "Log2(Firmicutes/Bacteroidota)")+
+  theme_classic()+
+  theme(axis.text = element_text(size=20, color="black"),
+        axis.title = element_text(size=20),
+        axis.line = element_line(arrow = arrow(length = unit(0.1, "inches"))))
+#XXXXXXXXX TO REMOVE XXXXXXXXX
 
 ##________________________________________
 ## STATISTICS
@@ -232,13 +274,13 @@ ggsave("~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/06_FirmBactActin
 actino <- phylumTable %>%
   filter(Phylum == "Actinobacteriota") %>%
   select(c('Sample', 'Abundance', 'Phylum', 'host_disease', 'host_subtype', 'sample_type', 'Collection',
-           'author', 'sequencing_tech', 'bowel_movement_quality')) %>%
+           'author', 'sequencing_tech', 'bowel_movement_quality', 'Bristol')) %>%
   rename(Actinobacteriota = Abundance) %>%
   select(-Phylum)
 
 # Compute log ratio
 ratioFBA <- left_join(x=ratioFB, y=actino,
-                     by=c("Sample", "host_disease", "host_subtype", "sample_type", "Collection", "author", "sequencing_tech", "bowel_movement_quality")) %>%
+                     by=c("Sample", "host_disease", "host_subtype", "sample_type", "Collection", "author", "sequencing_tech", "bowel_movement_quality", "Bristol")) %>%
   mutate(LogRatioFA = log2(Firmicutes/Actinobacteriota),
          LogRatioBA = log2(Bacteroidota/Actinobacteriota)) %>%
   relocate(Actinobacteriota, .after=Bacteroidota)
