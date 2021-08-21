@@ -4,8 +4,6 @@ This directory contains tables of aggregated taxa for each dataset. The code use
 
 For each dataset, taxa were aggregated at all taxonomic levels (from Genus to Phylum). The counts correspond to the **absolute count** (no normalization of total count per sample!!). Tables contain the available covariates, too.
 
-For Johannes: try the **Zhu-2019** dataset first!
-
 
 # Description of datasets
 
@@ -19,7 +17,7 @@ For Johannes: try the **Zhu-2019** dataset first!
 |LoPresti (2019) |     57    |age, gender, IBS subtype           |     8    |   12    |   29    |    40    |    90   |
 |   Mars (2020)  |     69    |age, gender, BMI, IBS subtype      |    18    |   29    |   66    |   108    |   269   |
 |  Nagel (2016)  |     30    |age, gender,IBS subtype (all IBS-D)|    12    |   18    |   44    |    64    |   163   |
-| Pozuelo (2015) |    290    |                  -                |    15    |   25    |   64    |   104    |   311   |
+| Pozuelo (2015) |    273    |IBS subtype, 2 collection times    |    15    |   25    |   64    |   103    |   308   |
 |  Zeber (2016)  |     90    |gender, IBS subtype                |    11    |   19    |   49    |    80    |   236   |
 |   Zhu (2019)   |     29    |age, gender                        |    11    |   17    |   39    |    57    |   142   |
 | Zhuang (2018)  |     30    |IBS subtype (all IBS-D)            |     9    |   14    |   32    |    44    |   116   |
