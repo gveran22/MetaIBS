@@ -5,6 +5,8 @@
 ##########################
 
 
+
+
 ##########
 # IMPORT #
 ##########
@@ -35,6 +37,7 @@ physeq.zeber <- readRDS(file.path(path.phy, "physeq_zeber.rds"))
 
 
 
+
 ###################
 # PREPROCESS DATA #
 ###################
@@ -56,7 +59,7 @@ physeq <- merge_phyloseq(physeq.ringel,
                          physeq.zeber)
 
 # Separate fecal & sigmoid samples
-physeq.fecal <- subset_samples(physeq, sample_type == 'stool') # 2,245 samples
+physeq.fecal <- subset_samples(physeq, sample_type == 'stool') # 2,228 samples
 physeq.sigmoid <- subset_samples(physeq, sample_type == 'sigmoid') # 431 samples
 cat("Nb of fecal samples:", nsamples(physeq.fecal))
 cat("\nNb of sigmoid samples:", nsamples(physeq.sigmoid))
@@ -70,12 +73,16 @@ otu_table(physeq_sigmoid.pseudocts)[otu_table(physeq_sigmoid.pseudocts) == 0] <-
 
 
 
-###############
-# AGGLOMERATE #
-###############
 
+#############
+# FUNCTIONS #
+#############
+
+#________________________________________________________
 # Function to obtain table with log-ratios between taxa
-LogRatios <- function(abundanceTable){
+LogRatios <- function(abundanceTable, tax_rank){
+  
+  cat("\n++ GET LOG-RATIOS BETWEEN", tax_rank, "++\n")
   
   # Get combinations between all taxa, 1st column numerator, 2nd column denominator, 3rd column taxa1/taxa2
   comb <- as.data.frame(combinations(nrow(abundanceTable), 2, rownames(abundanceTable), repeats.allowed = FALSE))
@@ -101,34 +108,159 @@ LogRatios <- function(abundanceTable){
   
   cat("We have", dim(ratios)[2], "samples and", dim(ratios)[1], "predictors (log-ratios) \n")
   
+  # Save
+  filepath <- paste0("~/IBS/UMAP/data/ratios", paste0(tax_rank, ".rds", sep=""), sep="")
+  saveRDS(object=t(ratios), file=filepath)
+  
   # Return table with samples as rows and logratios as columns
   return(t(ratios))
 }
 
 
-# Get the familyTable
-fam.agg <- physeq.pseudocts %>%
-  tax_glom(taxrank = "Family") %>%
-  psmelt()
-familyTable <- acast(fam.agg, Family ~ Sample, value.var = 'Abundance')
-# saveRDS(fam.agg, "~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/02_UMAP/family_agg.rds")
+#________________________________________________________
+# Function to agglomerate to given taxonomic level
+aggTable <- function(physeq, tax_rank){
+  
+  cat("\n++ AGGLOMERATE TO", tax_rank, "LEVEL++\n")
+  long.agg <- physeq %>%
+    tax_glom(taxrank = tax_rank) %>%
+    psmelt()
+  
+  # Get a matrix Sample (rows) x TaxRank (columns)
+  if(tax_rank=="Phylum"){agglomeratedTable <- acast(long.agg, Phylum ~ Sample, value.var = 'Abundance')}
+  else if(tax_rank=="Class"){agglomeratedTable <- acast(long.agg, Class ~ Sample, value.var = 'Abundance')}
+  else if(tax_rank=="Order"){agglomeratedTable <- acast(long.agg, Order ~ Sample, value.var = 'Abundance')}
+  else if(tax_rank=="Family"){agglomeratedTable <- acast(long.agg, Family ~ Sample, value.var = 'Abundance')}
+  else if(tax_rank=="Genus"){agglomeratedTable <- acast(long.agg, Genus ~ Sample, value.var = 'Abundance')}
+  cat("-> Dimensions matrix:", dim(agglomeratedTable), "\n")
+  cat("-> Any 0 counts?", table(agglomeratedTable == 0), "\n")
+  
+  # Save
+  filepath <- paste0("~/IBS/UMAP/data/", paste0(lowercase(tax_rank), "_agg.rds", sep=""), sep="")
+  saveRDS(object=long.agg, file=filepath)
+  
+  return(agglomeratedTable)
+}
 
-# sanity checks
-# dim(familyTable)
-# table(familyTable == 0)
 
-# Get log-ratios for family table
-ratiosFam <- LogRatios(familyTable)
-# saveRDS(ratiosFam, "~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/02_UMAP/ratiosFam.rds")
+#________________________________________________________
+# Function to get the table to feed into the UMAP
+getTable <- function(physeq, tax_rank){
+  
+  # Get the agglomerated taxa
+  agglomeratedTable <- aggTable(physeq, tax_rank)
+  
+  # Get log-ratios between taxa
+  ratiosTable <- LogRatios(agglomeratedTable, tax_rank)
+  
+  # Mean-center
+  # cat("\n++MEAN-CENTERING...++|n")
+  # ratios.scaled <- scale(ratiosTable, center = TRUE, scale = FALSE)
+  
+  # return(ratios.scaled)
+  return(ratiosTable)
+}
 
-# Mean centering
-ratiosFam.scaled <- scale(ratiosFam, center = TRUE, scale = FALSE)
-table(is.na(ratiosFam.scaled)) # sanity check
+
+#________________________________________________________
+# Function to run the UMAP
+runUMAP <- function(physeq, tax_rank){
+  
+  # Get the data table
+  ratios <- getTable(physeq, tax_rank)
+  
+  cat("\n++RUN UMAP...++\n")
+  # Run UMAP
+  umap <- uwot::umap(ratios, # umap on samples (rows) and taxa ratios (columns)
+                     n_neighbors=50, n_components=2, n_threads=16)
+  
+  # Save
+  filepath <- paste0("~/IBS/UMAP/data/umap", paste0(tax_rank, ".rds", sep=""), sep="")
+  saveRDS(object=umap, file=filepath)
+  
+  # Get the (x,y) coordinates from the UMAP
+  dims.umap <- umap %>% as.data.frame()
+  colnames(dims.umap) <- c("UMAP_1", "UMAP_2")
+  rownames(dims.umap) <- rownames(ratios)
+  
+  # Add covariates
+  covariates <- data.frame(disease = sample_data(physeq)[,'host_disease'],
+                           subtype = sample_data(physeq)[,'host_subtype'],
+                           seq_tech = sample_data(physeq)[,'sequencing_tech'],
+                           author = sample_data(physeq)[,'author'],
+                           variable_region = sample_data(physeq)[,'variable_region'],
+                           age = sample_data(physeq)[,'host_age'],
+                           bmi = sample_data(physeq)[,'host_bmi'])
+  dims.umap <- merge(as.data.frame(dims.umap), covariates, by="row.names") # umap+covariates
+  
+  # Save
+  filepath <- paste0("~/IBS/UMAP/data/dims_umap", paste0(tax_rank, ".rds", sep=""), sep="")
+  saveRDS(object=dims.umap, file=filepath)
+  
+  return(dims.umap)
+}
+
+
+#________________________________________________________
+# Function to plot the UMAP
+plotUMAP <- function(physeq, tax_rank){
+  
+  # Get the data table
+  dims.umap <- runUMAP(physeq, tax_rank)
+  
+  cat("\n++PLOT UMAP...++\n")
+  
+  # PLOT host_disease
+  ggplot(dims.umap, aes(x = UMAP_1, y = UMAP_2, color = host_disease))+
+    geom_point(size = 2, alpha = 0.7)+
+    scale_color_manual(values = c('blue', 'red', 'black'))+
+    labs(title = paste0('Agglomeration at taxonomic level:', tax_rank))+
+    theme_bw()
+  ggsave(paste0("~/IBS/UMAP/plots/umap", paste0(tax_rank, "_disease.jpg", sep=""), sep=""), width=6, height=4, type="cairo")
+  
+  # PLOT host_subtype
+  ggplot(dims.umap, aes(x = UMAP_1, y = UMAP_2, color = host_subtype))+
+    geom_point(size = 1, alpha = 0.7)+
+    scale_color_manual(values = c('#99CCFF', '#FF3300', '#990000', '#FF66CC','#FFFF66', '#CCCCCC'))+
+    labs(title = paste0('Agglomeration at taxonomic level:', tax_rank))+
+    theme_bw()
+  ggsave(paste0("~/IBS/UMAP/plots/umap", paste0(tax_rank, "_subtype.jpg", sep=""), sep=""), width=6, height=4, type="cairo")
+  
+  # PLOT author
+  ggplot(dims.umap, aes(x = UMAP_1, y = UMAP_2, color = author))+
+    geom_point(size = 2, alpha = 0.7)+
+    labs(title = paste0('Agglomeration at taxonomic level:', tax_rank))+
+    theme_bw()
+  ggsave(paste0("~/IBS/UMAP/plots/umap", paste0(tax_rank, "_author.jpg", sep=""), sep=""), width=6, height=4, type="cairo")
+  
+  # PLOT seqtech
+  ggplot(dims.umap, aes(x = UMAP_1, y = UMAP_2, color = sequencing_tech))+
+    geom_point(size = 2, alpha = 0.7)+
+    scale_color_manual(values = c('#6600FF', '#33CC33', '#006600', '#FF6633'))+
+    theme_bw()
+  ggsave(paste0("~/IBS/UMAP/plots/umap", paste0(tax_rank, "_seqtech.jpg", sep=""), sep=""), width=6, height=4, type="cairo")
+  # plotly::plot_ly(dims.umapFam_fecal_clr, x=~UMAP_1, y=~UMAP_2, z=~UMAP_3, color=~sequencing_tech, type="scatter3d", mode="markers")
+  
+  # PLOT variable region
+  ggplot(dims.umap, aes(x = UMAP_1, y = UMAP_2, color = variable_region))+
+    geom_point(size = 2, alpha = 0.7)+
+    theme_bw()
+  ggsave(paste0("~/IBS/UMAP/plots/umap", paste0(tax_rank, "_vregion.jpg", sep=""), sep=""), width=6, height=4, type="cairo")
+}
 
 
 
 
+############
+# RUN UMAP #
+############
 
+# taxranks <- c("Phylum", "Class", "Order", "Family", "Genus")
+taxranks <- c("Family")
+
+for(taxa in taxranks){
+  plotUMAP(physeq=physeq_fecal.pseudocts, tax_rank = taxa)
+}
 
 
 
