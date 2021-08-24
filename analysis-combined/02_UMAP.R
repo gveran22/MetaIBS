@@ -44,7 +44,7 @@ physeq.zeber <- readRDS(file.path(path.phy, "physeq_zeber.rds"))
 
 # Merge phyloseq objects
 cat("\n++ MERGE PHYLOSEQ OBJECTS ++\n")
-physeq <- merge_phyloseq(physeq.ringel,
+physeq.all <- merge_phyloseq(physeq.ringel,
                          physeq.labus,
                          physeq.lopresti,
                          physeq.pozuelo,
@@ -59,17 +59,17 @@ physeq <- merge_phyloseq(physeq.ringel,
                          physeq.zeber)
 
 # Separate fecal & sigmoid samples
-physeq.fecal <- subset_samples(physeq, sample_type == 'stool') # 2,228 samples
-physeq.sigmoid <- subset_samples(physeq, sample_type == 'sigmoid') # 431 samples
+physeq.fecal <- subset_samples(physeq.all, sample_type == 'stool') # 2,228 samples
+# physeq.sigmoid <- subset_samples(physeq, sample_type == 'sigmoid') # 431 samples
 cat("Nb of fecal samples:", nsamples(physeq.fecal))
-cat("\nNb of sigmoid samples:", nsamples(physeq.sigmoid))
+# cat("\nNb of sigmoid samples:", nsamples(physeq.sigmoid))
 
 # Have pseudocounts
 physeq_fecal.pseudocts <- physeq.fecal
 otu_table(physeq_fecal.pseudocts)[otu_table(physeq_fecal.pseudocts) == 0] <- 0.5
 
-physeq_sigmoid.pseudocts <- physeq.sigmoid
-otu_table(physeq_sigmoid.pseudocts)[otu_table(physeq_sigmoid.pseudocts) == 0] <- 0.5
+# physeq_sigmoid.pseudocts <- physeq.sigmoid
+# otu_table(physeq_sigmoid.pseudocts)[otu_table(physeq_sigmoid.pseudocts) == 0] <- 0.5
 
 
 
@@ -126,7 +126,7 @@ aggTable <- function(physeq, tax_rank){
     tax_glom(taxrank = tax_rank) %>%
     psmelt()
   
-  # Get a matrix Sample (rows) x TaxRank (columns)
+  # Get a matrix TaxRank (rows) x Samples (columns)
   if(tax_rank=="Phylum"){agglomeratedTable <- acast(long.agg, Phylum ~ Sample, value.var = 'Abundance')}
   else if(tax_rank=="Class"){agglomeratedTable <- acast(long.agg, Class ~ Sample, value.var = 'Abundance')}
   else if(tax_rank=="Order"){agglomeratedTable <- acast(long.agg, Order ~ Sample, value.var = 'Abundance')}
@@ -171,8 +171,9 @@ runUMAP <- function(physeq, tax_rank){
   
   cat("\n++RUN UMAP...++\n")
   # Run UMAP
+  set.seed(123)
   umap <- uwot::umap(ratios, # umap on samples (rows) and taxa ratios (columns)
-                     n_neighbors=50, n_components=2, n_threads=16)
+                     n_neighbors=50, n_components=3, n_threads=16)
   
   # Save
   filepath <- paste0("~/IBS/UMAP/data/umap", paste0(tax_rank, ".rds", sep=""), sep="")
@@ -180,7 +181,7 @@ runUMAP <- function(physeq, tax_rank){
   
   # Get the (x,y) coordinates from the UMAP
   dims.umap <- umap %>% as.data.frame()
-  colnames(dims.umap) <- c("UMAP_1", "UMAP_2")
+  colnames(dims.umap) <- c("UMAP_1", "UMAP_2", "UMAP_3")
   rownames(dims.umap) <- rownames(ratios)
   
   # Add covariates
