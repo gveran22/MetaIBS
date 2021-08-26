@@ -434,6 +434,7 @@ familyTable_fecal.clr <- acast(agg_fam_fecal.clr, Sample ~ Family, value.var = '
 # saveRDS(familyTable_fecal.clr, "~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/02_UMAP/familyTable_fecal_clr.rds")
 
 # RUN UMAP
+set.seed(123)
 umapFam_fecal.clr <- uwot::umap(familyTable_fecal.clr, # umap on samples (rows) and families abundances (columns)
                                 n_neighbors=50, n_components=3, n_threads=8)
 # saveRDS(umapFam_fecal.clr, "~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/02_UMAP/umapFam_fecal_clr.rds")
@@ -543,11 +544,30 @@ plotly::plot_ly(dims.umapFam.subtype, x=~UMAP_1, y=~UMAP_2, z=~UMAP_3, color=~ho
 # UMAP ON GENUS LEVEL #
 #######################
 
-```{r}
-path <- "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/CLUSTER/UMAP/data"
-dims.umapGenus <- readRDS(file.path(path, "dims_umapGenus.rds"))
 
-# Plot
+```{r}
+# IMPORT DATA
+path <- "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/CLUSTER/UMAP/data_clr"
+df <- readRDS(file.path(path, "genus_agg.rds"))
+df1 <- acast(df, Genus~Sample, fun.aggregate=sum, value.var = 'Abundance') # samples x genera (clr)
+dims.umapGenus <- readRDS(file.path(path, "dims_umapGenus.rds")) # coordinates umap + covariates
+
+
+author.order <- c('Labus', 'LoPresti', 'Ringel', # 454 pyrosequencing
+                  'AGP', 'Liu', 'Pozuelo', # Illumina single end
+                  'Fukui', 'Hugerth', 'Zhu', 'Zhuang', # Illumina paired end
+                  'Nagel', 'Zeber-Lubecka') # Ion Torrent
+dims.umapGenus$author <- factor(dims.umapGenus$author, levels=author.order)
+
+# Plot ggplot
+ggplot(dims.umapGenus, aes(x = UMAP_1, y = UMAP_2, color = author))+
+  geom_point(size = 1, alpha = 0.8)+
+  scale_color_manual(values=brewer.paired(n=13), name="")+
+  theme(panel.grid = element_blank(),
+        panel.background=element_blank())
+# ggsave("~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/02_UMAP/umapGenus_author.jpg", width=6, height=3.5)
+
+# Plot plotly
 plotly::plot_ly() %>%
   add_trace(data=dims.umapGenus,
             x=~UMAP_1, y=~UMAP_2, #z=~UMAP_3,
@@ -560,7 +580,7 @@ plotly::plot_ly() %>%
 
 ```
 
-```{r}
+```{r sanity-checks-genus-numbers}
 # Sanity checks
 # With 0 counts
 genus.agg <- physeq.fecal %>%
