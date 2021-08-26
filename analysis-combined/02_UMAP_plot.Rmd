@@ -1,0 +1,338 @@
+---
+title: "R Notebook"
+output:
+  html_document:
+    df_print: paged
+---
+
+# LIBRARIES
+
+```{r library}
+library(phyloseq)
+library(ggplot2)
+library(plotly)
+library(pals)
+library(RColorBrewer)
+library(umap)
+library(tidyverse)
+library(gtools)
+```
+
+
+
+# DATA
+
+```{r data}
+path.phy <- "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/CLUSTER/PhyloTree/input"
+
+# Import phyloseq objects
+physeq.ringel <- readRDS(file.path(path.phy, "physeq_ringel.rds"))
+physeq.labus <- readRDS(file.path(path.phy, "physeq_labus.rds"))
+physeq.lopresti <- readRDS(file.path(path.phy, "physeq_lopresti.rds"))
+physeq.pozuelo <- readRDS(file.path(path.phy, "physeq_pozuelo.rds"))
+physeq.zhuang <- readRDS(file.path(path.phy, "physeq_zhuang.rds"))
+physeq.zhu <- readRDS(file.path(path.phy, "physeq_zhu.rds"))
+physeq.hugerth <- readRDS(file.path(path.phy, "physeq_hugerth.rds"))
+physeq.fukui <- readRDS(file.path(path.phy, "physeq_fukui.rds"))
+physeq.mars <- readRDS(file.path(path.phy, "physeq_mars.rds"))
+physeq.liu <- readRDS(file.path(path.phy, "physeq_liu.rds"))
+physeq.agp <- readRDS(file.path(path.phy, "physeq_agp.rds"))
+physeq.nagel <- readRDS(file.path(path.phy, "physeq_nagel.rds"))
+physeq.zeber <- readRDS(file.path(path.phy, "physeq_zeber.rds"))
+
+# Merge phyloseq objects
+physeq <- merge_phyloseq(physeq.ringel,
+                         physeq.labus,
+                         physeq.lopresti,
+                         physeq.pozuelo,
+                         physeq.zhuang,
+                         physeq.zhu,
+                         physeq.hugerth,
+                         physeq.fukui,
+                         physeq.mars,
+                         physeq.liu,
+                         physeq.agp,
+                         physeq.nagel,
+                         physeq.zeber)
+
+# Keep only fecal samples
+physeq.fecal <- subset_samples(physeq, sample_type == 'stool') # 2,220 samples
+```
+
+
+
+# GET LOG RATIOS
+
+```{r log-ratios}
+# Agglomerate to phylum level
+phylumTable <- physeq.fecal %>%
+  tax_glom(taxrank = "Phylum") %>%
+  psmelt()
+
+# Extract abundance of Bacteroidota, Firmicutes and Actinobacteriota
+relevant.covariates <- c('Sample', 'Abundance', 'Phylum', 'host_disease', 'host_subtype', 'sample_type', 'Collection',
+                         'author', 'sequencing_tech')
+
+bacter <- phylumTable %>%
+  filter(Phylum == "Bacteroidota") %>%
+  select(relevant.covariates) %>%
+  rename(Bacteroidota = Abundance) %>%
+  select(-Phylum)
+
+firmi <- phylumTable %>%
+  filter(Phylum == "Firmicutes") %>%
+  select(relevant.covariates) %>%
+  rename(Firmicutes = Abundance) %>%
+  select(-Phylum)
+
+actino <- phylumTable %>%
+  filter(Phylum == "Actinobacteriota") %>%
+  select(relevant.covariates) %>%
+  rename(Actinobacteriota = Abundance) %>%
+  select(-Phylum)
+
+
+# COMPUTE LOG RATIOS
+common.columns <- c("Sample", "host_disease", "host_subtype", "sample_type", "Collection",
+                    "author", "sequencing_tech")
+
+ratio.df <- left_join(x=bacter, y=firmi, by=common.columns) %>%
+  left_join(actino, by=common.columns) %>%
+  relocate(Bacteroidota, .before=Firmicutes) %>%
+  # Add 0.5 pseudocounts for the few 0 values
+  mutate(Bacteroidota=replace(Bacteroidota, Bacteroidota==0, 0.5),
+         Firmicutes=replace(Firmicutes, Firmicutes==0, 0.5),
+         Actinobacteriota=replace(Actinobacteriota, Actinobacteriota==0, 0.5)) %>%
+  # Compute log ratios
+  mutate(LogRatio_FirmBact = log2(Firmicutes/Bacteroidota),
+         LogRatio_FirmAct = log2(Firmicutes/Actinobacteriota),
+         LogRatio_BactAct = log2(Bacteroidota/Actinobacteriota)) %>%
+  rename(samples=Sample)
+```
+
+
+
+
+# GET DIVERSITY
+
+```{r diversity}
+# Shannon diversity
+p <- plot_richness(physeq.fecal, x="host_disease", measures="Shannon") +
+  geom_boxplot(fill=NA, width=0.3) +
+  facet_wrap(~author, scales="fixed")
+shannon <- p$data %>%
+  select(samples, value) %>%
+  rename(shannon=value)
+```
+
+
+
+
+# IMPORT UMAP COORDINATES
+
+```{r umap}
+# UMAP computed on the cluster
+path <- "~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/02_UMAP/data_logratio/"
+dims.umapGenus <- readRDS(file.path(path, "dims_umapGenus.rds")) # coordinates umap + covariates
+
+author.order <- c('Labus', 'LoPresti', 'Ringel', # 454 pyrosequencing
+                  'AGP', 'Liu', 'Pozuelo', # Illumina single end
+                  'Fukui', 'Hugerth', 'Zhu', 'Zhuang', # Illumina paired end
+                  'Nagel', 'Zeber-Lubecka') # Ion Torrent
+dims.umapGenus$author <- factor(dims.umapGenus$author, levels=author.order)
+colnames(dims.umapGenus)[1] <- "samples"
+print(dim(dims.umapGenus)) # should be 2228
+
+
+# Merge with ratio.df
+umap.df <- merge(dims.umapGenus, ratio.df, by=c("samples", "host_disease", "host_subtype", "sequencing_tech", "author"))
+umap.df <- merge(umap.df, shannon, by="samples")
+print(dim(umap.df)) # should be 2220 because of the 8 samples of AGP removed
+```
+
+
+
+# PLOT
+
+## By disease
+
+```{r plot-disease}
+# 2D
+ggplot(umap.df, aes(x = UMAP_1, y = UMAP_2, color = host_disease))+
+  geom_point(size = 1, alpha = 0.6)+
+  scale_color_manual(values=c("blue", "red", "black"), name="")+
+  theme(panel.grid = element_blank(),
+        panel.background=element_blank())
+
+# 3D
+plotly::plot_ly() %>%
+  add_trace(data=umap.df,
+            x=~UMAP_1, y=~UMAP_2, z=~UMAP_3,
+            color=~host_disease,
+            colors=c("blue", "red", "black"),
+            type="scatter3d",
+            mode="markers",
+            marker=list(size=5))
+```
+
+
+## By IBS subtype
+
+```{r plot-subtype}
+# 2D
+ggplot(umap.df, aes(x = UMAP_1, y = UMAP_2, color = host_subtype))+
+  geom_point(size = 1, alpha = 0.6)+
+  scale_color_manual(values=c("#EFF3FF", "#D95F02", "#7570B3", "#E7298A", "#FEEDDE", "grey"))+
+  theme(panel.grid = element_blank(),
+        panel.background=element_blank())
+
+# 3D
+plotly::plot_ly() %>%
+  add_trace(data=umap.df,
+            x=~UMAP_1, y=~UMAP_2, z=~UMAP_3,
+            color=~host_subtype,
+            colors=c("#EFF3FF", "#D95F02", "#7570B3", "#E7298A", "#FEEDDE", "grey"),
+            type="scatter3d",
+            mode="markers",
+            marker=list(size=5))
+```
+
+
+## By sequencing technology
+
+```{r plot-seqtech}
+# 2D
+ggplot(umap.df, aes(x = UMAP_1, y = UMAP_2, color = sequencing_tech))+
+  geom_point(size = 1, alpha = 0.6)+
+  #scale_color_manual(values=brewer.paired(n=13), name="")+ # author
+  scale_color_manual(values=c('#6600FF', '#33CC33', '#006600', '#FF6633'))+
+  theme(panel.grid = element_blank(),
+        panel.background=element_blank())
+
+# 3D
+plotly::plot_ly() %>%
+  add_trace(data=umap.df,
+            x=~UMAP_1, y=~UMAP_2, z=~UMAP_3,
+            color=~sequencing_tech,
+            # colors=brewer.paired(n=13),
+            colors=c('#6600FF', '#33CC33', '#006600', '#FF6633'),
+            type="scatter3d",
+            mode="markers",
+            marker=list(size=5))
+```
+
+
+## By author (dataset)
+
+```{r plot-author}
+# 2D
+ggplot(umap.df, aes(x = UMAP_1, y = UMAP_2, color = author))+
+  geom_point(size = 1, alpha = 0.6)+
+  scale_color_manual(values=brewer.paired(n=13), name="")+
+  theme(panel.grid = element_blank(),
+        panel.background=element_blank())
+
+# 3D
+plotly::plot_ly() %>%
+  add_trace(data=umap.df,
+            x=~UMAP_1, y=~UMAP_2, z=~UMAP_3,
+            color=~author,
+            colors=brewer.paired(n=13),
+            type="scatter3d",
+            mode="markers",
+            marker=list(size=5))
+```
+
+
+## By shannon index
+
+```{r plot-shannon}
+# 2D
+ggplot(umap.df, aes(x = UMAP_1, y = UMAP_2, color = shannon))+
+  geom_point(size = 1)+
+  scale_color_gradient2(midpoint = mean(umap.df$shannon), low = "blue", mid = "white", high = "red")+
+  theme(panel.grid = element_blank(),
+        panel.background=element_blank())
+
+# 3D
+plotly::plot_ly() %>%
+  add_trace(data=umap.df,
+            x=~UMAP_1, y=~UMAP_2, z=~UMAP_3,
+            color=~shannon,
+            colors=rev(brewer.rdbu(50)),
+            type="scatter3d",
+            mode="markers",
+            marker=list(size=5))
+```
+
+
+
+## By Firmicutes/Bacteroidota ratio
+
+```{r plot-firmbact}
+# 2D
+ggplot(umap.df, aes(x = UMAP_1, y = UMAP_2, color = LogRatio_FirmBact))+
+  geom_point(size = 1)+
+  scale_color_gradient2(midpoint = mean(umap.df$LogRatio_FirmBact), low = "blue", mid = "white", high = "red")+
+  theme(panel.grid = element_blank(),
+        panel.background=element_blank())
+
+# 3D
+plotly::plot_ly() %>%
+  add_trace(data=umap.df,
+            x=~UMAP_1, y=~UMAP_2, z=~UMAP_3,
+            color=~LogRatio_FirmBact,
+            colors=rev(brewer.rdbu(50)),
+            type="scatter3d",
+            mode="markers",
+            marker=list(size=5))
+```
+
+
+## By Firmicutes/Actinobacteriota ratio
+
+```{r plot-firmact}
+# 2D
+ggplot(umap.df, aes(x = UMAP_1, y = UMAP_2, color = LogRatio_FirmAct))+
+  geom_point(size = 1)+
+  scale_color_gradient2(midpoint = mean(umap.df$LogRatio_FirmAct), low = "blue", mid = "white", high = "red")+
+  theme(panel.grid = element_blank(),
+        panel.background=element_blank())
+
+# 3D
+plotly::plot_ly() %>%
+  add_trace(data=umap.df,
+            x=~UMAP_1, y=~UMAP_2, z=~UMAP_3,
+            color=~LogRatio_FirmAct,
+            colors=rev(brewer.rdbu(50)),
+            type="scatter3d",
+            mode="markers",
+            marker=list(size=5))
+```
+
+
+## By Bacteroidota/Actinobacteriota ratio
+
+```{r plot-bactact}
+# 2D
+ggplot(umap.df, aes(x = UMAP_1, y = UMAP_2, color = LogRatio_BactAct))+
+  geom_point(size = 1)+
+  scale_color_gradient2(midpoint = mean(umap.df$LogRatio_FirmAct), low = "blue", mid = "white", high = "red")+
+  theme(panel.grid = element_blank(),
+        panel.background=element_blank())
+
+# 3D
+plotly::plot_ly() %>%
+  add_trace(data=umap.df,
+            x=~UMAP_1, y=~UMAP_2, z=~UMAP_3,
+            color=~LogRatio_BactAct,
+            colors=rev(brewer.rdbu(50)),
+            type="scatter3d",
+            mode="markers",
+            marker=list(size=5))
+```
+
+
+
+
+

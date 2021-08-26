@@ -547,38 +547,98 @@ plotly::plot_ly(dims.umapFam.subtype, x=~UMAP_1, y=~UMAP_2, z=~UMAP_3, color=~ho
 
 ```{r}
 # IMPORT DATA
-path <- "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/CLUSTER/UMAP/data_clr"
+path <- "~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/02_UMAP/data_logratio/"
 df <- readRDS(file.path(path, "genus_agg.rds"))
 df1 <- acast(df, Genus~Sample, fun.aggregate=sum, value.var = 'Abundance') # samples x genera (clr)
-dims.umapGenus <- readRDS(file.path(path, "dims_umapGenus.rds")) # coordinates umap + covariates
 
+dims.umapGenus <- readRDS(file.path(path, "dims_umapGenus.rds")) # coordinates umap + covariates
 
 author.order <- c('Labus', 'LoPresti', 'Ringel', # 454 pyrosequencing
                   'AGP', 'Liu', 'Pozuelo', # Illumina single end
                   'Fukui', 'Hugerth', 'Zhu', 'Zhuang', # Illumina paired end
                   'Nagel', 'Zeber-Lubecka') # Ion Torrent
 dims.umapGenus$author <- factor(dims.umapGenus$author, levels=author.order)
+colnames(dims.umapGenus)[1] <- "samples"
 
 # Plot ggplot
-ggplot(dims.umapGenus, aes(x = UMAP_1, y = UMAP_2, color = author))+
-  geom_point(size = 1, alpha = 0.8)+
-  scale_color_manual(values=brewer.paired(n=13), name="")+
+ggplot(dims.umapGenus, aes(x = UMAP_1, y = UMAP_2, color = host_subtype))+
+  geom_point(size = 1, alpha = 0.6)+
+  #scale_color_manual(values=brewer.paired(n=13), name="")+ # author
+  # scale_color_manual(values=c("blue", "red", "black"), name="")+ # host_disease
+  # scale_color_manual(values=c('#6600FF', '#33CC33', '#006600', '#FF6633'))+ # seqtech
+  scale_color_manual(values=c("#BDD7E7", "#D95F02", "#7570B3", "#E7298A", "#FEEDDE", "grey"))+
   theme(panel.grid = element_blank(),
         panel.background=element_blank())
-# ggsave("~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/02_UMAP/umapGenus_author.jpg", width=6, height=3.5)
+ggsave("~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/02_UMAP/umapGenus_subtype.jpg", width=6, height=3.5)
 
 # Plot plotly
 plotly::plot_ly() %>%
   add_trace(data=dims.umapGenus,
-            x=~UMAP_1, y=~UMAP_2, #z=~UMAP_3,
-            color=~author,
-            colors=brewer.paired(n=13),
+            x=~UMAP_1, y=~UMAP_2, z=~UMAP_3,
+            color=~host_subtype,
+            # colors=brewer.paired(n=13),
+            # colors=c("blue", "red", "black"),
             #colors=c('#6600FF', '#33CC33', '#006600', '#FF6633'),
-            type="scatter",
+            type="scatter3d",
+            mode="markers",
+            marker=list(size=5))
+
+
+# Add shannon diversity
+p <- plot_richness(physeq.fecal, x="host_disease", measures="Shannon") +
+  geom_boxplot(fill=NA, width=0.3) +
+  facet_wrap(~author, scales="fixed") +
+  theme_bw() +
+  labs(x="", y="Shannon")
+shannon <- p$data %>%
+  select(samples, value) %>%
+  rename(shannon=value)
+test <- merge(dims.umapGenus, shannon, by="samples")
+
+# Add simpson diversity
+p <- plot_richness(physeq.fecal, x="host_disease", measures="Simpson") +
+  geom_boxplot(fill=NA, width=0.3) +
+  facet_wrap(~author, scales="fixed") +
+  theme_bw() +
+  labs(x="", y="Simpson")
+simpson <- p$data %>%
+  select(samples, value) %>%
+  rename(simpson=value)
+test <- merge(test, simpson, by="samples")
+
+# Plot ggplot
+ggplot(test, aes(x = UMAP_1, y = UMAP_2, color = simpson))+
+  geom_point(size = 1, alpha = 1)+
+  # scale_color_gradient2(midpoint = 0.9, low = "blue", mid = "white", high = "red") +
+  # scale_colour_gradientn(colours = RColorBrewer::brewer.pal(10, "RdYlBu"))+
+  theme(panel.grid = element_blank(),
+        panel.background=element_blank())
+ggsave("~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/02_UMAP/umapGenus_shannon.jpg", width=6, height=3.5)
+
+
+# Add log ratios phyla
+test1 <- merge(dims.umapGenus, ratio.df, by=c("samples", "host_disease", "host_subtype", "sequencing_tech", "author"))
+ggplot(test1, aes(x = UMAP_1, y = UMAP_2, color = LogRatio_FirmProt))+
+  geom_point(size = 1, alpha = 1)+
+  scale_color_gradient2(midpoint=mean(test1$LogRatio_FirmProt), low = "blue", mid = "white", high = "red") +
+  # scale_colour_gradientn(colours = RColorBrewer::brewer.pal(10, "RdYlBu"))+
+  theme(panel.grid = element_blank(),
+        panel.background=element_blank())
+ggsave("~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/02_UMAP/umapGenus_firmact.jpg", width=6, height=3.5)
+
+plotly::plot_ly() %>%
+  add_trace(data=test1,
+            x=~UMAP_1, y=~UMAP_2, z=~UMAP_3,
+            color=~LogRatio_FirmBact,
+            colors=brewer.rdbu(50),
+            type="scatter3d",
             mode="markers",
             marker=list(size=5))
 
 ```
+
+
+
 
 ```{r sanity-checks-genus-numbers}
 # Sanity checks
