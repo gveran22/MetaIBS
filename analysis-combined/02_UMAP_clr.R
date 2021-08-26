@@ -46,18 +46,18 @@ physeq.zeber <- readRDS(file.path(path.phy, "physeq_zeber.rds"))
 # Merge phyloseq objects
 cat("\n++ MERGE PHYLOSEQ OBJECTS ++\n")
 physeq.all <- merge_phyloseq(physeq.ringel,
-                         physeq.labus,
-                         physeq.lopresti,
-                         physeq.pozuelo,
-                         physeq.zhuang,
-                         physeq.zhu,
-                         physeq.hugerth,
-                         physeq.fukui,
-                         physeq.mars,
-                         physeq.liu,
-                         physeq.agp,
-                         physeq.nagel,
-                         physeq.zeber)
+                             physeq.labus,
+                             physeq.lopresti,
+                             physeq.pozuelo,
+                             physeq.zhuang,
+                             physeq.zhu,
+                             physeq.hugerth,
+                             physeq.fukui,
+                             physeq.mars,
+                             physeq.liu,
+                             physeq.agp,
+                             physeq.nagel,
+                             physeq.zeber)
 
 # Separate fecal & sigmoid samples
 physeq.fecal <- subset_samples(physeq.all, sample_type == 'stool') # 2,228 samples
@@ -202,40 +202,6 @@ plotUMAP <- function(physeq, tax_rank){
 }
 
 
-#________________________________________________________
-# Function to plot PCA
-plotPCA <- function(physeq, tax_rank){
-  
-  cat("\n++COMPUTE PCA++\n")
-  # run PCA
-  set.seed(123)
-  ord_clr <- phyloseq::ordinate(physeq, "RDA")
-  
-  # Save
-  filepath <- paste0("~/IBS/UMAP/data_clr/ord_rda", paste0(tax_rank, ".rds", sep=""), sep="")
-  saveRDS(object=ord_clr, file=filepath)
-  
-  cat("\n++PLOT PCA...++\n")
-  #Plot scree plot
-  phyloseq::plot_scree(ord_clr) + 
-    geom_bar(stat="identity", fill = "blue") +
-    labs(x = "\nAxis", y = "Proportion of Variance\n")
-  ggsave("~/IBS/UMAP/data_clr/pca_variance.jpg", width=6, height=4, type="cairo")
-  
-  # Plot PCA
-  phyloseq::plot_ordination(physeq, ord_clr, type="samples", color="author") +
-    theme_bw()
-  ggsave(paste0("~/IBS/UMAP/data_clr/pca", paste0(tax_rank, "_author.jpg", sep=""), sep=""), width=6, height=4, type="cairo")
-  
-  phyloseq::plot_ordination(physeq, ord_clr, type="samples", color="host_disease") +
-    theme_bw()
-  ggsave(paste0("~/IBS/UMAP/data_clr/pca", paste0(tax_rank, "_disease.jpg", sep=""), sep=""), width=6, height=4, type="cairo")
-  
-  phyloseq::plot_ordination(physeq, ord_clr, type="samples", color="sequencing_tech") +
-    theme_bw()
-  ggsave(paste0("~/IBS/UMAP/data_clr/pca", paste0(tax_rank, "_seqtech.jpg", sep=""), sep=""), width=6, height=4, type="cairo")
-}
-
 
 
 ############
@@ -247,7 +213,6 @@ taxranks <- c("Genus")
 
 for(taxa in taxranks){
   plotUMAP(physeq=physeq_fecal.clr, tax_rank = taxa)
-  plotPCA(physeq=physeq_fecal.clr, tax_rank = taxa)
 }
 
 
