@@ -135,23 +135,42 @@ Looking at it more closely, there is a high proportion of Proteobacteria compare
 
 ```{r bloom-sequences}
 # Import bloom sequences
-bloom <- readDNAStringSet(file.path(path, "data/analysis-individual/AGP/newbloom.all.fna"))
+bloom <- readDNAStringSet(file.path(path, "newbloom.all.fna"))
+
 
 # Identify ASVs to keep (ones that are not bloom sequences)
 # note: trim ASVs to 150bp as bloom sequences are 150bp (a few ASVs are 151bp)
-ASVs_to_keep <- names(setdiff(subseq(refseq(physeq.agp), start=1, width=150), bloom))
+
+# 1 - Identify ASVs to keep (ones that are not bloom sequences) in the ASVs that are 150bp
+shortASV <- refseq(physeq.agp)[nchar(refseq(physeq.agp)) == 150]
+shortASV_tokeep <- names( shortASV[!(shortASV %in% bloom)] ) # 8,923
+
+# 2 - Identify ASVs to keep (ones that are not bloom sequences) in the ASVs that are 151bp
+longASV <- refseq(physeq.agp)[nchar(refseq(physeq.agp)) == 151]
+longASV_trim1 <- subseq(longASV, start=1, width=150) # range 1 - 150
+longASV_trim2 <- subseq(longASV, start=2, width=150) # range 2 - 151
+
+longASV_tokeep1 <- names( longASV_trim1[!(longASV_trim1 %in% bloom)] ) # bloom seqs in 1 - 150 range
+longASV_tokeep2 <- names( longASV_trim2[!(longASV_trim2 %in% bloom)] ) # bloom seqs in 2 - 151 range
+
+longASV_tokeep <- intersect(longASV_tokeep1, longASV_tokeep2)
+
+# 3 - Combine
+ASV_to_keep <- c(shortASV_tokeep, longASV_tokeep)
 
 # Check taxonomic classification of these bloom sequences
 tax_table(physeq.agp) %>%
   as.data.frame %>%
   rownames_to_column(var="ASV") %>%
-  filter(!ASV %in% ASVs_to_keep) %>%
-  group_by(Class) %>%
+  filter(!ASV %in% ASV_to_keep) %>%
+  group_by(Phylum) %>%
   summarize(n=n())
 
 # Remove unwanted taxa (bloom)
-physeq.filt <- prune_taxa(ASVs_to_keep, physeq.agp)
+physeq.filt <- prune_taxa(ASV_to_keep, physeq.agp)
 physeq.filt <- prune_samples(sample_sums(physeq.filt)>=500, physeq.filt)
+
+# saveRDS(physeq.filt, "~/Projects/IBS_Meta-analysis_16S/phyloseq-objects/physeq_agp.rds")
 
 phylum.table.filt <- physeq.filt %>%
   tax_glom(taxrank = "Phylum") %>%                     # agglomerate at phylum level
@@ -162,17 +181,19 @@ phylum.table.filt <- physeq.filt %>%
 # PLOT
 a <- ggplot(phylum.table, aes(x = host_disease,
                               y = Abundance, fill = Phylum))+
-  geom_bar(stat = "identity") +
+  geom_bar(stat = "identity", position="fill") +
+  theme_bw()+
   theme(legend.position="none")+
   labs(x = "", y = "Relative abundance", title = "Original data")
 
 b <- ggplot(phylum.table.filt, aes(x = host_disease,
                                    y = Abundance, fill = Phylum))+
-  geom_bar(stat = "identity") +
+  geom_bar(stat = "identity", position="fill") +
   # theme(axis.text.x = element_blank())+
-  labs(x = "", y = "Relative abundance", title = "Bloom sequences removed")
+  labs(x = "", y = "Relative abundance", title = "Bloom sequences removed")+
+  theme_bw()
 
-gridExtra::grid.arrange(a, b, ncol=2, widths=c(0.4,0.6))
+gridExtra::grid.arrange(a, b, ncol=2, widths=c(0.3,0.7))
 ```
 
 

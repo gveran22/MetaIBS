@@ -51,7 +51,7 @@ seq_infered <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individua
 # taxa
 taxa <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/CLUSTER/Taxonomy/output/taxa_agp.rds")
 # phyloseq object
-physeq <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/CLUSTER/PhyloTree/input/physeq_agp.rds")
+physeq <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/AGP/01_Dada2-AGP/physeq_agp_with_bloom.rds")
 ```
 
 
@@ -412,14 +412,8 @@ saveRDS(out2, file.path(path, "01_Dada2-AGP/out2.rds"))
 saveRDS(err, file.path(path, "01_Dada2-AGP/err.rds"))
 saveRDS(seq_infered, file.path(path, "01_Dada2-AGP/seq_infered.rds"))
 
-
-saveRDS(otu_table(physeq), file.path(path, "01_Dada2-AGP/ASVtable_final.rds")) # ASV table
-saveRDS(tax_table(physeq), file.path(path, "01_Dada2-AGP/taxa_final.rds")) # taxa table
-saveRDS(sample_data(physeq), file.path(path, "01_Dada2-AGP/metadata_final.rds")) # metadata table
-
-# Taxa & Phyloseq object
+# Taxa
 saveRDS(taxa, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/CLUSTER/Taxonomy/output/taxa_agp.rds")
-saveRDS(physeq, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/CLUSTER/PhyloTree/input/physeq_agp.rds")
 ```
 
 
@@ -446,3 +440,81 @@ ggplot(phylum.table, aes(x = reorder(Sample, Sample, function(x) mean(phylum.tab
 
 ```
 
+
+### 4. Remove bloom sequences
+
+Looking at it more closely, there is a high proportion of Proteobacteria compared to other datasets. Considering that fecal samples were shipped from the participants' home at room temperature, there is evidence that some bacteria grow at room temperature, which would bias the microbial composition (https://journals.asm.org/doi/10.1128/mSystems.00199-16#B5). Authors from the AGP removed a selection of **bloom sequences** that were shared on their [github repository][1] in a FASTA file.
+
+[1]: https://github.com/knightlab-analyses/bloom-analyses
+
+```{r bloom-sequences}
+# Import bloom sequences
+bloom <- readDNAStringSet(file.path(path, "newbloom.all.fna"))
+
+
+# Identify ASVs to keep (ones that are not bloom sequences)
+# note: trim ASVs to 150bp as bloom sequences are 150bp (a few ASVs are 151bp)
+
+allASV <- taxa_names(physeq)
+names(allASV) <- paste0("ASV", 1:length(allASV))
+
+# 1 - Identify ASVs to keep (ones that are not bloom sequences) in the ASVs that are 150bp
+shortASV <- allASV[nchar(allASV) == 150]
+shortASV_tokeep <- names( shortASV[!(shortASV %in% bloom)] ) # 8,923
+
+# 2 - Identify ASVs to keep (ones that are not bloom sequences) in the ASVs that are 151bp
+longASV <- allASV[nchar(allASV) == 151]
+longASV_trim1 <- subseq(longASV, start=1, width=150) # range 1 - 150
+longASV_trim2 <- subseq(longASV, start=2, width=150) # range 2 - 151
+
+longASV_tokeep1 <- names( longASV_trim1[!(longASV_trim1 %in% bloom)] ) # bloom seqs in 1 - 150 range
+longASV_tokeep2 <- names( longASV_trim2[!(longASV_trim2 %in% bloom)] ) # bloom seqs in 2 - 151 range
+
+longASV_tokeep <- intersect(longASV_tokeep1, longASV_tokeep2)
+
+# 3 - Combine and get the **sequences** to keep (not the names)
+ASV_to_keep <- allASV[c(shortASV_tokeep, longASV_tokeep)]
+
+# Check taxonomic classification of these bloom sequences
+tax_table(physeq) %>%
+  as.data.frame %>%
+  rownames_to_column(var="ASV") %>%
+  filter(!ASV %in% ASV_to_keep) %>%
+  group_by(Phylum) %>%
+  summarize(n=n())
+
+# Remove unwanted taxa (bloom)
+physeq.filt <- prune_taxa(ASV_to_keep, physeq)
+physeq.filt <- prune_samples(sample_sums(physeq.filt)>=500, physeq.filt) # 16,797 ASVs and 1,183 samples
+
+phylum.table.filt <- physeq.filt %>%
+  tax_glom(taxrank = "Phylum") %>%                     # agglomerate at phylum level
+  transform_sample_counts(function(x) {x/sum(x)} ) %>% # Transform to rel. abundance
+  psmelt()                                             # Melt to long format
+
+
+# PLOT TO COMPARE
+a <- ggplot(phylum.table, aes(x = host_disease,
+                              y = Abundance, fill = Phylum))+
+  geom_bar(stat = "identity", position="fill") +
+  theme_bw()+
+  theme(legend.position="none")+
+  labs(x = "", y = "Relative abundance", title = "Original data")
+
+b <- ggplot(phylum.table.filt, aes(x = host_disease,
+                                   y = Abundance, fill = Phylum))+
+  geom_bar(stat = "identity", position="fill") +
+  # theme(axis.text.x = element_blank())+
+  labs(x = "", y = "Relative abundance", title = "Bloom sequences removed")+
+  theme_bw()
+
+gridExtra::grid.arrange(a, b, ncol=2, widths=c(0.3,0.7))
+
+# SAVE FINAL DATA
+# saveRDS(otu_table(physeq.filt), file.path(path, "01_Dada2-AGP/ASVtable_final.rds")) # ASV table
+# saveRDS(tax_table(physeq.filt), file.path(path, "01_Dada2-AGP/taxa_final.rds")) # taxa table
+# saveRDS(sample_data(physeq.filt), file.path(path, "01_Dada2-AGP/metadata_final.rds")) # metadata table
+
+# Taxa & Phyloseq object
+# saveRDS(physeq.filt, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/CLUSTER/PhyloTree/input/physeq_agp.rds")
+```

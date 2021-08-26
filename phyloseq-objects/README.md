@@ -5,7 +5,7 @@
 
 |     Dataset    | N samples |                  Covariates               |                        TO BE CAREFUL                           |
 | -------------- | :-------: | :---------------------------------------- | :------------------------------------------------------------- |
-|   AGP (2021)   |  1,191    |age, BMI, bowel mvt, comorbidities         |                    -                                           |
+|   AGP (2021)   |  1,183    |age, BMI, bowel mvt, comorbidities         |                    -                                           |
 |  Fukui (2020)  |    110    |                    -                      |                    -                                           |
 | Hugerth (2019) |    525    |age, gender, BMI, psychology               | 2 `sample_type`: stool, sigmoid mucosa                         |
 |  Labus (2017)  |     52    |age, gender, BMI, IBS subtype              |                    -                                           |

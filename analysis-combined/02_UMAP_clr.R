@@ -1,5 +1,5 @@
 ##########################
-# Purpose: UMAP plotting at all taxonomic levels
+# Purpose: UMAP plotting at Genus level
 # Date: August 2021
 # Author: Salomé Carcy
 ##########################
@@ -13,6 +13,7 @@
 
 # Libraries
 library(phyloseq)
+library(microbiome)
 library(ggplot2)
 library(umap)
 library(tidyverse)
@@ -45,18 +46,18 @@ physeq.zeber <- readRDS(file.path(path.phy, "physeq_zeber.rds"))
 # Merge phyloseq objects
 cat("\n++ MERGE PHYLOSEQ OBJECTS ++\n")
 physeq.all <- merge_phyloseq(physeq.ringel,
-                         physeq.labus,
-                         physeq.lopresti,
-                         physeq.pozuelo,
-                         physeq.zhuang,
-                         physeq.zhu,
-                         physeq.hugerth,
-                         physeq.fukui,
-                         physeq.mars,
-                         physeq.liu,
-                         physeq.agp,
-                         physeq.nagel,
-                         physeq.zeber)
+                             physeq.labus,
+                             physeq.lopresti,
+                             physeq.pozuelo,
+                             physeq.zhuang,
+                             physeq.zhu,
+                             physeq.hugerth,
+                             physeq.fukui,
+                             physeq.mars,
+                             physeq.liu,
+                             physeq.agp,
+                             physeq.nagel,
+                             physeq.zeber)
 
 # Separate fecal & sigmoid samples
 physeq.fecal <- subset_samples(physeq.all, sample_type == 'stool') # 2,228 samples
@@ -64,12 +65,8 @@ physeq.fecal <- subset_samples(physeq.all, sample_type == 'stool') # 2,228 sampl
 cat("Nb of fecal samples:", nsamples(physeq.fecal))
 # cat("\nNb of sigmoid samples:", nsamples(physeq.sigmoid))
 
-# Have pseudocounts
-physeq_fecal.pseudocts <- physeq.fecal
-otu_table(physeq_fecal.pseudocts)[otu_table(physeq_fecal.pseudocts) == 0] <- 0.5
-
-# physeq_sigmoid.pseudocts <- physeq.sigmoid
-# otu_table(physeq_sigmoid.pseudocts)[otu_table(physeq_sigmoid.pseudocts) == 0] <- 0.5
+# CLR-TRANSFORM DATA
+physeq_fecal.clr <- microbiome::transform(physeq.fecal, "clr") # the function adds pseudocounts itself
 
 
 
@@ -77,45 +74,6 @@ otu_table(physeq_fecal.pseudocts)[otu_table(physeq_fecal.pseudocts) == 0] <- 0.5
 #############
 # FUNCTIONS #
 #############
-
-#________________________________________________________
-# Function to obtain table with log-ratios between taxa
-LogRatios <- function(abundanceTable, tax_rank){
-  
-  cat("\n++ GET LOG-RATIOS BETWEEN", tax_rank, "++\n")
-  
-  # Get combinations between all taxa, 1st column numerator, 2nd column denominator, 3rd column taxa1/taxa2
-  comb <- as.data.frame(combinations(nrow(abundanceTable), 2, rownames(abundanceTable), repeats.allowed = FALSE))
-  comb[,3] <- paste0(comb[,1], "/", comb[,2])
-  
-  cat("Number of combinations:", nrow(comb), "\n")
-  
-  # Compute the ratios
-  ratios <- as.data.frame(abundanceTable) # taxa as rows, samples as columns
-  test <- ratios[1:3,1:3] # for later sanity check
-  
-  ratios[ comb[,3] ,] <- mapply(function(x, y) log2(x/y), # compute the log ratio
-                                abundanceTable[ as.character(comb[,1]) ,], # between first column
-                                abundanceTable[ as.character(comb[,2]) ,]) # and second column of all combinations
-  
-  ratios <- ratios[-c(1:nrow(abundanceTable)),] # remove first x rows that are not ratios (it is simply the taxa)
-  
-  # sanity check
-  cat("Sanity check: log-ratio is", log2(test[1,1]/test[2,1]),
-      "and the corresponding value in the log-ratio table is", ratios[1,1], "\n")
-  cat("Sanity check2: log-ratio is", log2(test[1,2]/test[3,2]),
-      "and the corresponding value in the log-ratio table is", ratios[2,2], "\n")
-  
-  cat("We have", dim(ratios)[2], "samples and", dim(ratios)[1], "predictors (log-ratios) \n")
-  
-  # Save
-  filepath <- paste0("~/IBS/UMAP/data_logratio/ratios", paste0(tax_rank, ".rds", sep=""), sep="")
-  saveRDS(object=t(ratios), file=filepath)
-  
-  # Return table with samples as rows and logratios as columns
-  return(t(ratios))
-}
-
 
 #________________________________________________________
 # Function to agglomerate to given taxonomic level
@@ -126,24 +84,17 @@ aggTable <- function(physeq, tax_rank){
     tax_glom(taxrank = tax_rank) %>%
     psmelt()
   
-  # Get a matrix TaxRank (rows) x Samples (columns)
-  if(tax_rank=="Phylum"){agglomeratedTable <- acast(long.agg, Phylum ~ Sample, fun.aggregate=sum, value.var = 'Abundance')}
-  else if(tax_rank=="Class"){agglomeratedTable <- acast(long.agg, Class ~ Sample, fun.aggregate=sum, value.var = 'Abundance')}
-  else if(tax_rank=="Order"){agglomeratedTable <- acast(long.agg, Order ~ Sample, fun.aggregate=sum, value.var = 'Abundance')}
-  else if(tax_rank=="Family"){agglomeratedTable <- acast(long.agg, Family ~ Sample, fun.aggregate=sum, value.var = 'Abundance')}
-  else if(tax_rank=="Genus"){agglomeratedTable <- acast(long.agg, Genus ~ Sample, fun.aggregate=sum, value.var = 'Abundance')}
+  # Get a matrix Samples (rows) x TaxRank (columns)
+  if(tax_rank=="Phylum"){agglomeratedTable <- acast(long.agg, Sample ~ Phylum, value.var = 'Abundance')}
+  else if(tax_rank=="Class"){agglomeratedTable <- acast(long.agg, Sample ~ Class, value.var = 'Abundance')}
+  else if(tax_rank=="Order"){agglomeratedTable <- acast(long.agg, Sample ~ Order, value.var = 'Abundance')}
+  else if(tax_rank=="Family"){agglomeratedTable <- acast(long.agg, Sample ~ Family, value.var = 'Abundance')}
+  else if(tax_rank=="Genus"){agglomeratedTable <- acast(long.agg, Sample ~ Genus, value.var = 'Abundance')}
   cat("-> Dimensions matrix:", dim(agglomeratedTable), "\n")
   cat("-> Any 0 counts?", table(agglomeratedTable == 0), "\n")
   
-  # Sanity check reshape df
-  randomTaxa <- rownames(agglomeratedTable)[10]
-  randomSample <- colnames(agglomeratedTable)[785]
-  valueAgg <- sum(long.agg[long.agg[,tax_rank] == randomGenus & long.agg$Sample == randomSample, "Abundance"])
-  wideAgg <- agglomeratedTable[randomTaxa, randomSample]
-  cat("-> Sanity check: value in long shaped df is", valueAgg, "while in wide shaped df is", wideAgg)
-  
   # Save
-  filepath <- paste0("~/IBS/UMAP/data_logratio/", paste0(tolower(tax_rank), "_agg.rds", sep=""), sep="")
+  filepath <- paste0("~/IBS/UMAP/data_clr/", paste0(lowercase(tax_rank), "_agg.rds", sep=""), sep="")
   saveRDS(object=long.agg, file=filepath)
   
   return(agglomeratedTable)
@@ -157,15 +108,7 @@ getTable <- function(physeq, tax_rank){
   # Get the agglomerated taxa
   agglomeratedTable <- aggTable(physeq, tax_rank)
   
-  # Get log-ratios between taxa
-  ratiosTable <- LogRatios(agglomeratedTable, tax_rank)
-  
-  # Mean-center
-  # cat("\n++MEAN-CENTERING...++|n")
-  # ratios.scaled <- scale(ratiosTable, center = TRUE, scale = FALSE)
-  
-  # return(ratios.scaled)
-  return(ratiosTable)
+  return(agglomeratedTable)
 }
 
 
@@ -174,22 +117,22 @@ getTable <- function(physeq, tax_rank){
 runUMAP <- function(physeq, tax_rank){
   
   # Get the data table
-  ratios <- getTable(physeq, tax_rank)
+  agglomeratedTable <- getTable(physeq, tax_rank)
   
   cat("\n++RUN UMAP...++\n")
   # Run UMAP
   set.seed(123)
-  umap <- uwot::umap(ratios, # umap on samples (rows) and taxa ratios (columns)
+  umap <- uwot::umap(agglomeratedTable, # umap on samples (rows) and taxa abundances CLR transformed (columns)
                      n_neighbors=50, n_components=3, n_threads=16)
   
   # Save
-  filepath <- paste0("~/IBS/UMAP/data_logratio/umap", paste0(tax_rank, ".rds", sep=""), sep="")
+  filepath <- paste0("~/IBS/UMAP/data_clr/umap", paste0(tax_rank, ".rds", sep=""), sep="")
   saveRDS(object=umap, file=filepath)
   
   # Get the (x,y) coordinates from the UMAP
   dims.umap <- umap %>% as.data.frame()
   colnames(dims.umap) <- c("UMAP_1", "UMAP_2", "UMAP_3")
-  rownames(dims.umap) <- rownames(ratios)
+  rownames(dims.umap) <- rownames(agglomeratedTable)
   
   # Add covariates
   covariates <- data.frame(disease = sample_data(physeq)[,'host_disease'],
@@ -202,7 +145,7 @@ runUMAP <- function(physeq, tax_rank){
   dims.umap <- merge(as.data.frame(dims.umap), covariates, by="row.names") # umap+covariates
   
   # Save
-  filepath <- paste0("~/IBS/UMAP/data_logratio/dims_umap", paste0(tax_rank, ".rds", sep=""), sep="")
+  filepath <- paste0("~/IBS/UMAP/data_clr/dims_umap", paste0(tax_rank, ".rds", sep=""), sep="")
   saveRDS(object=dims.umap, file=filepath)
   
   return(dims.umap)
@@ -224,7 +167,7 @@ plotUMAP <- function(physeq, tax_rank){
     scale_color_manual(values = c('blue', 'red', 'black'))+
     labs(title = paste0('Agglomeration at taxonomic level:', tax_rank))+
     theme_bw()
-  ggsave(paste0("~/IBS/UMAP/data_logratio/umap", paste0(tax_rank, "_disease.jpg", sep=""), sep=""), width=6, height=4, type="cairo")
+  ggsave(paste0("~/IBS/UMAP/data_clr/umap", paste0(tax_rank, "_disease.jpg", sep=""), sep=""), width=6, height=4, type="cairo")
   
   # PLOT host_subtype
   ggplot(dims.umap, aes(x = UMAP_1, y = UMAP_2, color = host_subtype))+
@@ -232,14 +175,14 @@ plotUMAP <- function(physeq, tax_rank){
     scale_color_manual(values = c('#99CCFF', '#FF3300', '#990000', '#FF66CC','#FFFF66', '#CCCCCC'))+
     labs(title = paste0('Agglomeration at taxonomic level:', tax_rank))+
     theme_bw()
-  ggsave(paste0("~/IBS/UMAP/data_logratio/umap", paste0(tax_rank, "_subtype.jpg", sep=""), sep=""), width=6, height=4, type="cairo")
+  ggsave(paste0("~/IBS/UMAP/data_clr/umap", paste0(tax_rank, "_subtype.jpg", sep=""), sep=""), width=6, height=4, type="cairo")
   
   # PLOT author
   ggplot(dims.umap, aes(x = UMAP_1, y = UMAP_2, color = author))+
     geom_point(size = 2, alpha = 0.7)+
     labs(title = paste0('Agglomeration at taxonomic level:', tax_rank))+
     theme_bw()
-  ggsave(paste0("~/IBS/UMAP/data_logratio/umap", paste0(tax_rank, "_author.jpg", sep=""), sep=""), width=6, height=4, type="cairo")
+  ggsave(paste0("~/IBS/UMAP/data_clr/umap", paste0(tax_rank, "_author.jpg", sep=""), sep=""), width=6, height=4, type="cairo")
   
   # PLOT seqtech
   ggplot(dims.umap, aes(x = UMAP_1, y = UMAP_2, color = sequencing_tech))+
@@ -247,7 +190,7 @@ plotUMAP <- function(physeq, tax_rank){
     scale_color_manual(values = c('#6600FF', '#33CC33', '#006600', '#FF6633'))+
     labs(title = paste0('Agglomeration at taxonomic level:', tax_rank))+
     theme_bw()
-  ggsave(paste0("~/IBS/UMAP/data_logratio/umap", paste0(tax_rank, "_seqtech.jpg", sep=""), sep=""), width=6, height=4, type="cairo")
+  ggsave(paste0("~/IBS/UMAP/data_clr/umap", paste0(tax_rank, "_seqtech.jpg", sep=""), sep=""), width=6, height=4, type="cairo")
   # plotly::plot_ly(dims.umapFam_fecal_clr, x=~UMAP_1, y=~UMAP_2, z=~UMAP_3, color=~sequencing_tech, type="scatter3d", mode="markers")
   
   # PLOT variable region
@@ -255,7 +198,7 @@ plotUMAP <- function(physeq, tax_rank){
     geom_point(size = 2, alpha = 0.7)+
     labs(title = paste0('Agglomeration at taxonomic level:', tax_rank))+
     theme_bw()
-  ggsave(paste0("~/IBS/UMAP/data_logratio/umap", paste0(tax_rank, "_vregion.jpg", sep=""), sep=""), width=6, height=4, type="cairo")
+  ggsave(paste0("~/IBS/UMAP/data_clr/umap", paste0(tax_rank, "_vregion.jpg", sep=""), sep=""), width=6, height=4, type="cairo")
 }
 
 
@@ -266,10 +209,10 @@ plotUMAP <- function(physeq, tax_rank){
 ############
 
 # taxranks <- c("Phylum", "Class", "Order", "Family", "Genus")
-taxranks <- c("Genus", "Family")
+taxranks <- c("Genus")
 
 for(taxa in taxranks){
-  plotUMAP(physeq=physeq_fecal.pseudocts, tax_rank = taxa)
+  plotUMAP(physeq=physeq_fecal.clr, tax_rank = taxa)
 }
 
 
