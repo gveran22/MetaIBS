@@ -9,7 +9,7 @@ For each dataset, taxa were aggregated at all taxonomic levels (from Genus to Ph
 
 |     Dataset    | N samples |               Covariates          | N phylum | N class | N order | N family | N genus |
 | -------------- | :-------: | :--------------------------------:| :------: | :-----: | :-----: | :------: | :-----: |
-|   AGP (2021)   |  1,191    |age, BMI, bowel mvt, comorbidities |    31    |   69    |  141    |   225    |   619   |
+|   AGP (2021)   |  1,183    |age, BMI, bowel mvt, comorbidities |    31    |   69    |  141    |   225    |   619   |
 |  Fukui (2020)  |    110    |                  -                |    12    |   18    |   45    |    70    |   210   |
 | Hugerth (2019) |    525    |age, gender, BMI                   |    18    |   25    |   64    |   100    |   263   |
 |  Labus (2017)  |     52    |age, gender, BMI, IBS subtype      |     6    |    9    |   21    |    34    |    91   |
