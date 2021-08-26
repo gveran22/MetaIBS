@@ -109,7 +109,7 @@ LogRatios <- function(abundanceTable, tax_rank){
   cat("We have", dim(ratios)[2], "samples and", dim(ratios)[1], "predictors (log-ratios) \n")
   
   # Save
-  filepath <- paste0("~/IBS/UMAP/data/ratios", paste0(tax_rank, ".rds", sep=""), sep="")
+  filepath <- paste0("~/IBS/UMAP/data_logratio/ratios", paste0(tax_rank, ".rds", sep=""), sep="")
   saveRDS(object=t(ratios), file=filepath)
   
   # Return table with samples as rows and logratios as columns
@@ -127,16 +127,23 @@ aggTable <- function(physeq, tax_rank){
     psmelt()
   
   # Get a matrix TaxRank (rows) x Samples (columns)
-  if(tax_rank=="Phylum"){agglomeratedTable <- acast(long.agg, Phylum ~ Sample, value.var = 'Abundance')}
-  else if(tax_rank=="Class"){agglomeratedTable <- acast(long.agg, Class ~ Sample, value.var = 'Abundance')}
-  else if(tax_rank=="Order"){agglomeratedTable <- acast(long.agg, Order ~ Sample, value.var = 'Abundance')}
-  else if(tax_rank=="Family"){agglomeratedTable <- acast(long.agg, Family ~ Sample, value.var = 'Abundance')}
-  else if(tax_rank=="Genus"){agglomeratedTable <- acast(long.agg, Genus ~ Sample, value.var = 'Abundance')}
+  if(tax_rank=="Phylum"){agglomeratedTable <- acast(long.agg, Phylum ~ Sample, fun.aggregate=sum, value.var = 'Abundance')}
+  else if(tax_rank=="Class"){agglomeratedTable <- acast(long.agg, Class ~ Sample, fun.aggregate=sum, value.var = 'Abundance')}
+  else if(tax_rank=="Order"){agglomeratedTable <- acast(long.agg, Order ~ Sample, fun.aggregate=sum, value.var = 'Abundance')}
+  else if(tax_rank=="Family"){agglomeratedTable <- acast(long.agg, Family ~ Sample, fun.aggregate=sum, value.var = 'Abundance')}
+  else if(tax_rank=="Genus"){agglomeratedTable <- acast(long.agg, Genus ~ Sample, fun.aggregate=sum, value.var = 'Abundance')}
   cat("-> Dimensions matrix:", dim(agglomeratedTable), "\n")
   cat("-> Any 0 counts?", table(agglomeratedTable == 0), "\n")
   
+  # Sanity check reshape df
+  randomTaxa <- rownames(agglomeratedTable)[10]
+  randomSample <- colnames(agglomeratedTable)[785]
+  valueAgg <- sum(long.agg[long.agg[,tax_rank] == randomGenus & long.agg$Sample == randomSample, "Abundance"])
+  wideAgg <- agglomeratedTable[randomTaxa, randomSample]
+  cat("-> Sanity check: value in long shaped df is", valueAgg, "while in wide shaped df is", wideAgg)
+  
   # Save
-  filepath <- paste0("~/IBS/UMAP/data/", paste0(lowercase(tax_rank), "_agg.rds", sep=""), sep="")
+  filepath <- paste0("~/IBS/UMAP/data_logratio/", paste0(tolower(tax_rank), "_agg.rds", sep=""), sep="")
   saveRDS(object=long.agg, file=filepath)
   
   return(agglomeratedTable)
@@ -176,7 +183,7 @@ runUMAP <- function(physeq, tax_rank){
                      n_neighbors=50, n_components=3, n_threads=16)
   
   # Save
-  filepath <- paste0("~/IBS/UMAP/data/umap", paste0(tax_rank, ".rds", sep=""), sep="")
+  filepath <- paste0("~/IBS/UMAP/data_logratio/umap", paste0(tax_rank, ".rds", sep=""), sep="")
   saveRDS(object=umap, file=filepath)
   
   # Get the (x,y) coordinates from the UMAP
@@ -195,7 +202,7 @@ runUMAP <- function(physeq, tax_rank){
   dims.umap <- merge(as.data.frame(dims.umap), covariates, by="row.names") # umap+covariates
   
   # Save
-  filepath <- paste0("~/IBS/UMAP/data/dims_umap", paste0(tax_rank, ".rds", sep=""), sep="")
+  filepath <- paste0("~/IBS/UMAP/data_logratio/dims_umap", paste0(tax_rank, ".rds", sep=""), sep="")
   saveRDS(object=dims.umap, file=filepath)
   
   return(dims.umap)
@@ -217,7 +224,7 @@ plotUMAP <- function(physeq, tax_rank){
     scale_color_manual(values = c('blue', 'red', 'black'))+
     labs(title = paste0('Agglomeration at taxonomic level:', tax_rank))+
     theme_bw()
-  ggsave(paste0("~/IBS/UMAP/plots/umap", paste0(tax_rank, "_disease.jpg", sep=""), sep=""), width=6, height=4, type="cairo")
+  ggsave(paste0("~/IBS/UMAP/data_logratio/umap", paste0(tax_rank, "_disease.jpg", sep=""), sep=""), width=6, height=4, type="cairo")
   
   # PLOT host_subtype
   ggplot(dims.umap, aes(x = UMAP_1, y = UMAP_2, color = host_subtype))+
@@ -225,28 +232,30 @@ plotUMAP <- function(physeq, tax_rank){
     scale_color_manual(values = c('#99CCFF', '#FF3300', '#990000', '#FF66CC','#FFFF66', '#CCCCCC'))+
     labs(title = paste0('Agglomeration at taxonomic level:', tax_rank))+
     theme_bw()
-  ggsave(paste0("~/IBS/UMAP/plots/umap", paste0(tax_rank, "_subtype.jpg", sep=""), sep=""), width=6, height=4, type="cairo")
+  ggsave(paste0("~/IBS/UMAP/data_logratio/umap", paste0(tax_rank, "_subtype.jpg", sep=""), sep=""), width=6, height=4, type="cairo")
   
   # PLOT author
   ggplot(dims.umap, aes(x = UMAP_1, y = UMAP_2, color = author))+
     geom_point(size = 2, alpha = 0.7)+
     labs(title = paste0('Agglomeration at taxonomic level:', tax_rank))+
     theme_bw()
-  ggsave(paste0("~/IBS/UMAP/plots/umap", paste0(tax_rank, "_author.jpg", sep=""), sep=""), width=6, height=4, type="cairo")
+  ggsave(paste0("~/IBS/UMAP/data_logratio/umap", paste0(tax_rank, "_author.jpg", sep=""), sep=""), width=6, height=4, type="cairo")
   
   # PLOT seqtech
   ggplot(dims.umap, aes(x = UMAP_1, y = UMAP_2, color = sequencing_tech))+
     geom_point(size = 2, alpha = 0.7)+
     scale_color_manual(values = c('#6600FF', '#33CC33', '#006600', '#FF6633'))+
+    labs(title = paste0('Agglomeration at taxonomic level:', tax_rank))+
     theme_bw()
-  ggsave(paste0("~/IBS/UMAP/plots/umap", paste0(tax_rank, "_seqtech.jpg", sep=""), sep=""), width=6, height=4, type="cairo")
+  ggsave(paste0("~/IBS/UMAP/data_logratio/umap", paste0(tax_rank, "_seqtech.jpg", sep=""), sep=""), width=6, height=4, type="cairo")
   # plotly::plot_ly(dims.umapFam_fecal_clr, x=~UMAP_1, y=~UMAP_2, z=~UMAP_3, color=~sequencing_tech, type="scatter3d", mode="markers")
   
   # PLOT variable region
   ggplot(dims.umap, aes(x = UMAP_1, y = UMAP_2, color = variable_region))+
     geom_point(size = 2, alpha = 0.7)+
+    labs(title = paste0('Agglomeration at taxonomic level:', tax_rank))+
     theme_bw()
-  ggsave(paste0("~/IBS/UMAP/plots/umap", paste0(tax_rank, "_vregion.jpg", sep=""), sep=""), width=6, height=4, type="cairo")
+  ggsave(paste0("~/IBS/UMAP/data_logratio/umap", paste0(tax_rank, "_vregion.jpg", sep=""), sep=""), width=6, height=4, type="cairo")
 }
 
 
@@ -257,7 +266,7 @@ plotUMAP <- function(physeq, tax_rank){
 ############
 
 # taxranks <- c("Phylum", "Class", "Order", "Family", "Genus")
-taxranks <- c("Family")
+taxranks <- c("Genus", "Family")
 
 for(taxa in taxranks){
   plotUMAP(physeq=physeq_fecal.pseudocts, tax_rank = taxa)
