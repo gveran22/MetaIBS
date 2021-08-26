@@ -52,7 +52,7 @@ physeq <- merge_phyloseq(physeq.labus,
                          physeq.zeber)
 
 # Separate fecal & sigmoid samples
-physeq.fecal <- subset_samples(physeq, sample_type == 'stool') # 2,170 samples
+physeq.fecal <- subset_samples(physeq, sample_type == 'stool') # 2,153 samples
 physeq.sigmoid <- subset_samples(physeq, sample_type == 'sigmoid') # 431 samples
 cat("Nb of fecal samples:", nsamples(physeq.fecal))
 cat("\nNb of sigmoid samples:", nsamples(physeq.sigmoid))
@@ -70,12 +70,13 @@ phylum.table <- physeq %>%
   transform_sample_counts(function(x) {x/sum(x)} ) %>%
   psmelt()
 
-# Plot
+# Plot by sample
 ggplot(phylum.table, aes(x = reorder(Sample, Sample, function(x) mean(phylum.table[Sample == x & Phylum == 'Bacteroidota', 'Abundance'])),
                          y = Abundance, fill = Phylum))+
   facet_wrap(~ host_disease, scales = "free_x") +
   geom_bar(stat = "identity") +
-  scale_fill_manual(values=c(colorRampPalette(brewer.pal(8, "Set2"))(48)),
+  scale_fill_manual(#values=c(colorRampPalette(brewer.pal(8, "Set2"))(48)),
+                    values=brewer.paired(n=48),
                     guide=guide_legend(nrow=24))+
   scale_y_continuous(expand = c(0, 0))+ # remove empty space between axis and plot
   theme(axis.text.x = element_blank(),
@@ -90,3 +91,27 @@ ggplot(phylum.table, aes(x = reorder(Sample, Sample, function(x) mean(phylum.tab
 # Save figure
 ggsave("~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/05_Relative-Abund/phyla_relabund.jpg", width=12, height=5)
 
+
+
+# Plot by host_disease
+ggplot(phylum.table %>% filter(sample_type == "stool" & Collection=="1st"),
+       aes(x = host_disease, y = Abundance, fill = Phylum))+
+  #facet_wrap(~ host_disease, scales = "free_x") +
+  geom_bar(stat = "identity", position = "fill") +
+  scale_fill_manual(#values=c(colorRampPalette(brewer.pal(8, "Set2"))(48)),
+    values=brewer.paired(n=48),
+    guide=guide_legend(nrow=24))+
+  scale_y_continuous(expand = c(0, 0))+ # remove empty space between axis and plot
+  #theme_bw()+
+  theme(axis.text.x = element_text(size=10, color="black"),
+        #axis.ticks.x = element_blank(),
+        #legend.position = "None",
+        legend.text = element_text(size=7),
+        legend.key.size = unit(0.2, 'cm'),
+        panel.grid = element_blank(),
+        panel.background=element_blank(),
+        axis.line.x = element_line(size=0.5, color="black"))+
+  labs(x = "", y = "Proportion")
+
+# Save figure
+ggsave("~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/05_Relative-Abund/phyla_relabund_2.jpg", width=6, height=5)
