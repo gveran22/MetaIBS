@@ -15,18 +15,18 @@ library(tidyverse)
 
 # Data
 path <- "~/Projects/IBS_Meta-analysis_16S"
-physeq.agp <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/CLUSTER/PhyloTree/input/physeq_agp.rds")
-physeq.fukui <- readRDS(file.path(path, "phyloseq-objects/physeq_fukui.rds"))
-physeq.hugerth <- readRDS(file.path(path, "phyloseq-objects/physeq_hugerth.rds"))
-physeq.labus <- readRDS(file.path(path, "phyloseq-objects/physeq_labus.rds"))
-physeq.liu <- readRDS(file.path(path, "phyloseq-objects/physeq_liu.rds"))
+physeq.agp      <- readRDS(file.path(path, "phyloseq-objects/physeq_agp.rds"))
+physeq.fukui    <- readRDS(file.path(path, "phyloseq-objects/physeq_fukui.rds"))
+physeq.hugerth  <- readRDS(file.path(path, "phyloseq-objects/physeq_hugerth.rds"))
+physeq.labus    <- readRDS(file.path(path, "phyloseq-objects/physeq_labus.rds"))
+physeq.liu      <- readRDS(file.path(path, "phyloseq-objects/physeq_liu.rds"))
 physeq.lopresti <- readRDS(file.path(path, "phyloseq-objects/physeq_lopresti.rds"))
-physeq.mars <- readRDS(file.path(path, "phyloseq-objects/physeq_mars.rds"))
-physeq.nagel <- readRDS(file.path(path, "phyloseq-objects/physeq_nagel.rds"))
-physeq.pozuelo <- readRDS(file.path(path, "phyloseq-objects/physeq_pozuelo.rds"))
-physeq.zeber <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/CLUSTER/PhyloTree/input/physeq_zeber.rds")
-physeq.zhu <- readRDS(file.path(path, "phyloseq-objects/physeq_zhu.rds"))
-physeq.zhuang <- readRDS(file.path(path, "phyloseq-objects/physeq_zhuang.rds"))
+physeq.mars     <- readRDS(file.path(path, "phyloseq-objects/physeq_mars.rds"))
+physeq.nagel    <- readRDS(file.path(path, "phyloseq-objects/physeq_nagel.rds"))
+physeq.pozuelo  <- readRDS(file.path(path, "phyloseq-objects/physeq_pozuelo.rds"))
+physeq.zeber    <- readRDS(file.path(path, "phyloseq-objects/physeq_zeber.rds"))
+physeq.zhu      <- readRDS(file.path(path, "phyloseq-objects/physeq_zhu.rds"))
+physeq.zhuang   <- readRDS(file.path(path, "phyloseq-objects/physeq_zhuang.rds"))
 
 
 
@@ -60,18 +60,18 @@ test.genus %>%
 
 taxa.levels <- c("Phylum", "Class", "Order", "Family", "Genus")
 
-datasets <- list("AGP-2021" = physeq.agp,
-                 "Fukui-2020" = physeq.fukui,
-                 "Hugerth-2019" = physeq.hugerth,
-                 "Labus-2017" = physeq.labus,
-                 "Liu-2020" = physeq.liu,
+datasets <- list("AGP-2021"      = physeq.agp,
+                 "Fukui-2020"    = physeq.fukui,
+                 "Hugerth-2019"  = physeq.hugerth,
+                 "Labus-2017"    = physeq.labus,
+                 "Liu-2020"      = physeq.liu,
                  "LoPresti-2019" = physeq.lopresti,
-                 "Mars-2020" = physeq.mars,
-                 "Nagel-2016" = physeq.nagel,
-                 "Pozuelo-2015" = physeq.pozuelo,
-                 "Zeber-2016" = physeq.zeber,
-                 "Zhu-2019" = physeq.zhu,
-                 "Zhuang-2018" = physeq.zhuang)
+                 "Mars-2020"     = physeq.mars,
+                 "Nagel-2016"    = physeq.nagel,
+                 "Pozuelo-2015"  = physeq.pozuelo,
+                 "Zeber-2016"    = physeq.zeber,
+                 "Zhu-2019"      = physeq.zhu,
+                 "Zhuang-2018"   = physeq.zhuang)
 
 # Init
 i=0
@@ -102,4 +102,4 @@ for(physeq.cohort in datasets){
   }
 
 }
-
+ 
