@@ -13,6 +13,7 @@
 library(phyloseq)
 library(ggplot2)
 library(tidyverse)
+library(pals)
 
 # Data
 path.phy <- "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/CLUSTER/PhyloTree/input"
@@ -52,7 +53,7 @@ physeq <- merge_phyloseq(physeq.labus,
                          physeq.zeber)
 
 # Separate fecal & sigmoid samples
-physeq.fecal <- subset_samples(physeq, sample_type == 'stool') # 2,153 samples
+physeq.fecal <- subset_samples(physeq, sample_type == 'stool') # 2,145 samples
 physeq.sigmoid <- subset_samples(physeq, sample_type == 'sigmoid') # 431 samples
 cat("Nb of fecal samples:", nsamples(physeq.fecal))
 cat("\nNb of sigmoid samples:", nsamples(physeq.sigmoid))
@@ -94,17 +95,19 @@ ggsave("~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/05_Relative-Abun
 
 
 # Plot by host_disease
+phylum.table %>%
+  filter(sample_type == "stool" & Collection=="1st") %>%
+  group_by(host_disease, Phylum) %>%
+  summarize(Mean=mean(Abundance))
+
 ggplot(phylum.table %>% filter(sample_type == "stool" & Collection=="1st"),
        aes(x = host_disease, y = Abundance, fill = Phylum))+
-  #facet_wrap(~ host_disease, scales = "free_x") +
   geom_bar(stat = "identity", position = "fill") +
   scale_fill_manual(#values=c(colorRampPalette(brewer.pal(8, "Set2"))(48)),
     values=brewer.paired(n=48),
     guide=guide_legend(nrow=24))+
   scale_y_continuous(expand = c(0, 0))+ # remove empty space between axis and plot
-  #theme_bw()+
   theme(axis.text.x = element_text(size=10, color="black"),
-        #axis.ticks.x = element_blank(),
         #legend.position = "None",
         legend.text = element_text(size=7),
         legend.key.size = unit(0.2, 'cm'),
