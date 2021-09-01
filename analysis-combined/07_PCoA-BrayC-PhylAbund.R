@@ -126,6 +126,11 @@ cat("\n++ RUN PCoA ++\n")
 # Perform common-scale normalization
 physeq.CSN <- physeq.fecal
 physeq.CSN <- transform_sample_counts(physeq.CSN, function(x) (x*min(sample_sums(physeq.CSN))) / sum(x) )
+table(rowSums(otu_table(physeq.CSN)))
+
+physeq.CSN <- physeq.fecal
+physeq.CSN <- transform_sample_counts(physeq.CSN, function(x) ceiling((x*min(sample_sums(physeq.CSN))) / sum(x)) )
+table(rowSums(otu_table(physeq.CSN)))
 
 # Calculate distance
 ord <- ordinate(physeq.CSN, "PCoA", "bray")
