@@ -63,7 +63,7 @@ physeq.zeber <- readRDS(file.path(path.phy, "physeq_zeber.rds"))
 
 ```{r merge-datasets}
 # Merge phyloseq objects
-physeq <- merge_phyloseq(physeq.ringel,
+physeq.all <- merge_phyloseq(physeq.ringel,
                          physeq.labus,
                          physeq.lopresti,
                          physeq.pozuelo,
@@ -170,248 +170,6 @@ covariates <- data.frame(disease = sample_data(physeq_fecal.pseudocts)[,'host_di
 ```
 
 
-#______________________
-## FECAL DATA
-
-### FAMILY AGGREGATION
-
-First, let's get a table with samples as rows and family log ratios as columns
-
-```{r agglom-family}
-# Get the familyTable
-fam.agg <- physeq_fecal.pseudocts %>%
-  tax_glom(taxrank = "Family") %>%
-  psmelt()
-familyTable <- acast(family.agg, Family ~ Sample, value.var = 'Abundance')
-# saveRDS(fam.agg, "~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/02_UMAP/family_agg.rds")
-
-# sanity checks
-# dim(familyTable) # 360 families
-# table(familyTable == 0)
-
-# Get log-ratios for family table
-ratiosFam <- LogRatios(familyTable)
-# saveRDS(ratiosFam, "~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/02_UMAP/ratiosFam.rds")
-
-# Mean centering
-ratiosFam.scaled <- scale(ratiosFam, center = TRUE, scale = FALSE)
-table(is.na(ratiosFam.scaled)) # sanity check
-```
-
-Now we can run UMAP.
-
-```{r umap-family}
-# Run UMAP
-set.seed(123)
-umapFam <- uwot::umap(ratiosFam.scaled, # umap on samples (rows) and families abundances (columns)
-                      n_neighbors=20, n_components=3, n_threads=8)
-#30min
-# saveRDS(umapFam, "~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/02_UMAP/umapFam.rds")
-
-# Get the (x,y) coordinates from the UMAP
-dims.umapFam <- umapFam %>% as.data.frame()
-colnames(dims.umapFam) <- c("UMAP_1", "UMAP_2", "UMAP_3")
-rownames(dims.umapFam) <- rownames(ratiosFam.scaled)
-
-# Add covariates
-dims.umapFam <- merge(as.data.frame(dims.umapFam), covariates, by="row.names") # umap+covariates
-```
-
-Plot UMAP.
-
-```{r umap-plot-family}
-# PLOT host_disease
-ggplot(dims.umapFam, aes(x = UMAP_1, y = UMAP_2, color = host_disease))+
-  geom_point(size = 2, alpha = 0.7)+
-  scale_color_manual(values = c('blue', 'red', 'black'))+
-  labs(title = 'Agglomeration at Family level')+
-  theme_bw()
-ggsave("~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/02_UMAP/umapFam_disease.jpg", width=6, height=4)
-
-
-# PLOT host_subtype
-ggplot(dims.umapFam, aes(x = UMAP_1, y = UMAP_2, color = host_subtype))+
-  geom_point(size = 1, alpha = 0.7)+
-  scale_color_manual(values = c('#99CCFF', '#FF3300', '#990000', '#FF66CC','#FFFF66', '#CCCCCC'))+
-  labs(title = 'Agglomeration at Family level')+
-  theme_bw()
-ggsave("~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/02_UMAP/umapFam_subtype.jpg", width=6, height=4)
-
-
-# PLOT author
-ggplot(dims.umapFam, aes(x = UMAP_1, y = UMAP_2, color = author))+
-  geom_point(size = 2, alpha = 0.7)+
-  scale_color_manual(values=brewer.paired(n=12))+
-  #scale_color_manual(values=c(rep("grey", 11), "red"))+
-  theme_bw()
-plotly::plot_ly() %>%
-  add_trace(data=dims.umapFam,
-            x=~UMAP_1, y=~UMAP_2, z=~UMAP_3,
-            color=~author,
-            colors=brewer.paired(n=12),
-            #colors=c('#6600FF', '#33CC33', '#006600', '#FF6633'),
-            type="scatter3d",
-            mode="markers",
-            marker=list(size=3))
-#ggsave("~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/02_UMAP/umapFam_author.jpg", width=6, height=4)
-
-
-# PLOT seqtech
-ggplot(dims.umapFam, aes(x = UMAP_1, y = UMAP_2, color = sequencing_tech))+
-  geom_point(size = 2, alpha = 0.7)+
-  scale_color_manual(values = c('#6600FF', '#33CC33', '#006600', '#FF6633'))+
-  theme_bw()
-plotly::plot_ly() %>%
-  add_trace(data=dims.umapFam,
-            x=~UMAP_1, y=~UMAP_2, z=~UMAP_3, color=~sequencing_tech, type="scatter3d", mode="markers")
-# ggsave("~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/02_UMAP/umapFam_seqtech.jpg", width=6, height=4)
-
-
-# PLOT variable region
-ggplot(dims.umapFam, aes(x = UMAP_1, y = UMAP_2, color = variable_region))+
-  geom_point(size = 2, alpha = 0.7)+
-  theme_bw()
-ggsave("~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/02_UMAP/umapFam_vregion.jpg", width=6, height=4)
-```
-
-
-
-#___________________
-## SIGMOID DATA
-
-```{r sigmoid}
-# Get the familyTable
-fam.agg.sigmoid <- physeq_sigmoid.pseudocts %>%
-  tax_glom(taxrank = "Family") %>%
-  psmelt()
-familyTable.sigmoid <- acast(fam.agg.sigmoid, Family ~ Sample, value.var = 'Abundance')
-
-# sanity checks
-dim(familyTable.sigmoid)
-table(familyTable.sigmoid == 0)
-
-# Get log-ratios for family table
-ratiosFam.sigmoid <- LogRatios(familyTable.sigmoid)
-
-# Mean centering
-ratiosFam.sigmoid.scaled <- scale(ratiosFam.sigmoid, center = TRUE, scale = FALSE)
-table(is.na(ratiosFam.sigmoid.scaled)) # sanity check
-
-# Run UMAP
-umapFam.sigmoid <- umap(ratiosFam.sigmoid.scaled, n_neighbors=50) # umap on samples (rows) and families abundances (columns)
-#30min
-# Get the (x,y) coordinates from the UMAP
-dims.umapFam.sigmoid <- umapFam.sigmoid$layout
-colnames(dims.umapFam.sigmoid) <- c("UMAP_1", "UMAP_2")
-
-# Add covariates
-cov.sigmoid <- data.frame(disease = sample_data(physeq.sigmoid.pseudocts)[,'host_disease'],
-                        seq_tech = sample_data(physeq.sigmoid.pseudocts)[,'sequencing_tech'],
-                        author = sample_data(physeq.sigmoid.pseudocts)[,'author'],
-                        variable_region = sample_data(physeq.sigmoid.pseudocts)[,'variable_region'],
-                        age = sample_data(physeq.sigmoid.pseudocts)[,'host_age'],
-                        bmi = sample_data(physeq.sigmoid.pseudocts)[,'host_bmi'],
-                        subtype = sample_data(physeq.sigmoid.pseudocts)[,'host_subtype'])
-
-dims.umapFam.sigmoid <- merge(as.data.frame(dims.umapFam.sigmoid), cov.sigmoid, by="row.names") # umap+covariates
-
-# PLOT host_disease
-ggplot(dims.umapFam.sigmoid, aes(x = UMAP_1, y = UMAP_2, color = host_disease))+
-  geom_point(size = 2, alpha = 0.7)+
-  scale_color_manual(values = c('blue', 'red', 'black'))+
-  labs(title = 'Agglomeration at Family level')+
-  theme_bw()
-
-# PLOT host_subtype
-ggplot(dims.umapFam.sigmoid, aes(x = UMAP_1, y = UMAP_2, color = host_subtype))+
-  geom_point(size = 1, alpha = 0.7)+
-  scale_color_manual(values = c('#99CCFF', '#FF3300', '#990000', '#FF66CC','#FFFF66', '#CCCCCC'))+
-  labs(title = 'Agglomeration at Family level')+
-  theme_bw()
-
-# PLOT author
-ggplot(dims.umapFam.sigmoid, aes(x = UMAP_1, y = UMAP_2, color = author))+
-  geom_point(size = 2, alpha = 0.7)+
-  theme_bw()
-
-# PLOT seqtech
-ggplot(dims.umapFam.sigmoid, aes(x = UMAP_1, y = UMAP_2, color = sequencing_tech))+
-  geom_point(size = 2, alpha = 0.7)+
-  scale_color_manual(values = c('#6600FF', '#33CC33', '#006600', '#FF6633'))+
-  theme_bw()
-
-# PLOT variable region
-ggplot(dims.umapFam.sigmoid, aes(x = UMAP_1, y = UMAP_2, color = variable_region))+
-  geom_point(size = 2, alpha = 0.7)+
-  theme_bw()
-```
-
-
-
-
-###########################
-# REPRODUCE MASTER THESIS #
-###########################
-
-```{r master-thesis}
-# Get phyloseq object
-physeq.small <- merge_phyloseq(physeq.ringel,
-                               physeq.labus,
-                               physeq.lopresti,
-                               physeq.pozuelo,
-                               physeq.zhuang,
-                               physeq.zhu,
-                               physeq.zeber)
-# Keep only fecal samples
-physeq.small <- subset_samples(physeq.small, sample_type == 'stool') # 612 samples
-
-# Get the familyTable
-physeq.small.pseudocts <- physeq.small
-otu_table(physeq.small.pseudocts)[otu_table(physeq.small.pseudocts) == 0] <- 0.5
-agg.small <- physeq.small.pseudocts %>%
-  tax_glom(taxrank = "Family") %>%                     # agglomerate at genus level
-  psmelt()                                             # Melt to long format
-familyTable.small <- acast(agg.small, Family ~ Sample, value.var = 'Abundance')
-# familyTable.small[familyTable.small == 0] <- 10e-7 # add pseudocounts for heatmap
-dim(familyTable.small)
-
-# Get log-ratios for family table
-ratiosFam.small <- LogRatios(familyTable.small)
-
-# Mean centering
-ratiosFam.small <- scale(ratiosFam.small, center = TRUE, scale = TRUE)
-table(is.na(ratiosFam.small))
-
-# UMAP
-umap.small <- umap(ratiosFam.small, n_neighbors=100) #umap on samples (rows) and families abundances (columns)
-dims_umap.small <- umap.small$layout # extract coordinates
-colnames(dims_umap.small) <- c("UMAP_1", "UMAP_2")
-
-# Add covariates
-mat_col <- data.frame(disease = sample_data(physeq.small)[,'host_disease'],
-                        seq_tech = sample_data(physeq.small)[,'sequencing_tech'],
-                        author = sample_data(physeq.small)[,'author'])
-mat_col[is.na(mat_col$host_disease), "host_disease"] <- "NA"
-mat_col[mat_col$author == "Pozuelo", "sequencing_tech"] <- "Illumina MiSeq single-end"
-mat_col[mat_col$author %in% c("Zhuang", "Zhu"), "sequencing_tech"] <- "Illumina MiSeq paired-end"
-dims_umap.small <- merge(as.data.frame(dims_umap.small), mat_col, by="row.names") # umap+covariates
-
-# PLOT
-ggplot(dims_umap.small, aes(x = UMAP_1, y = UMAP_2, color = host_disease))+
-  geom_point(size = 1, alpha = 0.7)+
-  scale_color_manual(values = c('blue', 'red', 'black'))+
-  labs(title = 'Agglomeration at Family level')+
-  theme_bw()
-
-ggplot(dims_umap.small, aes(x = UMAP_1, y = UMAP_2, color = author))+
-  geom_point(size = 2, alpha = 0.7)+
-  theme_bw()
-
-ggplot(dims_umap.small, aes(x = UMAP_1, y = UMAP_2, color = sequencing_tech))+
-  geom_point(size = 1, alpha = 0.7)+
-  scale_color_manual(values = c('#6600FF', '#33CC33', '#006600', '#FF6633'))+
-  theme_bw()
-```
 
 
 
@@ -540,191 +298,254 @@ plotly::plot_ly(dims.umapFam.subtype, x=~UMAP_1, y=~UMAP_2, z=~UMAP_3, color=~ho
 
 
 
-#######################
-# UMAP ON GENUS LEVEL #
-#######################
+###################
+# SUPERVISED UMAP #
+###################
+
+## GET RATIOS BETWEEN PHYLA
+```{r functions-umap}
+#________________________________________________________
+# Function to agglomerate to given taxonomic level
+aggTable <- function(physeq, tax_rank){
+  
+  cat("\n++ AGGLOMERATE TO", tax_rank, "LEVEL++\n")
+  long.agg <- physeq %>%
+    tax_glom(taxrank = tax_rank) %>%
+    psmelt()
+  
+  # Get a matrix TaxRank (rows) x Samples (columns)
+  if(tax_rank=="Phylum"){agglomeratedTable <- acast(long.agg, Phylum ~ Sample, fun.aggregate=sum, value.var = 'Abundance')}
+  else if(tax_rank=="Class"){agglomeratedTable <- acast(long.agg, Class ~ Sample, fun.aggregate=sum, value.var = 'Abundance')}
+  else if(tax_rank=="Order"){agglomeratedTable <- acast(long.agg, Order ~ Sample, fun.aggregate=sum, value.var = 'Abundance')}
+  else if(tax_rank=="Family"){agglomeratedTable <- acast(long.agg, Family ~ Sample, fun.aggregate=sum, value.var = 'Abundance')}
+  else if(tax_rank=="Genus"){agglomeratedTable <- acast(long.agg, Genus ~ Sample, fun.aggregate=sum, value.var = 'Abundance')}
+  cat("-> Dimensions matrix:", dim(agglomeratedTable), "\n")
+  cat("-> Any 0 counts?", table(agglomeratedTable == 0), "\n")
+  
+  # Sanity check reshape df
+  randomTaxa <- rownames(agglomeratedTable)[10]
+  randomSample <- colnames(agglomeratedTable)[785]
+  valueAgg <- sum(long.agg[long.agg[,tax_rank] == randomTaxa & long.agg$Sample == randomSample, "Abundance"])
+  wideAgg <- agglomeratedTable[randomTaxa, randomSample]
+  cat("-> Sanity check: value in long shaped df is", valueAgg, "while in wide shaped df is", wideAgg)
+  
+  # Save
+  # filepath <- paste0("~/IBS/UMAP/data_logratio/", paste0(tolower(tax_rank), "_agg.rds", sep=""), sep="")
+  # saveRDS(object=long.agg, file=filepath)
+  
+  return(agglomeratedTable)
+}
 
 
-```{r}
-# IMPORT DATA
-path <- "~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/02_UMAP/data_logratio/"
-df <- readRDS(file.path(path, "genus_agg.rds"))
-df1 <- acast(df, Genus~Sample, fun.aggregate=sum, value.var = 'Abundance') # samples x genera (clr)
-
-dims.umapGenus <- readRDS(file.path(path, "dims_umapGenus.rds")) # coordinates umap + covariates
-
-author.order <- c('Labus', 'LoPresti', 'Ringel', # 454 pyrosequencing
-                  'AGP', 'Liu', 'Pozuelo', # Illumina single end
-                  'Fukui', 'Hugerth', 'Zhu', 'Zhuang', # Illumina paired end
-                  'Nagel', 'Zeber-Lubecka') # Ion Torrent
-dims.umapGenus$author <- factor(dims.umapGenus$author, levels=author.order)
-colnames(dims.umapGenus)[1] <- "samples"
-
-# Plot ggplot
-ggplot(dims.umapGenus, aes(x = UMAP_1, y = UMAP_2, color = host_subtype))+
-  geom_point(size = 1, alpha = 0.6)+
-  #scale_color_manual(values=brewer.paired(n=13), name="")+ # author
-  # scale_color_manual(values=c("blue", "red", "black"), name="")+ # host_disease
-  # scale_color_manual(values=c('#6600FF', '#33CC33', '#006600', '#FF6633'))+ # seqtech
-  scale_color_manual(values=c("#BDD7E7", "#D95F02", "#7570B3", "#E7298A", "#FEEDDE", "grey"))+
-  theme(panel.grid = element_blank(),
-        panel.background=element_blank())
-ggsave("~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/02_UMAP/umapGenus_subtype.jpg", width=6, height=3.5)
-
-# Plot plotly
-plotly::plot_ly() %>%
-  add_trace(data=dims.umapGenus,
-            x=~UMAP_1, y=~UMAP_2, z=~UMAP_3,
-            color=~host_subtype,
-            # colors=brewer.paired(n=13),
-            # colors=c("blue", "red", "black"),
-            #colors=c('#6600FF', '#33CC33', '#006600', '#FF6633'),
-            type="scatter3d",
-            mode="markers",
-            marker=list(size=5))
+#________________________________________________________
+# Function to get the table to feed into the UMAP
+getTable <- function(physeq, tax_rank){
+  
+  # Get the agglomerated taxa
+  agglomeratedTable <- aggTable(physeq, tax_rank)
+  
+  # Get log-ratios between taxa
+  ratiosTable <- LogRatios(agglomeratedTable, tax_rank)
+  
+  # Mean-center
+  # cat("\n++MEAN-CENTERING...++|n")
+  # ratios.scaled <- scale(ratiosTable, center = TRUE, scale = FALSE)
+  
+  # return(ratios.scaled)
+  return(ratiosTable)
+}
 
 
-# Add shannon diversity
-p <- plot_richness(physeq.fecal, x="host_disease", measures="Shannon") +
-  geom_boxplot(fill=NA, width=0.3) +
-  facet_wrap(~author, scales="fixed") +
-  theme_bw() +
-  labs(x="", y="Shannon")
-shannon <- p$data %>%
-  select(samples, value) %>%
-  rename(shannon=value)
-test <- merge(dims.umapGenus, shannon, by="samples")
-
-# Add simpson diversity
-p <- plot_richness(physeq.fecal, x="host_disease", measures="Simpson") +
-  geom_boxplot(fill=NA, width=0.3) +
-  facet_wrap(~author, scales="fixed") +
-  theme_bw() +
-  labs(x="", y="Simpson")
-simpson <- p$data %>%
-  select(samples, value) %>%
-  rename(simpson=value)
-test <- merge(test, simpson, by="samples")
-
-# Plot ggplot
-ggplot(test, aes(x = UMAP_1, y = UMAP_2, color = simpson))+
-  geom_point(size = 1, alpha = 1)+
-  # scale_color_gradient2(midpoint = 0.9, low = "blue", mid = "white", high = "red") +
-  # scale_colour_gradientn(colours = RColorBrewer::brewer.pal(10, "RdYlBu"))+
-  theme(panel.grid = element_blank(),
-        panel.background=element_blank())
-ggsave("~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/02_UMAP/umapGenus_shannon.jpg", width=6, height=3.5)
-
-
-# Add log ratios phyla
-test1 <- merge(dims.umapGenus, ratio.df, by=c("samples", "host_disease", "host_subtype", "sequencing_tech", "author"))
-ggplot(test1, aes(x = UMAP_1, y = UMAP_2, color = LogRatio_FirmProt))+
-  geom_point(size = 1, alpha = 1)+
-  scale_color_gradient2(midpoint=mean(test1$LogRatio_FirmProt), low = "blue", mid = "white", high = "red") +
-  # scale_colour_gradientn(colours = RColorBrewer::brewer.pal(10, "RdYlBu"))+
-  theme(panel.grid = element_blank(),
-        panel.background=element_blank())
-ggsave("~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/02_UMAP/umapGenus_firmact.jpg", width=6, height=3.5)
-
-plotly::plot_ly() %>%
-  add_trace(data=test1,
-            x=~UMAP_1, y=~UMAP_2, z=~UMAP_3,
-            color=~LogRatio_FirmBact,
-            colors=brewer.rdbu(50),
-            type="scatter3d",
-            mode="markers",
-            marker=list(size=5))
+# Get the data table
+ratios.phyla <- getTable(physeq=physeq_fecal.pseudocts, tax_rank = "Phylum")
 
 ```
 
 
 
+## RUN UMAP
 
-```{r sanity-checks-genus-numbers}
-# Sanity checks
-# With 0 counts
-genus.agg <- physeq.fecal %>%
-  tax_glom(taxrank = "Genus") %>%
-  psmelt()
+```{r run-supervised-umap}
+#________________________________________________________
+# Function to run the UMAP
+runUMAP <- function(physeq, tax_rank){
+  
+  # # Get the data table
+  # ratios <- getTable(physeq, tax_rank)
+  
+  # Add host_disease to the ratios matrix
+  ratios <- merge(ratios.phyla,
+                  data.frame(sequencing_tech = sample_data(physeq_fecal.pseudocts)[,'sequencing_tech']),
+                  by="row.names")
+  ratios$sequencing_tech <- as.factor(ratios$sequencing_tech)
+  rownames(ratios) <- ratios[,"Row.names"]
+  ratios[,"Row.names"] <- NULL
+  
+  cat("\n++RUN UMAP...++\n")
+  # Run UMAP
+  set.seed(123)
+  umap <- uwot::umap(ratios, # umap on samples (rows) and taxa ratios (columns)
+                     n_neighbors=50, n_components=3, n_threads=16, y=ratios$sequencing_tech)
+  
+  # Save
+  # filepath <- paste0("~/IBS/UMAP/data_logratio/umap", paste0(tax_rank, ".rds", sep=""), sep="")
+  # saveRDS(object=umap, file=filepath)
+  
+  # Get the (x,y) coordinates from the UMAP
+  dims.umap <- umap %>% as.data.frame()
+  colnames(dims.umap) <- c("UMAP_1", "UMAP_2", "UMAP_3")
+  rownames(dims.umap) <- rownames(ratios)
+  
+  # Add covariates
+  covariates <- data.frame(disease = sample_data(physeq)[,'host_disease'],
+                           subtype = sample_data(physeq)[,'host_subtype'],
+                           seq_tech = sample_data(physeq)[,'sequencing_tech'],
+                           author = sample_data(physeq)[,'author'],
+                           variable_region = sample_data(physeq)[,'variable_region'],
+                           age = sample_data(physeq)[,'host_age'],
+                           bmi = sample_data(physeq)[,'host_bmi'])
+  dims.umap <- merge(as.data.frame(dims.umap), covariates, by="row.names") # umap+covariates
+  
+  # Save
+  # filepath <- paste0("~/IBS/UMAP/data_logratio/dims_umap", paste0(tax_rank, ".rds", sep=""), sep="")
+  # saveRDS(object=dims.umap, file=filepath)
+  
+  return(dims.umap)
+}
 
-test <- genus.agg %>%
-  filter(Abundance != 0) %>%
-  group_by(Genus) %>%
-  filter(n_distinct(author) == 1) %>%
-  select(Genus, author, Abundance)
-length(unique(test$Genus))
-length(unique(genus.agg$Genus))
-# 483 genera out of 976 are only in 1 dataset
-unique.genera <- unique(test$Genus)
-sum(genus.agg$Abundance)
-sum(test$Abundance)
-# represent 112,363 / 57,396,134
+dims.umap <- runUMAP(physeq=physeq_fecal.pseudocts, tax_rank = "Phylum")
 
-# With 0.5 counts
-genus.agg2 <- readRDS(file.path(path, "genus_agg.rds"))
-test2 <- genus.agg2 %>%
-  filter(Genus %in% test$Genus) %>%
-  group_by(Genus, author, Abundance) %>%
-  select(Genus, author, Abundance)
-length(unique(test2$Genus))
-table(unique(test$Genus) %in% unique(test2$Genus))
-# 483 genera
-sum(genus.agg2$Abundance)
-sum(test2$Abundance)
+```
 
 
+## PLOT
 
-# FAMILY
-# With 0 counts
-family.agg <- physeq.fecal %>%
+```{r plot-supervised-umap, fig.width=5, fig.height=3.5}
+#### USE PLOTTING FUNCTIONS FROM 02_UMAP_plot.Rmd ####
+plot.covariates(plotDF = dims.umap)
+
+# Plot3D
+# plot3D(plotDF = dims.umap, coloring="host_disease", colorPal=c("blue", "red", "black"), taxLevel="Phylum")
+# plot3D(plotDF = dims.umap, coloring="host_subtype", colorPal=c("#EFF3FF", "#D95F02", "#7570B3", "#E7298A", "#FEEDDE", "grey"), taxLevel="Phylum")
+# plot3D(plotDF = dims.umap, coloring="sequencing_tech", colorPal=c('#6600FF', '#33CC33', '#006600', '#FF6633'), taxLevel="Phylum")
+# plot3D(plotDF = dims.umap, coloring="author", colorPal=brewer.paired(n=13), taxLevel="Phylum")
+
+# Plot by log ratios or relative abundances
+colnames(dims.umap)[1] <- "samples"
+umap.df <- merge(dims.umap, ratio.df, by=c("samples", "host_disease", "host_subtype", "sequencing_tech", "author"))
+umap.df <- merge(umap.df, relAbundance, by="samples")
+  
+# Plot log ratios (in 2D)
+plot.logRatio()
+
+# Plot 3D
+# plot3D(coloring="LogRatio_FirmBact", colorPal=rev(brewer.rdbu(50)), taxLevel="Phylum")
+# plot3D(coloring="LogRatio_FirmAct", colorPal=rev(brewer.rdbu(50)), taxLevel="Phylum")
+# plot3D(coloring="LogRatio_BactAct", colorPal=rev(brewer.rdbu(50)), taxLevel="Phylum")
+
+
+# By Phyla relative abundances (in 2D)
+plot.relAbundance()
+
+# By Phyla relative abundances (in 3D)
+# plot3D(coloring="Firmicutes", colorPal=rev(brewer.rdbu(50)), taxLevel="Phylum")
+# plot3D(coloring="Bacteroidota", colorPal=rev(brewer.rdbu(50)), taxLevel="Phylum")
+# plot3D(coloring="Actinobacteriota", colorPal=rev(brewer.rdbu(50)), taxLevel="Phylum")
+# plot3D(coloring="Proteobacteria", colorPal=rev(brewer.rdbu(50)), taxLevel="Phylum")
+
+
+# Ruminococcaceae?
+familyTable.rel <- physeq.fecal %>%
   tax_glom(taxrank = "Family") %>%
+  transform_sample_counts(function(x) {x/sum(x)} ) %>%
   psmelt()
 
-fam0 <- family.agg %>%
-  filter(Abundance != 0) %>%
-  group_by(Family) %>%
-  filter(n_distinct(author) == 1) %>%
-  select(Family, author, Abundance)
-length(unique(fam0$Family))
-length(unique(family.agg$Family))
-# 158 families out of 360 are only in 1 dataset
-unique.families <- unique(fam0$Family)
-sum(fam0$Abundance)
-sum(family.agg$Abundance)
-# represent 17,651 / 60,934,938
+# Extract relative abundance of major phyla
+rumino.rel <- familyTable.rel %>%
+  filter(Family == "Ruminococcaceae") %>%
+  select(Sample, Abundance, Family) %>%
+  rename(Ruminococcaceae = Abundance) %>%
+  rename(samples = Sample) %>%
+  select(-Family)
+umap.df <- merge(umap.df, rumino.rel, by="samples")
 
-# With 0.5 counts
-family.agg2 <- readRDS(file.path(path, "family_agg.rds"))
-fam0_5 <- family.agg2 %>%
-  filter(Family %in% fam0$Family) %>%
-  group_by(Family, author, Abundance) %>%
-  select(Family, author, Abundance)
-length(unique(fam0_5$Family))
-table(unique(fam0_5$Family) %in% unique(fam0_5$Family))
-# 158 families
-sum(fam0_5$Abundance)/sum(family.agg2$Abundance)
+ggplot(umap.df, aes(x = UMAP_1, y = UMAP_2, color = Ruminococcaceae))+
+    geom_point(size=1) +
+    scale_color_gradient2(midpoint=mean(umap.df$Ruminococcaceae), low="blue", mid="white", high="red")+
+    theme(panel.grid = element_blank(),
+          panel.background=element_blank(),
+          legend.key.size = unit(0.25, 'cm'),
+          legend.text = element_text(size=6),
+          legend.title = element_text(size=10),
+          axis.title = element_text(size=5),
+          axis.text = element_text(size=5))
+```
 
 
-# NUMBER OF TAXA PER DATASET
-genus.agg %>%
-  filter(Abundance != 0) %>%
-  select(Genus, author, Abundance) %>%
-  group_by(author) %>%
-  summarize(n_distinct(Genus), sum(Abundance)) %>%
-  rename("nb_total-genus"="n_distinct(Genus)",
-         "total_count" = "sum(Abundance)") %>%
-  left_join(genus.agg %>%
-                filter(Abundance != 0) %>%
-                group_by(Genus) %>%
-                filter(n_distinct(author) == 1) %>%
-                ungroup() %>%
-                select(Genus, author, Abundance) %>%
-                group_by(author) %>%
-                summarize(n_distinct(Genus), sum(Abundance)) %>%
-                rename("nb_unique-genus"="n_distinct(Genus)", "total_count_unique_genus" = "sum(Abundance)"),
-             by="author") %>%
-  mutate("%total_counts" = (total_count_unique_genus*100)/total_count) %>%
-  select(-c("total_count", "total_count_unique_genus"))
 
+
+
+###########################
+# REPRODUCE MASTER THESIS #
+###########################
+
+```{r master-thesis}
+# Get phyloseq object
+physeq.small <- merge_phyloseq(physeq.ringel,
+                               physeq.labus,
+                               physeq.lopresti,
+                               physeq.pozuelo,
+                               physeq.zhuang,
+                               physeq.zhu,
+                               physeq.zeber)
+# Keep only fecal samples
+physeq.small <- subset_samples(physeq.small, sample_type == 'stool') # 612 samples
+
+# Get the familyTable
+physeq.small.pseudocts <- physeq.small
+otu_table(physeq.small.pseudocts)[otu_table(physeq.small.pseudocts) == 0] <- 0.5
+agg.small <- physeq.small.pseudocts %>%
+  tax_glom(taxrank = "Family") %>%                     # agglomerate at genus level
+  psmelt()                                             # Melt to long format
+familyTable.small <- acast(agg.small, Family ~ Sample, value.var = 'Abundance')
+# familyTable.small[familyTable.small == 0] <- 10e-7 # add pseudocounts for heatmap
+dim(familyTable.small)
+
+# Get log-ratios for family table
+ratiosFam.small <- LogRatios(familyTable.small)
+
+# Mean centering
+ratiosFam.small <- scale(ratiosFam.small, center = TRUE, scale = TRUE)
+table(is.na(ratiosFam.small))
+
+# UMAP
+umap.small <- umap(ratiosFam.small, n_neighbors=100) #umap on samples (rows) and families abundances (columns)
+dims_umap.small <- umap.small$layout # extract coordinates
+colnames(dims_umap.small) <- c("UMAP_1", "UMAP_2")
+
+# Add covariates
+mat_col <- data.frame(disease = sample_data(physeq.small)[,'host_disease'],
+                        seq_tech = sample_data(physeq.small)[,'sequencing_tech'],
+                        author = sample_data(physeq.small)[,'author'])
+mat_col[is.na(mat_col$host_disease), "host_disease"] <- "NA"
+mat_col[mat_col$author == "Pozuelo", "sequencing_tech"] <- "Illumina MiSeq single-end"
+mat_col[mat_col$author %in% c("Zhuang", "Zhu"), "sequencing_tech"] <- "Illumina MiSeq paired-end"
+dims_umap.small <- merge(as.data.frame(dims_umap.small), mat_col, by="row.names") # umap+covariates
+
+# PLOT
+ggplot(dims_umap.small, aes(x = UMAP_1, y = UMAP_2, color = host_disease))+
+  geom_point(size = 1, alpha = 0.7)+
+  scale_color_manual(values = c('blue', 'red', 'black'))+
+  labs(title = 'Agglomeration at Family level')+
+  theme_bw()
+
+ggplot(dims_umap.small, aes(x = UMAP_1, y = UMAP_2, color = author))+
+  geom_point(size = 2, alpha = 0.7)+
+  theme_bw()
+
+ggplot(dims_umap.small, aes(x = UMAP_1, y = UMAP_2, color = sequencing_tech))+
+  geom_point(size = 1, alpha = 0.7)+
+  scale_color_manual(values = c('#6600FF', '#33CC33', '#006600', '#FF6633'))+
+  theme_bw()
 ```
 
