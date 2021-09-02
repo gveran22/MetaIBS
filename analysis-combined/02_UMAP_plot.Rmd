@@ -197,7 +197,8 @@ author.order <- c('Labus', 'LoPresti', 'Ringel', # 454 pyrosequencing
                   'Fukui', 'Hugerth', 'Zhu', 'Zhuang', # Illumina paired end
                   'Nagel', 'Zeber-Lubecka') # Ion Torrent
 
-path <- "~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/02_UMAP/data_logratio_all/"
+# path <- "~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/02_UMAP/data_logratio_all/"
+path <- "~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/02_UMAP/supervised_UMAP/data_seqtech"
 
 # Function to get the UMAP coordinates (by taxonomic level)
 getUMAP <- function(taxLevel="Genus"){
@@ -282,7 +283,7 @@ plot.covariates <- function(plotDF=umap.df){
 plot3D <- function(plotDF=umap.df, coloring="host_disease", colorPal=c("blue", "red", "black"), taxLevel="Genus"){
   # 3D
   plotly::plot_ly() %>%
-    add_trace(data=umap.df,
+    add_trace(data=plotDF,
               x=~UMAP_1, y=~UMAP_2, z=~UMAP_3,
               color=~plotDF[,coloring],
               colors=colorPal,
@@ -575,6 +576,7 @@ plot.relAbundance()
 # plot3D(coloring="Actinobacteriota", colorPal=rev(brewer.rdbu(50)), taxLevel="Family")
 # plot3D(coloring="Proteobacteria", colorPal=rev(brewer.rdbu(50)), taxLevel="Family")
 ```
+
 
 
 ## Genus level
