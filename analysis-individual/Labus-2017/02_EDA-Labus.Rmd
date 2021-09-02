@@ -64,7 +64,7 @@ plot_tree(physeq.labus, color = "host_disease", ladderize="left")
 # Import phyloseq objects for computing distances
 physeq.rel <- readRDS(file.path(path, "data/analysis-individual/Labus-2017/02_EDA-Labus/physeq_relative.rds"))
 physeq.clr <- readRDS(file.path(path, "data/analysis-individual/Labus-2017/02_EDA-Labus/physeq_clr.rds"))
-physeq.CSN <- readRDS(file.path(path, "data/analysis-individual/Labus-2017/02_EDA-Labus//physeq_CSN.rds"))
+physeq.CSN <- readRDS(file.path(path, "data/analysis-individual/Labus-2017/02_EDA-Labus/physeq_CSN.rds"))
 physeq.NZcomp <- readRDS(file.path(path, "data/analysis-individual/Labus-2017/02_EDA-Labus/physeq_NZcomp.rds"))
 ```
 
