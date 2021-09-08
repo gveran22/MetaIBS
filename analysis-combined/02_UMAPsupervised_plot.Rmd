@@ -391,9 +391,9 @@ plot.relAbundance <- function(plotDF=umap.df){
 ## 1. DISEASE AS INDICATOR
 
 ### a) Family level
-```{r plot-disease-family, fig.width=9, fig.height=7}
+```{r plot-disease-family, include=FALSE, fig.width=9, fig.height=7}
 # GET UMAP DF
-path <- "~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/02_UMAP/supervised_UMAP/data_disease"
+path <- "~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/02_UMAP/supervised_UMAP/n_neighbors_10/data_disease"
 umap.df <- NULL
 umap.df <- getUMAP(taxLevel="Family")
 
@@ -437,9 +437,9 @@ plot.relAbundance()
 ```
 
 ### b) Genus level
-```{r plot-disease-genus, fig.width=9, fig.height=7}
+```{r plot-disease-genus, include=FALSE, fig.width=9, fig.height=7}
 # GET UMAP DF
-path <- "~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/02_UMAP/supervised_UMAP/data_disease"
+path <- "~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/02_UMAP/supervised_UMAP/n_neighbors_10/data_disease"
 umap.df <- NULL
 umap.df <- getUMAP(taxLevel="Genus")
 
@@ -489,7 +489,7 @@ plot.relAbundance()
 ### a) Family level
 ```{r plot-author-family, fig.width=9, fig.height=7}
 # GET UMAP DF
-path <- "~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/02_UMAP/supervised_UMAP/data_author"
+path <- "~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/02_UMAP/supervised_UMAP/n_neighbors_10/data_author"
 umap.df <- NULL
 umap.df <- getUMAP(taxLevel="Family")
 
@@ -505,16 +505,16 @@ plot3D(coloring="author", colorPal=brewer.paired(n=13), taxLevel="Family")
 
 
 # Plot by Shannon index (in 2D)
-ggplot(umap.df, aes(x = UMAP_1, y = UMAP_2, color = shannon))+
-    geom_point(size=1) +
-    scale_color_gradient2(midpoint=mean(umap.df$shannon), low="blue", mid="white", high="red")+
-    theme(panel.grid = element_blank(),
-          panel.background=element_blank())
+# ggplot(umap.df, aes(x = UMAP_1, y = UMAP_2, color = shannon))+
+#     geom_point(size=1) +
+#     scale_color_gradient2(midpoint=mean(umap.df$shannon), low="blue", mid="white", high="red")+
+#     theme(panel.grid = element_blank(),
+#           panel.background=element_blank())
 # plot3D(coloring="shannon", colorPal=rev(brewer.rdbu(50)), taxLevel="Family")
 
 
 # Plot log ratios (in 2D)
-plot.logRatio()
+# plot.logRatio()
 
 # Plot 3D
 # plot3D(coloring="LogRatio_FirmBact", colorPal=rev(brewer.rdbu(50)), taxLevel="Family")
@@ -523,7 +523,7 @@ plot.logRatio()
 
 
 # By Phyla relative abundances (in 2D)
-plot.relAbundance()
+# plot.relAbundance()
 
 # By Phyla relative abundances (in 3D)
 # plot3D(coloring="Firmicutes", colorPal=rev(brewer.rdbu(50)), taxLevel="Family")
@@ -535,7 +535,7 @@ plot.relAbundance()
 ### b) Genus level
 ```{r plot-author-genus, fig.width=9, fig.height=7}
 # GET UMAP DF
-path <- "~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/02_UMAP/supervised_UMAP/data_author"
+path <- "~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/02_UMAP/supervised_UMAP/n_neighbors_10/data_author"
 umap.df <- NULL
 umap.df <- getUMAP(taxLevel="Genus")
 
@@ -551,16 +551,16 @@ plot3D(coloring="author", colorPal=brewer.paired(n=13), taxLevel="Genus")
 
 
 # Plot by Shannon index (in 2D)
-ggplot(umap.df, aes(x = UMAP_1, y = UMAP_2, color = shannon))+
-    geom_point(size=1) +
-    scale_color_gradient2(midpoint=mean(umap.df$shannon), low="blue", mid="white", high="red")+
-    theme(panel.grid = element_blank(),
-          panel.background=element_blank())
+# ggplot(umap.df, aes(x = UMAP_1, y = UMAP_2, color = shannon))+
+#     geom_point(size=1) +
+#     scale_color_gradient2(midpoint=mean(umap.df$shannon), low="blue", mid="white", high="red")+
+#     theme(panel.grid = element_blank(),
+#           panel.background=element_blank())
 # plot3D(coloring="shannon", colorPal=rev(brewer.rdbu(50)), taxLevel="Genus")
 
 
 # Plot log ratios (in 2D)
-plot.logRatio()
+# plot.logRatio()
 
 # Plot 3D
 # plot3D(coloring="LogRatio_FirmBact", colorPal=rev(brewer.rdbu(50)), taxLevel="Genus")
@@ -569,7 +569,7 @@ plot.logRatio()
 
 
 # By Phyla relative abundances (in 2D)
-plot.relAbundance()
+# plot.relAbundance()
 
 # By Phyla relative abundances (in 3D)
 # plot3D(coloring="Firmicutes", colorPal=rev(brewer.rdbu(50)), taxLevel="Genus")
@@ -585,7 +585,7 @@ plot.relAbundance()
 ### a) Family level
 ```{r plot-seqtech-family, fig.width=9, fig.height=7}
 # GET UMAP DF
-path <- "~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/02_UMAP/supervised_UMAP/data_seqtech"
+path <- "~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/02_UMAP/supervised_UMAP/n_neighbors_10/data_seqtech"
 umap.df <- NULL
 umap.df <- getUMAP(taxLevel="Family")
 
@@ -601,16 +601,16 @@ plot3D(coloring="sequencing_tech", colorPal=c('#6600FF', '#33CC33', '#006600', '
 
 
 # Plot by Shannon index (in 2D)
-ggplot(umap.df, aes(x = UMAP_1, y = UMAP_2, color = shannon))+
-    geom_point(size=1) +
-    scale_color_gradient2(midpoint=mean(umap.df$shannon), low="blue", mid="white", high="red")+
-    theme(panel.grid = element_blank(),
-          panel.background=element_blank())
+# ggplot(umap.df, aes(x = UMAP_1, y = UMAP_2, color = shannon))+
+#     geom_point(size=1) +
+#     scale_color_gradient2(midpoint=mean(umap.df$shannon), low="blue", mid="white", high="red")+
+#     theme(panel.grid = element_blank(),
+#           panel.background=element_blank())
 # plot3D(coloring="shannon", colorPal=rev(brewer.rdbu(50)), taxLevel="Family")
 
 
 # Plot log ratios (in 2D)
-plot.logRatio()
+# plot.logRatio()
 
 # Plot 3D
 # plot3D(coloring="LogRatio_FirmBact", colorPal=rev(brewer.rdbu(50)), taxLevel="Family")
@@ -619,7 +619,7 @@ plot.logRatio()
 
 
 # By Phyla relative abundances (in 2D)
-plot.relAbundance()
+# plot.relAbundance()
 
 # By Phyla relative abundances (in 3D)
 # plot3D(coloring="Firmicutes", colorPal=rev(brewer.rdbu(50)), taxLevel="Family")
@@ -631,7 +631,7 @@ plot.relAbundance()
 ### b) Genus level
 ```{r plot-seqtech-genus, fig.width=9, fig.height=7}
 # GET UMAP DF
-path <- "~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/02_UMAP/supervised_UMAP/data_seqtech"
+path <- "~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/02_UMAP/supervised_UMAP/n_neighbors_10/data_seqtech"
 umap.df <- NULL
 umap.df <- getUMAP(taxLevel="Genus")
 
@@ -647,16 +647,16 @@ plot3D(coloring="sequencing_tech", colorPal=c('#6600FF', '#33CC33', '#006600', '
 
 
 # Plot by Shannon index (in 2D)
-ggplot(umap.df, aes(x = UMAP_1, y = UMAP_2, color = shannon))+
-    geom_point(size=1) +
-    scale_color_gradient2(midpoint=mean(umap.df$shannon), low="blue", mid="white", high="red")+
-    theme(panel.grid = element_blank(),
-          panel.background=element_blank())
+# ggplot(umap.df, aes(x = UMAP_1, y = UMAP_2, color = shannon))+
+#     geom_point(size=1) +
+#     scale_color_gradient2(midpoint=mean(umap.df$shannon), low="blue", mid="white", high="red")+
+#     theme(panel.grid = element_blank(),
+#           panel.background=element_blank())
 # plot3D(coloring="shannon", colorPal=rev(brewer.rdbu(50)), taxLevel="Genus")
 
 
 # Plot log ratios (in 2D)
-plot.logRatio()
+# plot.logRatio()
 
 # Plot 3D
 # plot3D(coloring="LogRatio_FirmBact", colorPal=rev(brewer.rdbu(50)), taxLevel="Genus")
@@ -665,7 +665,7 @@ plot.logRatio()
 
 
 # By Phyla relative abundances (in 2D)
-plot.relAbundance()
+# plot.relAbundance()
 
 # By Phyla relative abundances (in 3D)
 # plot3D(coloring="Firmicutes", colorPal=rev(brewer.rdbu(50)), taxLevel="Genus")
