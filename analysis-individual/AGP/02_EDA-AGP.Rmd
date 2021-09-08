@@ -5,8 +5,6 @@ output:
     df_print: paged
     toc: yes
   pdf_document: default
-  html_notebook:
-    toc: yes
 ---
 
 ```{r, include=FALSE}
@@ -20,14 +18,14 @@ knitr::opts_chunk$set(fig.width = 15, fig.height = 5, warning=FALSE, message=FAL
 ## IMPORT ##
 ############
 
-## Librairies
+## 1. Librairies
 
 ```{r library-import}
 library(phyloseq) # for phyloseq object
-library(Biostrings)
 library(ggplot2)
 library(cowplot)
-library(tidyverse)
+library(plyr)
+library(dplyr)
 library("plotly") # plot 3D
 library("microbiome") # for centered log-ratio
 library("coda") # Aitchison distance
@@ -37,16 +35,14 @@ library(pheatmap) # for heatmap
 ```
 
 
-## Data
+## 2. Data
 
 ```{r import-data}
 # Set path
 path <- "~/Projects/IBS_Meta-analysis_16S"
 
 # Import phyloseq object
-# physeq.agp <- readRDS(file.path(path, "phyloseq-objects/physeq_AGPfilt.rds"))
-physeq.agp <- readRDS(file.path(path, "data/OutputPhangorn/physeq_AGPfilt.rds"))
-physeq.agp <- prune_samples(sample_sums(physeq.agp)>=500, physeq.agp)
+physeq.agp <- readRDS(file.path(path, "phyloseq-objects/physeq_agp.rds"))
 
 # Sanity check
 physeq.agp
@@ -74,6 +70,38 @@ physeq.NZcomp <- readRDS(file.path(path, "data/analysis-individual/AGP/02_EDA-AG
 dist.agp <- readRDS(file.path(path, "data/analysis-individual/AGP/02_EDA-AGP/distances.rds"))
 plot.df <- readRDS(file.path(path, "data/analysis-individual/AGP/02_EDA-AGP/plot_distances.rds"))
 ```
+
+
+
+
+##################
+## DEMOGRAPHICS ##
+##################
+
+This dataset has several covariates (age, bmi). We will check whether there is the same distribution of these covariates between healthy and IBS patients.
+
+```{r demographics-stats}
+# Number of individuals in each group
+metadata <- data.frame(sample_data(physeq.agp))
+metadata %>%
+  count(host_disease)
+
+# Age
+metadata %>%
+  group_by(host_disease) %>%
+  summarize(mean_age=mean(host_age), sd_age=sd(host_age))
+wilcox.test(metadata[metadata$host_disease == "IBS", ]$host_age,
+            metadata[metadata$host_disease == "Healthy", ]$host_age)
+
+# BMI
+metadata %>%
+  group_by(host_disease) %>%
+  summarize(mean_bmi=mean(na.omit(host_bmi)), sd_bmi=sd(na.omit(host_bmi)))
+wilcox.test(metadata[metadata$host_disease == "IBS",]$host_bmi,
+            metadata[metadata$host_disease == "Healthy", ]$host_bmi)
+```
+
+
 
 
 ################
@@ -127,86 +155,16 @@ ggplot(class.table, aes(x = reorder(Sample, Sample, function(x) mean(phylum.tabl
 ```
 
 
-### 3. Remove bloom sequences
-
-Looking at it more closely, there is a high proportion of Proteobacteria compared to other datasets. Considering that fecal samples were shipped from the participants' home at room temperature, there is evidence that some bacteria grow at room temperature, which would bias the microbial composition (https://journals.asm.org/doi/10.1128/mSystems.00199-16#B5). Authors from the AGP removed a selection of **bloom sequences** that were shared on their [github repository][1] in a FASTA file.
-
-[1]: https://github.com/knightlab-analyses/bloom-analyses
-
-```{r bloom-sequences}
-# Import bloom sequences
-bloom <- readDNAStringSet(file.path(path, "newbloom.all.fna"))
-
-
-# Identify ASVs to keep (ones that are not bloom sequences)
-# note: trim ASVs to 150bp as bloom sequences are 150bp (a few ASVs are 151bp)
-
-# 1 - Identify ASVs to keep (ones that are not bloom sequences) in the ASVs that are 150bp
-shortASV <- refseq(physeq.agp)[nchar(refseq(physeq.agp)) == 150]
-shortASV_tokeep <- names( shortASV[!(shortASV %in% bloom)] ) # 8,923
-
-# 2 - Identify ASVs to keep (ones that are not bloom sequences) in the ASVs that are 151bp
-longASV <- refseq(physeq.agp)[nchar(refseq(physeq.agp)) == 151]
-longASV_trim1 <- subseq(longASV, start=1, width=150) # range 1 - 150
-longASV_trim2 <- subseq(longASV, start=2, width=150) # range 2 - 151
-
-longASV_tokeep1 <- names( longASV_trim1[!(longASV_trim1 %in% bloom)] ) # bloom seqs in 1 - 150 range
-longASV_tokeep2 <- names( longASV_trim2[!(longASV_trim2 %in% bloom)] ) # bloom seqs in 2 - 151 range
-
-longASV_tokeep <- intersect(longASV_tokeep1, longASV_tokeep2)
-
-# 3 - Combine
-ASV_to_keep <- c(shortASV_tokeep, longASV_tokeep)
-
-# Check taxonomic classification of these bloom sequences
-tax_table(physeq.agp) %>%
-  as.data.frame %>%
-  rownames_to_column(var="ASV") %>%
-  filter(!ASV %in% ASV_to_keep) %>%
-  group_by(Phylum) %>%
-  summarize(n=n())
-
-# Remove unwanted taxa (bloom)
-physeq.filt <- prune_taxa(ASV_to_keep, physeq.agp)
-physeq.filt <- prune_samples(sample_sums(physeq.filt)>=500, physeq.filt)
-
-# saveRDS(physeq.filt, "~/Projects/IBS_Meta-analysis_16S/phyloseq-objects/physeq_agp.rds")
-
-phylum.table.filt <- physeq.filt %>%
-  tax_glom(taxrank = "Phylum") %>%                     # agglomerate at phylum level
-  transform_sample_counts(function(x) {x/sum(x)} ) %>% # Transform to rel. abundance
-  psmelt()                                             # Melt to long format
-
-
-# PLOT
-a <- ggplot(phylum.table, aes(x = host_disease,
-                              y = Abundance, fill = Phylum))+
-  geom_bar(stat = "identity", position="fill") +
-  theme_bw()+
-  theme(legend.position="none")+
-  labs(x = "", y = "Relative abundance", title = "Original data")
-
-b <- ggplot(phylum.table.filt, aes(x = host_disease,
-                                   y = Abundance, fill = Phylum))+
-  geom_bar(stat = "identity", position="fill") +
-  # theme(axis.text.x = element_blank())+
-  labs(x = "", y = "Relative abundance", title = "Bloom sequences removed")+
-  theme_bw()
-
-gridExtra::grid.arrange(a, b, ncol=2, widths=c(0.3,0.7))
-```
-
-
 ### 3. Firmicutes/Bacteroidota ratio
 
 ```{r plot-log-ratio, fig.height = 5, fig.width=3}
 # Extract abundance of only Bacteroidota and Firmicutes
-bacter <- phylum.table.filt %>%
+bacter <- phylum.table %>%
   filter(Phylum == "Bacteroidota") %>%
   select(c('Sample', 'Abundance', 'host_disease', 'Phylum')) %>%
   arrange(Sample)
 
-firmi <- phylum.table.filt %>%
+firmi <- phylum.table %>%
   filter(Phylum == "Firmicutes") %>%
   select(c('Sample', 'Abundance', 'host_disease', 'Phylum')) %>%
   arrange(Sample)
@@ -218,12 +176,18 @@ ratio.FB <- data.frame('Sample' = bacter$Sample,
                        'Firmicutes' = firmi$Abundance)
 ratio.FB$logRatioFB <- log2(ratio.FB$Firmicutes / ratio.FB$Bacteroidota)
 
+
 # Plot log2 ratio Firmicutes/Bacteroidota
 ggplot(ratio.FB, aes(x = host_disease, y = logRatioFB))+
   geom_boxplot(outlier.shape = NA)+
   geom_jitter(width=0.1)+
   labs(x = "",  y = 'Log2(Firmicutes/Bacteroidota)', title = "Firmicutes:Bacteroidota ratio")+
   theme_cowplot()
+
+
+# Statistical test
+wilcox.test(ratio.FB[ratio.FB$host_disease == "IBS","logRatioFB"],
+            ratio.FB[ratio.FB$host_disease == "Healthy","logRatioFB"]) # p = 0.78
 ```
 
 
@@ -233,7 +197,7 @@ path.plots <- file.path(path, "data/analysis-individual/PLOTS/plots-AGP-EDA")
 
 # Absolute abundance phylum
 jpeg(file.path(path.plots, "absAbundance_phylum.jpg"), width = 4000, height = 2000)
-plot_bar(physeq.filt, fill = "Phylum") + facet_wrap("host_disease", scales="free") +
+plot_bar(physeq.agp, fill = "Phylum") + facet_wrap("host_disease", scales="free") +
   theme(axis.text.x = element_blank(),
         axis.text.y = element_text(size = 30),
         legend.text = element_text(size = 50),
@@ -245,7 +209,7 @@ dev.off()
 
 # Relative abundances
 jpeg(file.path(path.plots, "relAbundance_phylum.jpg"), width = 4000, height = 2000)
-ggplot(phylum.table.filt, aes(x = reorder(Sample, Sample, function(x) mean(phylum.table[Sample == x & Phylum == 'Bacteroidota', 'Abundance'])),
+ggplot(phylum.table, aes(x = reorder(Sample, Sample, function(x) mean(phylum.table[Sample == x & Phylum == 'Bacteroidota', 'Abundance'])),
                          y = Abundance, fill = Phylum))+
   facet_wrap(~ host_disease, scales = "free") + # scales = "free" removes empty lines
   geom_bar(stat = "identity") +
@@ -288,21 +252,22 @@ dev.off()
 
 
 
+
 ####################
 ## NORMALIZE DATA ##
 ####################
 
 ```{r normalize-data, eval = FALSE, echo = TRUE}
 # Sanity check no sample with less than 500 total count
-table(sample_sums(physeq.filt)<500) # all FALSE
+table(sample_sums(physeq.agp)<500) # all FALSE
 
 #____________________________________________________________________
 # PHYLOSEQ OBJECT WITH NON-ZERO COMPOSITIONS
-physeq.NZcomp <- physeq.filt
+physeq.NZcomp <- physeq.agp
 otu_table(physeq.NZcomp)[otu_table(physeq.NZcomp) == 0] <- 0.5 # pseudocounts
 
 # Sanity check that 0 values have been replaced
-# otu_table(physeq.filt)[1:5,1:5]
+# otu_table(physeq.agp)[1:5,1:5]
 # otu_table(physeq.NZcomp)[1:5,1:5]
 
 # transform into compositions
@@ -314,11 +279,11 @@ saveRDS(physeq.NZcomp, file.path(path, "data/analysis-individual/AGP/02_EDA-AGP/
 
 #____________________________________________________________________
 # PHYLOSEQ OBJECT WITH RELATIVE COUNT (BETWEEN 0 AND 1)
-physeq.rel <- physeq.filt
+physeq.rel <- physeq.agp
 physeq.rel <- transform_sample_counts(physeq.rel, function(x) x / sum(x) ) # divide each count by the total number of counts (per sample)
 
 # check the counts are all relative
-# otu_table(physeq.filt)[1:5, 1:5]
+# otu_table(physeq.agp)[1:5, 1:5]
 # otu_table(physeq.rel)[1:5, 1:5]
 
 # sanity check
@@ -329,7 +294,7 @@ saveRDS(physeq.rel, file.path(path, "data/analysis-individual/AGP/02_EDA-AGP/phy
 
 #____________________________________________________________________
 # PHYLOSEQ OBJECT WITH COMMON-SCALE NORMALIZATION
-physeq.CSN <- physeq.filt
+physeq.CSN <- physeq.agp
 physeq.CSN <- transform_sample_counts(physeq.CSN, function(x) (x*min(sample_sums(physeq.CSN))) / sum(x) )
 
 # sanity check
@@ -341,11 +306,11 @@ saveRDS(physeq.CSN, file.path(path, "data/analysis-individual/AGP/02_EDA-AGP/phy
 
 #____________________________________________________________________
 # PHYLOSEQ OBJECT WITH CENTERED LOG RATIO COUNT
-physeq.clr <- physeq.filt
-physeq.clr <- microbiome::transform(physeq.filt, "clr") # the function adds pseudocounts itself
+physeq.clr <- physeq.agp
+physeq.clr <- microbiome::transform(physeq.agp, "clr") # the function adds pseudocounts itself
 
 # Compare the otu tables in the original phyloseq object and the new one after CLR transformation
-otu_table(physeq.filt)[1:5, 1:5] # should contain absolute counts
+otu_table(physeq.agp)[1:5, 1:5] # should contain absolute counts
 otu_table(physeq.clr)[1:5, 1:5] # should all be relative
 
 # save the physeq.rel object
@@ -469,7 +434,7 @@ plotDistances3D <- function(d, name_dist){
   
   # Plot
   fig.3D <- plot_ly(x=xyz[,1], y=xyz[,2], z=xyz[,3], type="scatter3d", mode="markers",
-                    color=sample_data(physeq.filt)$host_disease, colors = c("blue", "red"))%>%
+                    color=sample_data(physeq.agp)$host_disease, colors = c("blue", "red"))%>%
     layout(title = paste('MDS in 3D with', name_dist, 'distance', sep = ' '))
   
   return(fig.3D)
@@ -496,7 +461,7 @@ plotDistances3D(dist.agp$Bray, "Bray-Curtis")
 
 ```{r hierarchical-clust, fig.width = 25, fig.width = 7}
 # For heatmaps: have group color
-matcol <- data.frame(group = sample_data(physeq.filt)[,"host_disease"])
+matcol <- data.frame(group = sample_data(physeq.agp)[,"host_disease"])
 
 
 # Function to get heatmap from the distances computed
