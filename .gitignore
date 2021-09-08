@@ -4,3 +4,6 @@ data/
 standard-RAxML-master
 .Rproj.user/
 *.Rproj
+analysis-combined/*.nb.html
+analysis-individual/*.nb.html
+analysis-individual/.ipynb_checkpoints/
