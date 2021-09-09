@@ -13,6 +13,9 @@
 library(phyloseq)
 library(ggplot2)
 library(tidyverse)
+library(reshape2)
+library(pheatmap)
+library(RColorBrewer)
 library(pals)
 
 # Data
@@ -41,6 +44,7 @@ physeq.zeber <- readRDS(file.path(path.phy, "physeq_zeber.rds"))
 # Merge phyloseq objects
 physeq <- merge_phyloseq(physeq.labus,
                          physeq.lopresti,
+                         physeq.ringel,
                          physeq.pozuelo,
                          physeq.zhuang,
                          physeq.zhu,
@@ -59,10 +63,170 @@ cat("Nb of fecal samples:", nsamples(physeq.fecal))
 cat("\nNb of sigmoid samples:", nsamples(physeq.sigmoid))
 
 
+# Covariates for heatmap labels
+color.df <- data.frame(disease = sample_data(physeq.fecal)[,'host_disease'],
+                       seq_tech = sample_data(physeq.fecal)[,'sequencing_tech'],
+                       author = sample_data(physeq.fecal)[,'author'])
+color.df[is.na(color.df$host_disease),"host_disease"] <- "NA"
+author.order <- c('Labus', 'LoPresti', 'Ringel', # 454 pyrosequencing
+                  'Fukui', 'Hugerth', 'Zhu', 'Zhuang', # Illumina paired end
+                  'AGP', 'Liu', 'Pozuelo', # Illumina single end
+                  'Nagel', 'Zeber-Lubecka') # Ion Torrent
+# color.df$author <- factor(color.df$author, levels = author.order)
+color.df <- color.df %>%
+  mutate(author = factor(color.df$author, levels = author.order)) %>%
+  arrange(author, host_disease)
+
+sample.order <- rownames(color.df)
+# table(color.df$author) # sanity check
+
+annotationCol <- list(host_disease = c(Healthy = 'blue', IBS = 'red', "NA"='white'),
+                      sequencing_tech = c('454 pyrosequencing' = '#6600FF',
+                                          'Illumina single-end' = '#33CC33',
+                                          'Illumina paired-end' = '#006600',
+                                          'Ion Torrent' = '#FF6633'),
+                      author = setNames(brewer.paired(n=12), levels(color.df$author)))
 
 
 
 
+#########################
+# HEATMAP PHYLA AS ROWS #
+#########################
+
+# Agglomerate to Phylum level, keeping only ASVs present in at least 2 samples
+phylum.agg <- physeq.fecal %>%
+  tax_glom(taxrank = "Phylum") %>%                     # agglomerate at genus level
+  transform_sample_counts(function(x) {x/sum(x)} ) %>% # Transform to rel. abundance
+  psmelt()                                             # Melt to long format
+# phylum.agg <- filter_taxa(physeq.fecal, function(x) sum(x > 0) >= 2, TRUE) %>%
+#   tax_glom(taxrank = "Phylum") %>%                     # agglomerate at genus level
+#   transform_sample_counts(function(x) {x/sum(x)} ) %>% # Transform to rel. abundance
+#   psmelt()                                             # Melt to long format
+
+# Identify phyla present in at least 3 datasets
+list.phylum <- phylum.agg %>%
+  # is each phylum present in each dataset (T/F)?
+  group_by(Phylum, author) %>%
+  summarize(phy_present=sum(Abundance)>0) %>%
+  ungroup() %>%
+  # in how many datasets is each phylum present (n)?
+  group_by(Phylum) %>%
+  count(phy_present) %>%
+  filter(phy_present == TRUE) %>%
+  filter(n>2) %>%
+  ungroup()
+list.phylum <- list.phylum$Phylum
+  
+
+# Agglomerate again at Phylum level, but keeping only phyla present in at least 3 datasets
+phylum.agg <- subset_taxa(physeq.fecal, Phylum %in% list.phylum) %>%
+  tax_glom(taxrank = "Phylum") %>%
+  transform_sample_counts(function(x) {x/sum(x)} ) %>%
+  psmelt()
+
+# Get dataframe phylum x samples
+phylumTable <- acast(phylum.agg %>% filter(Phylum %in% list.phylum),
+                     Phylum ~ Sample, fun.aggregate=sum, value.var = 'Abundance')
+
+# Sanity checks
+dim(phylumTable)
+table(is.na(phylumTable))
+table(colSums(phylumTable))
+table(rownames(phylumTable))
+table(rowSums(phylumTable) == 0)
+
+# For coloring, add "pseudocounts"
+# min(phylumTable[phylumTable>0]) # min is 2e-5
+phylumTable[phylumTable == 0] <- 10e-6
+
+
+# Reorder samples
+phylumTable <- phylumTable[,sample.order] # reorder samples
+
+jpeg("~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/09_Heatmaps/phylum_heatmp.jpg", height = 3000, width = 4000, res = 300)
+pheatmap(log10(phylumTable),
+         color = colorRampPalette(rev(brewer.pal(n = 7, name = "RdYlBu")))(100),
+         show_rownames = T,
+         show_colnames = F,
+         fontsize_row = 8,
+         cluster_rows = T,
+         cluster_cols = T,
+         #cutree_rows = 2,
+         cutree_cols = 2,
+         clustering_method = 'ward.D',
+         annotation_col = color.df,
+         annotation_colors = annotationCol,
+         main = "Hierarchical clustering with ward linkage (phyla as rows)")
+dev.off()
+
+
+
+
+############################
+# HEATMAP FAMILIES AS ROWS #
+############################
+
+# Agglomerate to Family level
+family.agg <- physeq.fecal %>%
+  tax_glom(taxrank = "Family") %>%                     # agglomerate at genus level
+  transform_sample_counts(function(x) {x/sum(x)} ) %>% # Transform to rel. abundance
+  psmelt()                                             # Melt to long format
+
+# Identify families present in at least 3 datasets
+list.family <- family.agg %>%
+  # is each family present in each dataset (T/F)?
+  group_by(Family, author) %>%
+  summarise(fam_present=sum(Abundance)>0) %>%
+  ungroup() %>%
+  # in how many datasets is each family present (n)?
+  group_by(Family) %>%
+  count(fam_present) %>%
+  filter(fam_present == TRUE) %>%
+  filter(n>2) %>%
+  ungroup()
+list.family <- list.family$Family
+
+
+# Agglomerate again at family level, but keeping only families present in at least 3 datasets
+family.agg <- subset_taxa(physeq.fecal, Family %in% list.family) %>%
+  tax_glom(taxrank = "Family") %>%
+  transform_sample_counts(function(x) {x/sum(x)} ) %>%
+  psmelt()
+
+# Get dataframe family x samples
+familyTable <- acast(family.agg %>% filter(Family %in% list.family),
+                     Family ~ Sample, fun.aggregate=sum, value.var = 'Abundance')
+
+# Sanity checks
+dim(familyTable)
+table(is.na(familyTable))
+table(colSums(familyTable))
+table(rownames(familyTable))
+table(rowSums(familyTable) == 0)
+
+# For coloring, add "pseudocounts"
+# min(familyTable[familyTable>0]) # min is 6e-6
+familyTable[familyTable == 0] <- 10e-7
+
+# Reorder samples
+familyTable <- familyTable[,sample.order] # reorder samples
+
+jpeg("~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/09_Heatmaps/family_heatmp_ordered.jpg", height = 3000, width = 4000, res = 300)
+pheatmap(log10(familyTable),
+         color = colorRampPalette(rev(brewer.pal(n = 7, name = "RdYlBu")))(100),
+         show_rownames = T,
+         show_colnames = F,
+         fontsize_row = 5,
+         cluster_rows = T,
+         cluster_cols = F,
+         #cutree_rows = 2,
+         cutree_cols = 2,
+         clustering_method = 'ward.D',
+         annotation_col = color.df,
+         annotation_colors = annotationCol,
+         main = "Hierarchical clustering with ward linkage (families as rows)")
+dev.off()
 
 
 
