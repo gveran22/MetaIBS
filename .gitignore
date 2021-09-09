@@ -5,5 +5,5 @@ standard-RAxML-master
 .Rproj.user/
 *.Rproj
 analysis-combined/*.nb.html
-analysis-individual/*.nb.html
-analysis-individual/.ipynb_checkpoints/
+analysis-individual/AGP/*.nb.html
+analysis-individual/Pozuelo-2015/.ipynb_checkpoints/
