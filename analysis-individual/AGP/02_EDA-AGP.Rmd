@@ -387,6 +387,9 @@ Now let's plot!
 # Get the distances & the plot data
 dist.agp <- getDistances()
 plot.df <- plotDistances2D(dist.agp)
+
+# saveRDS(dist.agp, file.path(path, "data/analysis-individual/AGP/02_EDA-AGP/distances.rds"))
+# saveRDS(plot.df, file.path(path, "data/analysis-individual/AGP/02_EDA-AGP/plot_distances.rds"))
 ```
 
 ```{r dist-run-2}
