@@ -43,16 +43,16 @@ datasets <- list("fukui" = physeq.fukui,
 #_______________________________________
 # MOCK DATA
 # Create mock data
-df <- data.frame("author" = c("fukui", "fukui", "zhu", "pozuelo", "fukui"),
-                 "ASV" = paste("ASV", rep(1:5), sep=""),
-                 "Sequence" = c("ATTTGAC", "GCATTAGCTTTA", "TTTGA", "GCTATCG", "AGCTTTA"),
-                 "Phylum" = c("Firmicutes", "Bacteroidota", "Firmicutes", "Actinobacteria", "Bacteroidota"),
-                 "Class" = c("Clostridia", "Bacteria", "Clostridia", "Proteomachin", "Bacteria")) %>%
+df <- data.frame("author" = c("fukui", "fukui", "zhu", "pozuelo", "fukui", "pozuelo"),
+                 "ASV" = paste("ASV", rep(1:6), sep=""),
+                 "Sequence" = c("ATTTGAC", "GCATTAGCTTTA", "TTTGA", "GCTATCG", "AGCTTTA", "TTTGAT"),
+                 "Phylum" = c("Firmicutes", "Bacteroidota", "Firmicutes", "Actinobacteria", "Bacteroidota", "Proteobacteria"),
+                 "Class" = c("Clostridia", "Bacteria", NA, "Proteomachin", "Bacteria", "Gammaproteo")) %>%
   arrange(nchar(Sequence))
 
 
 # Init
-new.df <- data.frame(matrix(ncol=5, nrow=0))
+new.df <- data.frame(matrix(ncol=6, nrow=0))
 colnames(new.df) <- c(colnames(df), "ASV_new")
 
 allseq <- df$Sequence
@@ -67,7 +67,8 @@ while(length(allseq) !=0 ){
   
   # Subset df by sequence
   tempdf <- df %>%
-    filter(str_detect(Sequence, seq)) %>%
+    filter(str_detect(string=Sequence, pattern=seq)) %>%
+    filter(n_distinct(Phylum) == 1) %>%
     mutate(ASV_new = paste("ASV", i, sep=""))
   
   # Add to new.df
@@ -129,7 +130,7 @@ while(length(allseq) !=0 ){
   
   # Subset df by sequence
   tempdf <- taxtable %>%
-    filter(str_detect(sequence, seq)) %>%
+    filter(str_detect(string=sequence, pattern=seq)) %>%
     mutate(ASV = paste("ASV", i, sep=""))
   
   # Add to new.df
@@ -144,7 +145,7 @@ while(length(allseq) !=0 ){
   i=i+1
 }
 
-saveRDS(taxtable.new, "~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/01_Merge-Datasets/taxtable_merged.rds")
+# saveRDS(taxtable.new, "~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/01_Merge-Datasets/taxtable_merged.rds")
 
 # Sanity check
 taxtable.new <- readRDS(file.path(path, "data/analysis-combined/01_Merge-Datasets/taxtable_merged.rds"))
@@ -153,10 +154,20 @@ taxtable.new %>%
   group_by(ASV) %>%
   mutate(verif = str_detect(string=sequence, pattern=sequence[which.min(nchar(sequence))])) %>%
   ungroup() %>%
-  count(verif)
+  summarise(n_true = sum(verif), n_false=sum(!verif))
 # Only TRUEs!! =)
 
-# check that ASVs with several sequence have the same taxa assigned to them
+# check that for each ASV, the "middle-length" sequences can be found in the bigger length sequences
+test <- taxtable.new %>%
+  group_by(ASV) %>%
+  filter(sequence != sequence[which.min(nchar(sequence))]) %>% # remove shortest sequence
+  mutate(verif = str_detect(string=sequence, pattern=sequence[which.min(nchar(sequence))]),
+         length = nchar(sequence)) %>%
+  ungroup() %>%
+  summarise(n_true = sum(verif), n_false=sum(!verif))
+
+
+# check that ASVs with several sequences have the same taxa assigned to them
 test <- taxtable.new %>%
   group_by(ASV) %>%
   # if several sequences for the ASV, replace NA values by the known Genus of other sequences
