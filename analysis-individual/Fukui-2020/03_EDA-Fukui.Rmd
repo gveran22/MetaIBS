@@ -43,7 +43,7 @@ library(dendextend) # for dendrogram
 path <- "~/Projects/IBS_Meta-analysis_16S"
 
 # Import phyloseq object
-physeq.fukui <- readRDS(file.path(path, "data/analysis-individual/Fukui-2020/01_Dada2-Fukui/physeq_fukui(postDADA2).rds"))
+physeq.fukui <- readRDS(file.path(path, "phyloseq-objects/physeq_fukui.rds"))
 
 # Sanity check
 physeq.fukui
@@ -126,20 +126,6 @@ ggplot(class.table, aes(x = Sample, y = Abundance, fill = Class))+
 ```
 
 
-The sample SRR11944160 in the IBS population is the only one with lower sequencing depth and only composed of Bacteroidota.
-
-```{r outlier}
-# Look at the ASVs with non-0 count in this sample
-non0_ASVs <-  apply(otu_table(physeq.fukui)["SRR11944160",], 2, function(col) all(col !=0 ))
-otu_table(physeq.fukui)["SRR11944160",non0_ASVs]
-
-# There are only 3 ASVs in this sample, so we will remove it.
-physeq.fukui <- subset_samples(physeq.fukui, Run != "SRR11944160")
-
-# Save the updated phyloseq object
-# saveRDS(physeq.fukui, "~/Projects/IBS_Meta-analysis_16S/phyloseq-objects/physeq_fukui.rds")
-```
-
 
 ### 3. Firmicutes/Bacteroidota ratio
 
@@ -168,6 +154,11 @@ ggplot(ratio.FB, aes(x = host_disease, y = logRatioFB))+
   geom_jitter(width=0.1)+
   labs(x = "",  y = 'Log2(Firmicutes/Bacteroidota)', title = "Firmicutes:Bacteroidota ratio")+
   theme_cowplot()
+
+
+# Statistical test
+wilcox.test(ratio.FB[ratio.FB$host_disease == "IBS","logRatioFB"],
+            ratio.FB[ratio.FB$host_disease == "Healthy","logRatioFB"]) # p = 0.28
 ```
 
 
@@ -480,7 +471,7 @@ plot_ordination(physeq.rel, fig.2A, color="host_disease", shape = "host_disease"
   geom_point(size=5, alpha=0.5) +
   scale_color_manual(values = c('blue', 'red'))+ scale_shape_manual(values = c(17,16))+
   theme_classic()+
-  ggtitle("PCoA on weighted-UniFrac distance")
+  ggtitle("PCoA on unweighted-UniFrac distance")
 
 ```
 
@@ -488,7 +479,7 @@ plot_ordination(physeq.rel, fig.2A, color="host_disease", shape = "host_disease"
 
 Now, let's reproduce figure 2B. They performed a hierarchical clustering with Ward linkage on the unweighted Unifrac distance.
 
-```{r reproduce-fig1A, fig.width = 10, fig.height = 5}
+```{r reproduce-fig1A, fig.width = 10, fig.height = 7}
 # ___________________________________________________________________________________________________________
 # FIGURE 1A
 
@@ -514,7 +505,8 @@ color_leaf<<-function(n){
             if(disease=="Healthy"){col_disease="blue"};if(disease=="IBS"){col_disease="red"}
         
         #Modification of leaf attribute
-        attr(n,"nodePar") <- c(a$nodePar, list(cex=1.5, lab.cex=0.6, pch=20, col=col_disease, lab.font=1, lab.cex=1))
+        attr(n,"nodePar") <- c(a$nodePar, list(cex=0.8, pch=20, col=col_disease, # size & shape leaf
+                                               lab.cex=0.4)) # size leaf label
         }
     return(n)
 }
