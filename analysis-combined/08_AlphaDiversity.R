@@ -142,8 +142,10 @@ plot_richness(subset_samples(physeq.all, sample_type=="stool" & Collection == "1
               x="host_disease", measures="Simpson") +
   geom_boxplot(fill=NA, width=0.3) +
   facet_wrap(~author, scales="fixed") +
+  ylim(c(0.5,1)) +
   theme_bw() +
   labs(x="", y="Simpson")
+
 ggsave("~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/08_AlphaDiversity/simpson_disease.jpg", width=6, height=8)
 
 # Plot merged phyloseq object (host_subtype)
