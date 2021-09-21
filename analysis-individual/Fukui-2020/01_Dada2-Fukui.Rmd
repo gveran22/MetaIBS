@@ -107,7 +107,7 @@ mergers <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Fu
 # taxa
 taxa <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/CLUSTER/Taxonomy/output/taxa_fukui.rds")
 # phyloseq object
-physeq <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/CLUSTER/PhyloTree/input/physeq_fukui.rds")
+# physeq <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/CLUSTER/PhyloTree/input/physeq_fukui.rds")
 ```
 
 
@@ -384,7 +384,7 @@ We will remove any sample with less than 500 reads from further analysis, and al
 ### 1. Create phyloseq object
 The preprocessing will be easier to do with ASV, taxonomic and metadata tables combined in a phyloseq object.
 
-```{r phyloseq-preprocess, echo=TRUE, eval=FALSE}
+```{r phyloseq-preprocess, echo=TRUE, eval=TRUE}
 #________________________
 # Import metadata
 metadata_table <- read.table("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Fukui-2020/FukuiSraRunTable.txt", header = TRUE, sep = ",")
@@ -469,7 +469,7 @@ The sample SRR11944160 in the IBS population is the only one with lower sequenci
 
 ```{r outlier}
 # Look at the ASVs with non-0 count in this sample
-non0_ASVs <-  apply(otu_table(physeq)["SRR11944160",], 2, function(col) all(col !=0 ))
+non0_ASVs <- apply(otu_table(physeq)["SRR11944160",], 2, function(col) all(col !=0 ))
 otu_table(physeq)["SRR11944160",non0_ASVs]
 
 # There are only 3 ASVs in this sample, so we will remove it.
@@ -480,11 +480,11 @@ physeq <- filter_taxa(physeq, function(x) sum(x > 0) > 0, TRUE) # 0 taxa discard
 
 
 # Save the ASV, taxa, metadata tables
-saveRDS(otu_table(physeq), file.path(path, "01_Dada2-Fukui/ASVtable_final.rds")) # ASV table
-saveRDS(tax_table(physeq), file.path(path, "01_Dada2-Fukui/taxa_final.rds")) # taxa table
-saveRDS(sample_data(physeq), file.path(path, "01_Dada2-Fukui/metadata_final.rds")) # metadata table
+# saveRDS(otu_table(physeq), file.path(path, "01_Dada2-Fukui/ASVtable_final.rds")) # ASV table
+# saveRDS(tax_table(physeq), file.path(path, "01_Dada2-Fukui/taxa_final.rds")) # taxa table
+# saveRDS(sample_data(physeq), file.path(path, "01_Dada2-Fukui/metadata_final.rds")) # metadata table
 
 # Save the phyloseq object
-saveRDS(physeq, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/CLUSTER/PhyloTree/input/physeq_fukui.rds")
+# saveRDS(physeq, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/CLUSTER/PhyloTree/input/physeq_fukui.rds")
 ```
 

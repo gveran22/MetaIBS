@@ -131,7 +131,7 @@ plot_bar(physeq.labus, fill = "Class")+ facet_wrap("host_disease", scales="free"
 
 ### 2. Relative abundances
 
-```{r plot-relative-abundances, fig.width=10, fig.height = 5}
+```{r plot-relative-abundances, fig.width=10, fig.height = 5, message=FALSE}
 # Agglomerate to phylum & class levels
 phylum.table <- physeq.labus %>%
   tax_glom(taxrank = "Phylum") %>%                     # agglomerate at phylum level
