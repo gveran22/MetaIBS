@@ -13,7 +13,8 @@
 library(phyloseq)
 library(ggplot2)
 library(tidyverse)
-library(pals)
+# library(pals)
+library(RColorBrewer)
 
 # Data
 path.phy <- "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/CLUSTER/PhyloTree/input"
@@ -58,13 +59,6 @@ physeq <- merge_phyloseq(physeq.labus,
 # cat("Nb of fecal samples:", nsamples(physeq.fecal))
 # cat("\nNb of sigmoid samples:", nsamples(physeq.sigmoid))
 
-
-
-
-############################################
-# PLOT PHYLA RELATIVE ABUNDANCES BY SAMPLE #
-############################################
-
 # Obtain relative abundances
 phylum.table <- physeq %>%
   tax_glom(taxrank = "Phylum") %>%
@@ -83,13 +77,21 @@ main_phyla <- c("Firmicutes", "Bacteroidota", "Proteobacteria", "Actinobacteriot
 phylum.table.main <- phylum.table %>%
   mutate(Phylum=replace(Phylum, !(Phylum %in% main_phyla), "Other")) %>%
   mutate(Phylum=factor(Phylum, levels=c("Actinobacteriota", "Bacteroidota", "Firmicutes", "Proteobacteria", "Verrucomicrobiota", "Other")))
+table(phylum.table.main$Phylum) # sanity check
 
 # phylum.table.other <- phylum.table %>%
 #   filter(!Phylum %in%  main_phyla)
 
-# Plot main phyla by sample
-ggplot(phylum.table.main, aes(x = reorder(Sample, Sample, function(x) mean(phylum.table.main[Sample == x & Phylum == 'Bacteroidota', 'Abundance'])),
-                         y = Abundance, fill = Phylum))+
+
+
+#############################################
+# PLOT PHYLA RELATIVE ABUNDANCES PER SAMPLE #
+#############################################
+
+# Plot main phyla by sample (fecal samples)
+ggplot(phylum.table.main %>% filter(sample_type == "stool"),
+       aes(x = reorder(Sample, Sample, function(x) mean(phylum.table.main[Sample == x & Phylum == 'Bacteroidota', 'Abundance'])),
+           y = Abundance, fill = Phylum))+
   facet_wrap(~ host_disease, scales = "free_x") +
   geom_bar(stat = "identity") +
   scale_fill_manual(# values=stepped(n=length(unique(phylum.table.main$Phylum))),
@@ -106,17 +108,43 @@ ggplot(phylum.table.main, aes(x = reorder(Sample, Sample, function(x) mean(phylu
         legend.text = element_text(size=12),
         legend.title = element_text(size=12),
         legend.key.size = unit(0.2, 'cm'))+
-  labs(x = "Samples", y = "Relative abundance")
+  labs(x = "Fecal samples", y = "Relative abundance")
 
 # Save figure
-ggsave("~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/05_Relative-Abund/phyla_relabund.jpg", width=12, height=5)
+ggsave("~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/05_Relative-Abund/phyla_relabund_fecal.jpg", width=8, height=5)
+
+
+# Plot main phyla by sample (sigmoid samples)
+ggplot(phylum.table.main %>% filter(sample_type == "sigmoid"),
+       aes(x = reorder(Sample, Sample, function(x) mean(phylum.table.main[Sample == x & Phylum == 'Bacteroidota', 'Abundance'])),
+           y = Abundance, fill = Phylum))+
+  facet_wrap(~ host_disease, scales = "free_x") +
+  geom_bar(stat = "identity") +
+  scale_fill_manual(# values=stepped(n=length(unique(phylum.table.main$Phylum))),
+    values=paste0(brewer.pal(6, "Set1"), "CC", sep=""),
+    # values=qualitative_hcl(n=6, palette = "Cold"),
+    guide=guide_legend(nrow=6)
+  )+
+  scale_y_continuous(expand = c(0, 0))+ # remove empty space between axis and plot
+  theme(axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(),
+        strip.background = element_rect(fill="white", color="black"),
+        strip.text = element_text(size=15),
+        #legend.position = "None",
+        legend.text = element_text(size=12),
+        legend.title = element_text(size=12),
+        legend.key.size = unit(0.2, 'cm'))+
+  labs(x = "Biopsy samples", y = "Relative abundance")
+
+# Save figure
+ggsave("~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/05_Relative-Abund/phyla_relabund_sigmoid.jpg", width=8, height=5)
 
 
 
 
-#############################################
-# PLOT PHYLA RELATIVE ABUNDANCES BY DISEASE #
-#############################################
+##############################################
+# PLOT PHYLA RELATIVE ABUNDANCES PER DISEASE #
+##############################################
 
 # Plot by host_disease
 phylum.table %>%
