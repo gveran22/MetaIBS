@@ -1,5 +1,5 @@
 ---
-title: "Hugerth2019_DataAnalysis"
+title: "Hugerth2020_DataAnalysis"
 output:
   pdf_document: default
   html_document:
@@ -8,7 +8,7 @@ output:
 
 ```{r, include=FALSE}
 knitr::opts_chunk$set(fig.width = 15, fig.height = 5, warning=FALSE, message=FALSE,
-                      root.dir = "~/Projects/IBS_Meta-analysis_16S/analysis-individual/Hugerth-2019/")
+                      root.dir = "~/Projects/IBS_Meta-analysis_16S/analysis-individual/Hugerth-2020/")
 ```
 
 
@@ -23,8 +23,7 @@ knitr::opts_chunk$set(fig.width = 15, fig.height = 5, warning=FALSE, message=FAL
 library(phyloseq) # for phyloseq object
 library(ggplot2)
 library(cowplot)
-library(plyr)
-library(dplyr)
+library(tidyverse)
 library("plotly") # plot 3D
 library("microbiome") # for centered log-ratio
 library("coda") # Aitchison distance
@@ -62,10 +61,10 @@ plot_tree(physeq.hugerth, color = "host_disease", ladderize="left")
 #__________________________________________________________________________
 
 # Import phyloseq objects for computing distances
-physeq.rel <- readRDS(file.path(path, "data/analysis-individual/Hugerth-2019/02_EDA-Hugerth/physeq_relative.rds"))
-physeq.clr <- readRDS(file.path(path, "data/analysis-individual/Hugerth-2019/02_EDA-Hugerth/physeq_clr.rds"))
-physeq.CSN <- readRDS(file.path(path, "data/analysis-individual/Hugerth-2019/02_EDA-Hugerth/physeq_CSN.rds"))
-physeq.NZcomp <- readRDS(file.path(path, "data/analysis-individual/Hugerth-2019/02_EDA-Hugerth/physeq_NZcomp.rds"))
+physeq.rel <- readRDS(file.path(path, "data/analysis-individual/Hugerth-2020/02_EDA-Hugerth/physeq_relative.rds"))
+physeq.clr <- readRDS(file.path(path, "data/analysis-individual/Hugerth-2020/02_EDA-Hugerth/physeq_clr.rds"))
+physeq.CSN <- readRDS(file.path(path, "data/analysis-individual/Hugerth-2020/02_EDA-Hugerth/physeq_CSN.rds"))
+physeq.NZcomp <- readRDS(file.path(path, "data/analysis-individual/Hugerth-2020/02_EDA-Hugerth/physeq_NZcomp.rds"))
 ```
 
 
@@ -120,138 +119,209 @@ wilcox.test(sample_data(physeq.hugerth)[sample_data(physeq.hugerth)$host_disease
 
 
 
-######################################
-## ABSOLUTE AND RELATIVE ABUNDANCES ##
-######################################
-```{r plot-abundances, echo = TRUE, fig.height = 6}
-# Relative abundance for Phylum
-phylum.table <- physeq %>%
+################
+## ABUNDANCES ##
+################
+
+### 1. Absolute abundances
+
+```{r plot-absolute-abundance, fig.width=10, fig.height = 5}
+# Plot Phylum
+plot_bar(physeq.hugerth, fill = "Phylum") + facet_wrap("host_disease", scales="free") +
+  theme(axis.text.x = element_text(size = 5))+
+  labs(x = "Samples", y = "Absolute abundance", title = "Hugerth dataset (2020)") +
+  ylim(0,200000)
+
+# Plot Class
+plot_bar(physeq.hugerth, fill = "Class")+ facet_wrap("host_disease", scales="free") +
+  theme(axis.text.x = element_text(size = 5))+
+  labs(x = "Samples", y = "Absolute abundance", title = "Hugerth dataset (2020)")+
+  ylim(0,200000)
+```
+
+**Sequencing depth** characteristics of the Hugerth dataset:  
+- minimum of `r min(sample_sums(physeq.hugerth))` total count per sample  
+- median: `r median(sample_sums(physeq.hugerth))` total count per sample  
+- maximum of `r max(sample_sums(physeq.hugerth))` total count per sample  
+
+
+
+### 2. Relative abundances
+
+```{r plot-relative-abundances, fig.width=10, fig.height = 5, message=FALSE}
+# Agglomerate to phylum & class levels
+phylum.table <- physeq.hugerth %>%
   tax_glom(taxrank = "Phylum") %>%                     # agglomerate at phylum level
   transform_sample_counts(function(x) {x/sum(x)} ) %>% # Transform to rel. abundance
   psmelt()                                             # Melt to long format
 
-# Relative abundance for Class
-class.table <- physeq %>%
-  tax_glom(taxrank = "Class") %>%                     # agglomerate at class level
-  transform_sample_counts(function(x) {x/sum(x)} ) %>% # Transform to rel. abundance
-  psmelt()                                             # Melt to long format
+class.table <- physeq.hugerth %>%
+  tax_glom(taxrank = "Class") %>%
+  transform_sample_counts(function(x) {x/sum(x)} ) %>%
+  psmelt()
 
 
-# Plot Phylum
-plot_bar(physeq, fill = "Phylum") + facet_wrap("host_disease", scales="free") +
-  theme(axis.text.x = element_text(size = 8))+
-  labs(x = "Samples", y = "Total read count", title = "Hugherth dataset (2020)")
-  #ylim(0, 7000)
-
+# Plot relative abundances
 ggplot(phylum.table, aes(x = reorder(Sample, Sample, function(x) mean(phylum.table[Sample == x & Phylum == 'Bacteroidota', 'Abundance'])),
                          y = Abundance, fill = Phylum))+
-  facet_wrap(~ host_disease, scales = "free") + # scales = "free" removes empty lines
+  facet_wrap(~ sample_type + host_disease, scales = "free") + # scales = "free" removes empty lines
   geom_bar(stat = "identity") +
   theme(axis.text.x = element_blank())+
-  labs(x = "Samples", y = "Relative abundance", title = "Hugherth dataset (2020)")
+  labs(x = "Samples", y = "Relative abundance", title = "Hugerth dataset (2020)")
 
-# Plot Class
-plot_bar(physeq, fill = "Class")+ facet_wrap("host_disease", scales="free") +
-  theme(axis.text.x = element_text(size = 8))+
-  labs(x = "Samples", y = "Total read count", title = "Hugherth dataset (2020)")+
-  ylim(0, 7000)
-
-ggplot(class.table, aes(x = Sample, y = Abundance, fill = Class))+
-  facet_wrap(~ host_disease, scales = "free") + # scales = "free" removes empty lines
+ggplot(class.table, aes(x = reorder(Sample, Sample, function(x) mean(class.table[Sample == x & Class == 'Clostridia', 'Abundance'])),
+                        y = Abundance, fill = Class))+
+  facet_wrap(~ sample_type + host_disease, scales = "free") +
   geom_bar(stat = "identity") +
   theme(axis.text.x = element_text(size = 8, angle = -90))+
-  labs(x = "Samples", y = "Relative abundance", title = "Hugherth dataset (2020)")
+  labs(x = "Samples", y = "Relative abundance", title = "Hugerth dataset (2020)")
 ```
 
 
-```{r plot-log-ratio, fig.height = 3, fig.width=7}
+
+### 3. Firmicutes/Bacteroidota ratio
+
+```{r plot-log-ratio, fig.height = 5, fig.width=3}
 # Extract abundance of only Bacteroidota and Firmicutes
-bacter <- phylum.table[phylum.table[,'Phylum'] == 'Bacteroidota', c('Sample', 'Abundance',
-                                                                    'host_disease', 'Phylum')]
-bacter <- bacter[order(bacter$Sample),] # order by sample name
-firmi <- phylum.table[phylum.table[,'Phylum'] == 'Firmicutes', c('Sample', 'Abundance',
-                                                                 'host_disease', 'Phylum')]
-firmi <- firmi[order(firmi$Sample),] # order by sample name
+relevant.covariates <- c('Sample', 'Abundance', 'host_disease', 'Phylum', 'sample_type', 'host_ID', 'host_age', 'host_sex', 'host_bmi')
+
+bacter <- phylum.table %>%
+  filter(Phylum == "Bacteroidota") %>%
+  select(all_of(relevant.covariates)) %>%
+  rename(Bacteroidota = Abundance) %>%
+  select(-Phylum)
+
+firmi <- phylum.table %>%
+  filter(Phylum == "Firmicutes") %>%
+  select(all_of(relevant.covariates)) %>%
+  rename(Firmicutes = Abundance) %>%
+  select(-Phylum)
 
 # Calculate log2 ratio Firmicutes/Bacteroidota
-ratio_FB <- data.table('Sample' = bacter$Sample,
-                       'host_disease' = bacter$host_disease,
-                       'Bacteroidota' = bacter$Abundance,
-                       'Firmicutes' = firmi$Abundance)
-ratio_FB[,"Log_ratio_FB"] <- log2(ratio_FB[,"Firmicutes"] / ratio_FB[,"Bacteroidota"])
+ratio.FB <- left_join(x=bacter, y=firmi, by=c('Sample', 'host_disease', 'sample_type', 'host_ID', 'host_age', 'host_sex', 'host_bmi')) %>%
+  relocate(Firmicutes, .after=Bacteroidota) %>%
+  # Compute log ratios
+  mutate(logRatioFB = log2(Firmicutes/Bacteroidota))
+
 
 # Plot log2 ratio Firmicutes/Bacteroidota
-par(mar = c(3, 10, 3, 10))
-boxplot(data = ratio_FB, Log_ratio_FB ~ host_disease, ylab = "Log2 Ratio Abundance", xlab = "", main = "Firmicutes to Bacteroidota ratio")
+ggplot(ratio.FB, aes(x = host_disease, y = logRatioFB))+
+  geom_violin(aes(fill=host_disease))+
+  scale_fill_manual(values=alpha(c("blue", "red"), .3))+
+  geom_jitter(width=0.1)+
+  facet_wrap(~sample_type) +
+  labs(x = "",  y = 'Log2(Firmicutes/Bacteroidota)', title = "Firmicutes:Bacteroidota ratio")+
+  theme_cowplot()+
+  theme(legend.position="none")
+
+# Statistical test sigmoid samples
+wilcox.test(ratio.FB[ratio.FB$sample_type == "sigmoid" & ratio.FB$host_disease == "IBS","logRatioFB"],
+            ratio.FB[ratio.FB$sample_type == "sigmoid" & ratio.FB$host_disease == "Healthy","logRatioFB"]) # p = 0.6
+# Statistical test stool samples
+wilcox.test(ratio.FB[ratio.FB$sample_type == "stool" & ratio.FB$host_disease == "IBS","logRatioFB"],
+            ratio.FB[ratio.FB$sample_type == "stool" & ratio.FB$host_disease == "Healthy","logRatioFB"]) # p=0.12
+
+
+# Paired data
+ggplot(ratio.FB, aes(x = sample_type, y = logRatioFB))+
+  geom_violin(aes(fill=host_disease))+
+  scale_fill_manual(values=alpha(c("blue", "red"), .3))+
+  geom_point()+
+  geom_line(aes(group=host_ID), lwd=0.1) +
+  facet_wrap(~host_disease) +
+  labs(x = "",  y = 'Log2(Firmicutes/Bacteroidota)', title = "Paired data") +
+  theme_cowplot()+
+  theme(legend.position="none")
+
+# Statistical test sigmoid vs stool samples
+wilcox.test(ratio.FB[ratio.FB$sample_type == "stool" & ratio.FB$host_disease == "Healthy","logRatioFB"],
+            ratio.FB[ratio.FB$sample_type == "sigmoid" & ratio.FB$host_disease == "Healthy","logRatioFB"]) # p=0.1
+wilcox.test(ratio.FB[ratio.FB$sample_type == "stool" & ratio.FB$host_disease == "IBS","logRatioFB"],
+            ratio.FB[ratio.FB$sample_type == "sigmoid" & ratio.FB$host_disease == "IBS","logRatioFB"]) # p=0.3
 ```
 
 
-```{r statistics-phyla, eval = FALSE, echo = FALSE, include = FALSE}
-# Nb reads per sample
-median(sample_sums(physeq))
-min(sample_sums(physeq))
-max(sample_sums(physeq))
+```{r export-plots-1, eval = FALSE, echo = FALSE}
+# Save path to plots
+path.plots <- file.path(path, "data/analysis-individual/PLOTS/plots-Hugerth-EDA")
 
-table(tax_table(physeq)[,3])
-mean(phylum.table[phylum.table[,'Phylum'] == 'Bacteroidota', 'Abundance'])
-mean(phylum.table[phylum.table[,'Phylum'] == 'Firmicutes' & phylum.table[,'host_disease'] == 'IBS', 'Abundance'])
-mean(class.table[class.table[,'Class'] == 'Bacilli', 'Abundance'])
-```
-
-
-```{r export-plots-1, eval = FALSE, echo = FALSE, include = FALSE}
-# check working directory
-getwd()
-
-jpeg("./Plots/plot_phylum_absAbundance.jpg", width = 4000, height = 2000)
-plot_bar(physeq, fill = "Phylum") + facet_wrap("host_disease", scales="free") +
-  theme(axis.text.x = element_text(size = 30, angle = -90),
+# Absolute abundance phylum
+jpeg(file.path(path.plots, "absAbundance_phylum.jpg"), width = 4000, height = 2000)
+plot_bar(physeq.hugerth, fill = "Phylum") + facet_wrap("host_disease", scales="free_x") +
+  theme(axis.text.x = element_blank(),
         axis.text.y = element_text(size = 30),
-        legend.text = element_text(size = 70),
+        legend.text = element_text(size = 50),
         axis.title = element_text(size = 50),
         title = element_text(size = 70),
         strip.text = element_text(size = 50))+
-  labs(x = "Samples", y = "Total read count", title = "Hugherth dataset (2020)")
+  labs(x = "Samples", y = "Total read count", title = "Hugerth dataset (2019)")+
+  ylim(0, 200000)
 dev.off()
 
-jpeg("./Plots/plot_phylum_relAbundance.jpg", width = 4000, height = 2000)
+# Relative abundances
+jpeg(file.path(path.plots, "relAbundance_phylum.jpg"), width = 4000, height = 2000)
 ggplot(phylum.table, aes(x = reorder(Sample, Sample, function(x) mean(phylum.table[Sample == x & Phylum == 'Bacteroidota', 'Abundance'])),
                          y = Abundance, fill = Phylum))+
-  facet_wrap(~ host_disease, scales = "free") + # scales = "free" removes empty lines
+  facet_wrap(~ sample_type + host_disease, scales = "free") + # scales = "free" removes empty lines
   geom_bar(stat = "identity") +
   theme(axis.text.x = element_blank(),
         axis.text.y = element_text(size = 30),
-        legend.text = element_text(size = 70),
-        axis.title = element_text(size = 50),
-        title = element_text(size = 70),
-        strip.text = element_text(size = 50))+
-  labs(x = "Samples", y = "Relative abundance", title = "Hugherth dataset (2020)")
-dev.off()
-
-jpeg("./Plots/plot_class_relAbundance.jpg", width = 4000, height = 2000)
-ggplot(class.table, aes(x = Sample, y = Abundance, fill = Class))+
-  facet_wrap(~ host_disease, scales = "free") + # scales = "free" removes empty lines
-  geom_bar(stat = "identity") +
-  theme(axis.text.x = element_text(size = 30, angle = -90),
-        axis.text.y = element_text(size = 30),
-        legend.text = element_text(size = 70),
-        axis.title = element_text(size = 50),
-        title = element_text(size = 70),
-        strip.text = element_text(size = 50))+
-  labs(x = "Samples", y = "Relative abundance", title = "Hugherth dataset (2020)")
-dev.off()
-
-jpeg("./Plots/Log2Ratio_FirmBact.jpg", width = 1500, height = 2000)
-ggplot(ratio_FB, aes(x = host_disease, y = Log_ratio_FB))+
-  geom_boxplot(outlier.size = 4, lwd = 3)+
-  labs(x = "",  y = 'Log2 Firmicutes/Bacteroidota Abundance Ratio', title = "Hugherth dataset (2020)")+
-  theme_classic()+
-  theme(axis.text = element_text(size = 50),
         legend.text = element_text(size = 50),
+        axis.title = element_text(size = 50),
+        title = element_text(size = 70),
+        strip.text = element_text(size = 50))+
+  labs(x = "Samples", y = "Relative abundance", title = "Hugerth dataset (2020)")
+dev.off()
+
+jpeg(file.path(path.plots, "relAbundance_class.jpg"), width = 4000, height = 2000)
+ggplot(class.table, aes(x = reorder(Sample, Sample, function(x) mean(phylum.table[Sample == x & Phylum == 'Bacteroidota', 'Abundance'])),
+                        y = Abundance, fill = Class))+
+  facet_wrap(~ sample_type + host_disease, scales = "free") +
+  geom_bar(stat = "identity") +
+  theme(axis.text.x = element_blank(),
+        axis.text.y = element_text(size = 30),
+        legend.text = element_text(size = 50),
+        axis.title = element_text(size = 50),
+        title = element_text(size = 70),
+        strip.text = element_text(size = 50))+
+  labs(x = "Samples", y = "Relative abundance", title = "Hugerth dataset (2020)")
+dev.off()
+
+
+# Firmicutes:Bacteroidota log ratio (healthy/IBS)
+jpeg(file.path(path.plots, "ratioFB.jpg"), width = 1500, height = 1500)
+ggplot(ratio.FB, aes(x = host_disease, y = logRatioFB))+
+  geom_violin(lwd=3, aes(fill=host_disease))+
+  geom_jitter(size = 10, width=0.1)+
+  scale_fill_manual(values=alpha(c("blue", "red"), .3))+
+  facet_wrap(~sample_type) +
+  labs(x = "",  y = 'Log2(Firmicutes/Bacteroidota)', title = "Firmicutes:Bacteroidota ratio")+
+  theme_cowplot()+
+  theme(axis.text = element_text(size = 50),
+        strip.text = element_text(size=50),
+        legend.position = "none",
+        axis.title = element_text(size = 50),
+        title = element_text(size = 50))
+dev.off()
+
+# Firmicutes:Bacteroidota log ratio (paired data stool/sigmoid)
+jpeg(file.path(path.plots, "ratioFB_paired-data.jpg"), width = 1500, height = 1500)
+ggplot(ratio.FB, aes(x = sample_type, y = logRatioFB))+
+  geom_violin(lwd=3, aes(fill=host_disease))+
+  geom_point(size = 10)+
+  geom_line(aes(group=host_ID), lwd=0.5) +
+  scale_fill_manual(values=alpha(c("blue", "red"), .3))+
+  facet_wrap(~host_disease) +
+  labs(x = "",  y = 'Log2(Firmicutes/Bacteroidota)', title = "Paired data") +
+  theme_cowplot()+
+  theme(axis.text = element_text(size = 50),
+        strip.text = element_text(size=50),
+        legend.position = "none",
         axis.title = element_text(size = 50),
         title = element_text(size = 50))
 dev.off()
 ```
+
 
 
 
@@ -260,71 +330,65 @@ dev.off()
 ####################
 
 ```{r normalize-data, eval = FALSE, echo = TRUE}
-# REMOVE SAMPLES WITH LESS THAN 1000 COUNTS
-physeq <- prune_samples(sample_sums(physeq)>=1000, physeq)
-physeq_best <-  prune_samples(sample_sums(physeq)>=1000, physeq)
-physeq_best
+# Sanity check no sample with less than 500 total count
+table(sample_sums(physeq.hugerth)<500) # all FALSE
 
 #____________________________________________________________________
 # PHYLOSEQ OBJECT WITH NON-ZERO COMPOSITIONS
-physeq.NZcomp <- physeq_best
-otu_table(physeq.NZcomp)[otu_table(physeq.NZcomp) == 0] <- 0.5
+physeq.NZcomp <- physeq.hugerth
+otu_table(physeq.NZcomp)[otu_table(physeq.NZcomp) == 0] <- 0.5 # pseudocounts
 
-# check the 0 values have been replaced
-otu_table(physeq_best)[1:5,1:5]
-otu_table(physeq.NZcomp)[1:5,1:5]
+# Sanity check that 0 values have been replaced
+# otu_table(physeq.hugerth)[1:5,1:5]
+# otu_table(physeq.NZcomp)[1:5,1:5]
 
 # transform into compositions
-physeq.NZcomp <- transform_sample_counts(physeq.NZcomp, function(x) x / sum(x) ) # divide each count by the total number of counts (per sample)
-sum(otu_table(physeq.NZcomp) < 0) # see how many negative values are present in the matrix
-sum(rowSums(otu_table(physeq.NZcomp)) == 1) # check if there is any row not summing to 1
-table(rowSums(otu_table(physeq.NZcomp)))
+physeq.NZcomp <- transform_sample_counts(physeq.NZcomp, function(x) x / sum(x) )
+table(rowSums(otu_table(physeq.NZcomp))) # check if there is any row not summing to 1
 
-# save the physeq.NZcomp object
-saveRDS(physeq.NZcomp, "/Users/scarcy/Desktop/Praktikum/Data/Hugherth_2020/Rproject_DataAnalysis/physeq_NZcomp.rds")
+# Save object
+saveRDS(physeq.NZcomp, file.path(path, "data/analysis-individual/Hugerth-2019/02_EDA-Hugerth/physeq_NZcomp.rds"))
 
 #____________________________________________________________________
 # PHYLOSEQ OBJECT WITH RELATIVE COUNT (BETWEEN 0 AND 1)
-physeq.rel <- physeq_best
-physeq.rel <- transform_sample_counts(physeq.rel, function(x) x / sum(x) ) # divide each count by the total number of counts (per sample)
+physeq.rel <- physeq.hugerth
+physeq.rel <- transform_sample_counts(physeq.rel, function(x) x / sum(x) )
 
 # check the counts are all relative
-otu_table(physeq)[1:5, 1:5]
-otu_table(physeq.rel)[1:5, 1:5]
+# otu_table(physeq.hugerth)[1:5, 1:5]
+# otu_table(physeq.rel)[1:5, 1:5]
 
 # sanity check
-sum(otu_table(physeq.rel) < 0) # see how many negative values are present in the matrix
-sum(rowSums(otu_table(physeq.rel)) == 1) # check if there is any row not summing to 1
+table(rowSums(otu_table(physeq.rel))) # check if there is any row not summing to 1
 
 # save the physeq.rel object
-saveRDS(physeq.rel, "/Users/scarcy/Desktop/Praktikum/Data/Hugherth_2020/Rproject_DataAnalysis/physeq_relative.rds")
+saveRDS(physeq.rel, file.path(path, "data/analysis-individual/Hugerth-2019/02_EDA-Hugerth/physeq_relative.rds"))
 
 #____________________________________________________________________
 # PHYLOSEQ OBJECT WITH COMMON-SCALE NORMALIZATION
-physeq.CSN <- physeq_best
-physeq.CSN <- transform_sample_counts(physeq.CSN, function(x) (x*min(sample_sums(physeq.CSN))) / sum(x) ) # divide each count by the total number of counts (per sample)
-min(sample_sums(physeq.CSN))
+physeq.CSN <- physeq.hugerth
+physeq.CSN <- transform_sample_counts(physeq.CSN, function(x) (x*min(sample_sums(physeq.CSN))) / sum(x) )
 
 # sanity check
-sum(otu_table(physeq.CSN) < 0) # see how many negative values are present in the matrix
-sum(rowSums(otu_table(physeq.CSN)) == 1013) # check if there is any row not summing to 1
+table(rowSums(otu_table(physeq.CSN))) # check that all rows are summing to the same total
 
 # save the physeq.CSN object
-saveRDS(physeq.CSN, "/Users/scarcy/Desktop/Praktikum/Data/Hugherth_2020/Rproject_DataAnalysis/physeq_CSN.rds")
+saveRDS(physeq.CSN, file.path(path, "data/analysis-individual/Hugerth-2019/02_EDA-Hugerth/physeq_CSN.rds"))
 
 
 #____________________________________________________________________
 # PHYLOSEQ OBJECT WITH CENTERED LOG RATIO COUNT
-physeq.clr <- physeq_best
-physeq.clr <- transform(physeq.clr, "clr") # the function adds pseudocounts itself
+physeq.clr <- physeq.hugerth
+physeq.clr <- microbiome::transform(physeq.hugerth, "clr") # the function adds pseudocounts itself
 
 # Compare the otu tables in the original phyloseq object and the new one after CLR transformation
-otu_table(physeq_best)[1:5, 1:5] # should contain absolute counts
+otu_table(physeq.hugerth)[1:5, 1:5] # should contain absolute counts
 otu_table(physeq.clr)[1:5, 1:5] # should all be relative
 
 # save the physeq.rel object
-saveRDS(physeq.clr, "/Users/scarcy/Desktop/Praktikum/Data/Hugherth_2020/Rproject_DataAnalysis/physeq_clr.rds")
+saveRDS(physeq.clr, file.path(path, "data/analysis-individual/Hugerth-2019/02_EDA-Hugerth/physeq_clr.rds"))
 ```
+
 
 
 
@@ -332,7 +396,11 @@ saveRDS(physeq.clr, "/Users/scarcy/Desktop/Praktikum/Data/Hugherth_2020/Rproject
 ## COMPUTE DISTANCES ##
 #######################
 
-```{r dist-thesis, fig.width = 15, fig.height = 4}
+### 1. UniFrac, Aitchison, Bray-Curtis and Canberra
+
+First, let's look at these four distances of interest.
+
+```{r dist-functions, fig.width = 15, fig.height = 4}
 #____________________________________________________________________________________
 # Measure distances
 Distances <- function(){
