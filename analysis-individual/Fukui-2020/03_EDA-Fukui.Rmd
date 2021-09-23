@@ -158,7 +158,7 @@ ggplot(ratio.FB, aes(x = host_disease, y = logRatioFB))+
 
 # Statistical test
 wilcox.test(ratio.FB[ratio.FB$host_disease == "IBS","logRatioFB"],
-            ratio.FB[ratio.FB$host_disease == "Healthy","logRatioFB"]) # p = 0.28
+            ratio.FB[ratio.FB$host_disease == "Healthy","logRatioFB"]) # p = 0.24
 ```
 
 
@@ -180,7 +180,8 @@ dev.off()
 
 # Relative abundances
 jpeg(file.path(path.plots, "relAbundance_phylum.jpg"), width = 4000, height = 2000)
-ggplot(phylum.table, aes(x = Sample, y = Abundance, fill = Phylum))+
+ggplot(phylum.table, aes(x = reorder(Sample, Sample, function(x) mean(phylum.table[Sample == x & Phylum == 'Bacteroidota', 'Abundance'])),
+                         y = Abundance, fill = Phylum))+
   facet_wrap(~ host_disease, scales = "free") + # scales = "free" removes empty lines
   geom_bar(stat = "identity") +
   theme(axis.text.x = element_text(size = 30, angle = -90),
@@ -193,7 +194,8 @@ ggplot(phylum.table, aes(x = Sample, y = Abundance, fill = Phylum))+
 dev.off()
 
 jpeg(file.path(path.plots, "relAbundance_class.jpg"), width = 4000, height = 2000)
-ggplot(class.table, aes(x = Sample, y = Abundance, fill = Class))+
+ggplot(class.table, aes(x = reorder(Sample, Sample, function(x) mean(phylum.table[Sample == x & Phylum == 'Bacteroidota', 'Abundance'])),
+                        y = Abundance, fill = Class))+
   facet_wrap(~ host_disease, scales = "free") + # scales = "free" removes empty lines
   geom_bar(stat = "identity") +
   theme(axis.text.x = element_text(size = 30, angle = -90),
@@ -208,8 +210,9 @@ dev.off()
 # Firmicutes:Bacteroidota log ratio
 jpeg(file.path(path.plots, "ratioFB.jpg"), width = 1500, height = 2000)
 ggplot(ratio.FB, aes(x = host_disease, y = logRatioFB))+
-  geom_boxplot(outlier.size = 0, lwd = 3)+
-  geom_jitter(size = 8, width=0.1)+
+  geom_violin(lwd=3, aes(fill=host_disease))+
+  geom_jitter(size = 10, width=0.1)+
+  scale_fill_manual(values=scales::alpha(c("blue", "red"), .3))+
   labs(x = "",  y = 'Log2(Firmicutes/Bacteroidota)', title = "Fukui dataset (2020)")+
   theme_classic()+
   theme(axis.text = element_text(size = 50),
@@ -341,7 +344,7 @@ plotDistances2D <- function(dlist, ordination="MDS"){
   plist[[4]] <- plot_ordination(physeq.NZcomp, iMDS.Can, color="host_disease")
   
   # Creating a dataframe to plot everything
-  plot.df = ldply(plist, function(x) x$data)
+  plot.df = plyr::ldply(plist, function(x) x$data)
   names(plot.df)[1] <- "distance"
   
   return(plot.df)

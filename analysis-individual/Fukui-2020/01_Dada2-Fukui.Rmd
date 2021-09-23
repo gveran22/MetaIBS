@@ -107,7 +107,7 @@ mergers <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Fu
 # taxa
 taxa <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/CLUSTER/Taxonomy/output/taxa_fukui.rds")
 # phyloseq object
-# physeq <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/CLUSTER/PhyloTree/input/physeq_fukui.rds")
+physeq <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/CLUSTER/PhyloTree/input/physeq_fukui.rds")
 ```
 
 
@@ -439,8 +439,14 @@ saveRDS(dadaFs, file.path(path, "01_Dada2-Fukui/infered_seq_F.rds"))
 saveRDS(dadaRs, file.path(path, "01_Dada2-Fukui/infered_seq_R.rds"))
 saveRDS(mergers, file.path(path, "01_Dada2-Fukui/mergers.rds"))
 
-# Taxa
+# Save the ASV, taxa, metadata tables
+saveRDS(otu_table(physeq), file.path(path, "01_Dada2-Fukui/ASVtable_final.rds")) # ASV table
+saveRDS(tax_table(physeq), file.path(path, "01_Dada2-Fukui/taxa_final.rds")) # taxa table
+saveRDS(sample_data(physeq), file.path(path, "01_Dada2-Fukui/metadata_final.rds")) # metadata table
+
+# Taxa & phyloseq object
 saveRDS(taxa, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/CLUSTER/Taxonomy/output/taxa_fukui.rds")
+saveRDS(physeq, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/CLUSTER/PhyloTree/input/physeq_fukui.rds")
 ```
 
 
@@ -463,28 +469,3 @@ ggplot(phylum.table, aes(x = reorder(Sample, Sample, function(x) mean(phylum.tab
   theme(axis.text.x = element_text(size = 2, angle = -90))+
   labs(x = "Samples", y = "Relative abundance")
 ```
-
-
-The sample SRR11944160 in the IBS population is the only one with lower sequencing depth and only composed of Bacteroidota.
-
-```{r outlier}
-# Look at the ASVs with non-0 count in this sample
-non0_ASVs <- apply(otu_table(physeq)["SRR11944160",], 2, function(col) all(col !=0 ))
-otu_table(physeq)["SRR11944160",non0_ASVs]
-
-# There are only 3 ASVs in this sample, so we will remove it.
-physeq <- subset_samples(physeq, Run != "SRR11944160")
-
-# Discard any ASV that is present in no sample anymore
-physeq <- filter_taxa(physeq, function(x) sum(x > 0) > 0, TRUE) # 0 taxa discarded
-
-
-# Save the ASV, taxa, metadata tables
-# saveRDS(otu_table(physeq), file.path(path, "01_Dada2-Fukui/ASVtable_final.rds")) # ASV table
-# saveRDS(tax_table(physeq), file.path(path, "01_Dada2-Fukui/taxa_final.rds")) # taxa table
-# saveRDS(sample_data(physeq), file.path(path, "01_Dada2-Fukui/metadata_final.rds")) # metadata table
-
-# Save the phyloseq object
-# saveRDS(physeq, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/CLUSTER/PhyloTree/input/physeq_fukui.rds")
-```
-
