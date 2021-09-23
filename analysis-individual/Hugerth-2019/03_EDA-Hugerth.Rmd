@@ -92,7 +92,7 @@ metadata %>%
   group_by(host_disease) %>%
   summarize(mean_age=mean(host_age), sd_age=sd(host_age))
 wilcox.test(metadata[metadata$host_disease == "IBS", ]$host_age,
-            metadata[metadata$host_disease == "Healthy", ]$host_age) # p=0.21
+            metadata[metadata$host_disease == "Healthy", ]$host_age) # p=0.23
 
 # Gender
 metadata %>%
@@ -385,8 +385,8 @@ physeq.clr <- physeq.hugerth
 physeq.clr <- microbiome::transform(physeq.hugerth, "clr") # the function adds pseudocounts itself
 
 # Compare the otu tables in the original phyloseq object and the new one after CLR transformation
-otu_table(physeq.hugerth)[1:5, 1:5] # should contain absolute counts
-otu_table(physeq.clr)[1:5, 1:5] # should all be relative
+# otu_table(physeq.hugerth)[1:5, 1:5] # should contain absolute counts
+# otu_table(physeq.clr)[1:5, 1:5] # should all be relative
 
 # save the physeq.rel object
 saveRDS(physeq.clr, file.path(path, "data/analysis-individual/Hugerth-2019/02_EDA-Hugerth/physeq_clr.rds"))
@@ -472,6 +472,8 @@ plotDistances2D <- function(dlist, ordination="MDS", relPhyseq=physeq.rel, clrPh
 
 Now let's plot!
 
+
+#### a) Fecal samples
 ```{r dist-run-fecal}
 #________________
 # FECAL DATA
@@ -490,7 +492,7 @@ plot.df.fecal <- plotDistances2D(dlist=dist.hugerth.fecal,
 
 # Plot
 ggplot(plot.df.fecal, aes(Axis.1, Axis.2, color=host_disease))+
-  geom_point(size=6, alpha=0.5)  + scale_color_manual(values = c('blue', 'red'))+
+  geom_point(size=4, alpha=0.5)  + scale_color_manual(values = c('blue', 'red'))+
   facet_wrap(distance~., scales='free', nrow=1)+
   theme_bw()+
   theme(strip.text.x = element_text(size=20))+
@@ -498,6 +500,7 @@ ggplot(plot.df.fecal, aes(Axis.1, Axis.2, color=host_disease))+
 # ggsave(file.path(path.plots, "distances4_MDS_stool.jpg"), height = 4, width = 15)
 ```
 
+#### b) Sigmoid samples
 ```{r dist-run-sigmoid}
 #________________
 # SIGMOID DATA
@@ -516,7 +519,7 @@ plot.df.sigmoid <- plotDistances2D(dlist=dist.hugerth.sigmoid,
 
 # Plot
 ggplot(plot.df.sigmoid, aes(Axis.1, Axis.2, color=host_disease))+
-  geom_point(size=6, alpha=0.5)  + scale_color_manual(values = c('blue', 'red'))+
+  geom_point(size=4, alpha=0.5)  + scale_color_manual(values = c('blue', 'red'))+
   facet_wrap(distance~., scales='free', nrow=1)+
   theme_bw()+
   theme(strip.text.x = element_text(size=20))+
@@ -524,7 +527,8 @@ ggplot(plot.df.sigmoid, aes(Axis.1, Axis.2, color=host_disease))+
 # ggsave(file.path(path.plots, "distances4_MDS_sigmoid.jpg"), height = 4, width = 15)
 ```
 
-```{r dist-run-all, fig.width = 15, fig.height = 12}
+#### c) All samples
+```{r dist-run-all, fig.width = 15, fig.height = 10}
 #________________
 # ALL DATA
 #________________
@@ -704,7 +708,7 @@ ggplot(bc.comp, aes(x=compare, y=value))+
 
 ### Figure 4 - NMDS highlighting IBS diagnosis or healthy
 
-```{r reproduce-fig4, eval = TRUE, echo = TRUE, fig.height = 6, fig.width = 10}
+```{r reproduce-fig4, eval = TRUE, echo = TRUE, fig.height = 5, fig.width = 10}
 # Calculate NMDS coordinates
 set.seed(123)
 NMDS.Bray.fecal <- ordinate(physeq = subset_samples(physeq.CSN, sample_type=="stool"),
@@ -734,7 +738,7 @@ ggpubr::ggarrange(p1,p2,ncol=2)
 
 ### Figure 5 - relationship between samples from same individual
 
-```{r reproduce-fig5, eval = TRUE, echo = TRUE, fig.height = 6, fig.width = 10}
+```{r reproduce-fig5, eval = TRUE, echo = TRUE, fig.height = 5, fig.width = 10}
 # Identify individuals that have both a sigmoid and a fecal sample
 duo.samples <- sample_data(physeq.hugerth) %>%
   as.data.frame() %>%
@@ -764,7 +768,7 @@ NMDS.Bray.comp <- ordinate(physeq = subset_samples(physeq.CSN, Run %in% duo.samp
 
 # Plot
 p1 <- ggplot(chao1.df, aes(x=stool, y=sigmoid))+
-  geom_point(size=4)+
+  geom_point(size=3)+
   theme_cowplot()+
   labs(x="Stool Chao1", y="Sigmoid biopsy Chao1", title="A")
 
