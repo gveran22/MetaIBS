@@ -4,455 +4,323 @@ output:
   pdf_document: default
   html_document:
     df_print: paged
+    toc: true
 ---
 
 ```{r, include=FALSE}
 knitr::opts_chunk$set(fig.width = 15, fig.height = 5, warning=FALSE, message=FALSE,
-                      root.dir = "/Users/scarcy/Desktop/Praktikum/Data/LoPresti_2019/")
+                      root.dir = "~/Projects/IBS_Meta-analysis_16S/analysis-individual/LoPresti-2019")
 ```
 
 
 
-#######################
-## IMPORT LIBRAIRIES ##
-#######################
-```{r library-import, echo=FALSE}
-library(dada2) # manage fastq file
+############
+## IMPORT ##
+############
 
-library(ShortRead) # manage fastq file
+### 1. Librairies
 
-library(Biostrings) # to manage dna sequences as strings
-
-library(seqTools) # analyse read length in fastq file
-
+```{r library-import}
 library(phyloseq) # for phyloseq object
-
-library(ggplot2) # for plots
-library(ggrepel)
-
-library(data.table)
-
-library(plyr)
-library(dplyr)
-
-library("doParallel")
-
-library("foreach")
-
-library("DECIPHER") # for phylogenetic tree
-library(ips)
-library("phangorn")
-
+library(ggplot2)
+library(cowplot)
+library(tidyverse)
 library("plotly") # plot 3D
-
 library("microbiome") # for centered log-ratio
-
 library("coda") # Aitchison distance
-
 library("coda.base") # Aitchison distance
-
 library("vegan") # NMDS
+library(pheatmap) # for heatmap
+```
 
-library(pheatmap) # for heat map
+### 2. Data
+
+```{r import-data}
+# Set path
+path <- "~/Projects/IBS_Meta-analysis_16S"
+
+# Import phyloseq object
+physeq.lopresti <- readRDS(file.path(path, "phyloseq-objects/physeq_lopresti.rds"))
+
+# Sanity check
+physeq.lopresti
 ```
 
 
-#################
-## IMPORT DATA ##
-#################
-
-XXXX
-```{r TO-DELETE, eval = FALSE, echo = TRUE}
-# Import metadata
-metadata_table <- read.csv("/Users/scarcy/Desktop/Praktikum/Data/LoPresti_2019/LoPresti_SraRunTable.csv")
-table(metadata_table$host_disease) # look at number of IBS vs HC
-table(metadata_table$env_material) # look at number of stool vs mucosa
-
-# Keep only relevant metadata
-metadata_table <- metadata_table[, c("Run", "host_disease", "gastrointest_disord", "env_material",
-                                     "Sample.Name", "Host_Age", "host_sex")]
-rownames(metadata_table) <- metadata_table$Run # assign sample names as row names
-
-metadata_table$host_disease <- as.character(metadata_table$host_disease) # host_disease is of class "factor", transform it to characters
-metadata_table$gastrointest_disord <- as.character(metadata_table$gastrointest_disord) # gastrointest_disord is of class "factor", transform it to characters
-
-metadata_table$host_disease[metadata_table$host_disease == "Healthy subject"] <- "Healthy" # replace host_disease "none" to "healthy"
-metadata_table$host_disease[metadata_table$host_disease == "Irritable Bowel Syndrome"] <- "IBS"
-
-metadata_table$gastrointest_disord[metadata_table$gastrointest_disord == "Absence"] <- "HC"
-metadata_table$gastrointest_disord[metadata_table$gastrointest_disord == "Alternating constipation and diarrhea"] <- "IBS-M"
-metadata_table$gastrointest_disord[metadata_table$gastrointest_disord == "diarrhea"] <- "IBS-D"
-metadata_table$gastrointest_disord[metadata_table$gastrointest_disord == "constipation"] <- "IBS-C"
-
-metadata_table$Sample.Name <- gsub("\\.A$", '', metadata_table$Sample.Name)
-metadata_table$Sample.Name <- gsub("\\A$", '', metadata_table$Sample.Name)
-
-colnames(metadata_table) <- c('Run', 'host_disease', 'host_subtype', 'sample_type', 'individual', 'host_age', 'host_sex')
-
-metadata_table$author <- "LoPresti"
-metadata_table$sequencing_tech <- "454 pyrosequencing"
-metadata_table$variable_region <- "V1-V3"
-
-saveRDS(metadata_table, "/Users/scarcy/Desktop/Praktikum/Data/LoPresti_2019/metadata_final.rds")
-
-
-#_________________________________________________________________________
-# Import OTU table (rows: sample names // columns: sequence variants)
-seqtable.nochim <- readRDS("/Users/scarcy/Desktop/Praktikum/Data/LoPresti_2019/ASVtable_final.rds")
-dim(seqtable.nochim) # should have 163 samples and 1198 ASV
-rownames(seqtable.nochim) <- gsub(".fastq.gz","", rownames(seqtable.nochim)) # remove the .fastq.gz extension in sample names
-
-# Import Taxonomic table (rows: sequence variants // columns: Kingdom, Phylum, Class, ...)
-taxa <- readRDS("/Users/scarcy/Desktop/Praktikum/Data/LoPresti_2019/taxa_final.rds")
-dim(taxa)
-```
-XXXX
-
-```{r}
-dim(test)
-test <- metadata_table[!duplicated(metadata_table$individual),]
-table(test$individual)
-unique(metadata_table$individual)
-
-# Age
-mean(test[test$host_disease == "IBS", "host_age"])
-sd(test[test$host_disease == "IBS", "host_age"])
-max(test[test$host_disease == "IBS", "host_age"])
-
-mean(test[test$host_disease == "Healthy", "host_age"])
-sd(test[test$host_disease == "Healthy", "host_age"])
-max(test[test$host_disease == "Healthy", "host_age"])
-
-wilcox.test(test[test$host_disease == "IBS", "host_age"],
-            test[test$host_disease == "Healthy", "host_age"])
-
-# Gender
-table(test[test$host_disease == "IBS", "host_sex"])
-30/44
-table(test[test$host_disease == "Healthy", "host_sex"])
-20/47
-
-chisq.test(data.frame("Female" = c(30,20),
-                      "Male" = c(14,27)))
-```
-
-
-```{r import-for-pdf, echo = FALSE}
-metadata_table <- readRDS("/Users/scarcy/Desktop/Praktikum/Data/LoPresti_2019/metadata_final.rds")
-physeq <- readRDS("/Users/scarcy/Desktop/Praktikum/Data/OutputPhangorn/physeq_lopresti.rds")
-physeq_best <- readRDS("/Users/scarcy/Desktop/Praktikum/Data/LoPresti_2019/Rproject_DataAnalysis/physeq_best.rds")
-physeq.rel <- readRDS("/Users/scarcy/Desktop/Praktikum/Data/LoPresti_2019/Rproject_DataAnalysis/physeq_relative.rds")
-physeq.clr <- readRDS("/Users/scarcy/Desktop/Praktikum/Data/LoPresti_2019/Rproject_DataAnalysis/physeq_clr.rds")
-
-# Distance methods
-dist_methods <- unlist(distanceMethodList)
-dist_methods <- dist_methods[-which(dist_methods=="ANY")] # Remove the user-defined distance
-dist_methods <- dist_methods[-c(1,15,18)] #remove unweighted unifrac, mountford, chao (not gonna work on pseudocounts)
-dist_methods <- dist_methods[1:16] #keep only the 16 first methods (remove the beta diversity distances)
-
-# For heatmaps: have group color
-mat_col <- data.frame(group = metadata_table[,"host_disease"],
-                      sampleType = metadata_table[,"env_material"],
-                      subtype = metadata_table[,"gastrointest_disord"])
-rownames(mat_col) <- rownames(metadata_table)
-```
-
-
-
-############################
-## CREATE PHYLOSEQ OBJECT ##
-############################
-
-```{r phyloseq-object, eval = FALSE, echo = TRUE}
-#____________________________________________________________________
-# OTU TABLE, TAXA TABLE AND METADATA
-physeq <- phyloseq(otu_table(seqtable.nochim, taxa_are_rows=FALSE), # by default, in otu_table the sequence variants are in rows
-                  sample_data(metadata_table), 
-                  tax_table(taxa))
-
-#____________________________________________________________________
-# PHYLOGENETIC TREE
-
-# Multiple-sequence alignment (know which regions are conserved/different to be able to do the phylogeny)
-seqs <- getSequences(seqtable.nochim) # get the sequence variants (the ASVs)
-names(seqs) <- seqs # This propagates to the tip labels of the tree
-alignment <- AlignSeqs(DNAStringSet(seqs), anchor=NA) # by default, anchor = 0.7 which means that 70% of sequences must share a common region to anchor the alignment space.
-
-# Construct a neighbor-joining tree
-phang.align <- phyDat(as(alignment, "matrix"), type="DNA") # transform the aligned DNA sequences into a phyDat (phangorn) object
-dm <- dist.ml(phang.align) # compute pairwise distance between DNA sequences (with the Jukes-Cantor estimate of the evolutionary distance)
-treeNJ <- NJ(dm) # create a neighbor-joining tree estimation based on the distance matrix
-fit <- pml(treeNJ, data=phang.align) # get the likelihood of the phylogenetic tree given the sequence alignment (then we'll optimize it)
-
-## negative edges length changed to 0!
-
-# Fit a generalized time-reversible with gamma rate variation (GTR+G+I)
-fitGTR <- update(fit, k=4, inv=0.2)
-fitGTR <- optim.pml(fitGTR, model="GTR", optInv=TRUE, optGamma=TRUE, # gamma rate and proportion of variable size get optimized
-                      rearrangement = "stochastic", control = pml.control(trace = 0)) # (trace = 0) don't show output during optimization
-# stochastic tree rearrangement
-
-## Message displayed : "I unrooted the tree"
-
-# Add tree to physeq
-physeq <- merge_phyloseq(physeq, phy_tree(fitGTR$tree))
-```
+Phylogenetic tree was computed with the package `phangorn`, and the script was run on a cluster. Let's check we have correctly generated a phylogenetic tree.
 
 ```{r plot-tree, fig.height = 6, fig.width = 10}
 # Look at the tree
-plot_tree(physeq, color = "host_disease", ladderize="left")
-```
-
-
-```{r phyloseq-object-2, eval = FALSE, echo = TRUE}
-#____________________________________________________________________
-# GIVE SURNAMES TO OTUs
-
-# Give surnames to sequence variants & store the sequence variants in "refseq" in the phyloseq object
-dna <- DNAStringSet(taxa_names(physeq)) # get the sequence variants (ASVs)
-names(dna) <- taxa_names(physeq) # no idea what this does
-physeq <- merge_phyloseq(physeq, dna) # store the dna sequences in the refseq of the phyloseq object
-taxa_names(physeq) <- paste0("OTU", seq(ntaxa(physeq))) # replace the whole dna sequences in the taxa_names by a surname OTU1, OTU2, etc.
-
-
-# Save physeq object
-saveRDS(physeq, "/Users/scarcy/Desktop/Praktikum/Data/LoPresti_2019/Rproject_DataAnalysis/physeq.rds")
-saveRDS(physeq, "/Users/scarcy/Desktop/Praktikum/Data/Rproject_COMBINE/physeq_lopresti.rds")
+plot_tree(physeq.lopresti, color = "host_disease", ladderize="left")
 ```
 
 
 
-######################################
-## ABSOLUTE AND RELATIVE ABUNDANCES ##
-######################################
-```{r plot-abundances, echo = TRUE, fig.height = 6}
+```{r import-for-html, echo = FALSE}
+#__________________________________________________________________________
+#____________ THIS IS ONLY FOR (quicker) PDF/HTML OUTPUT __________________
+#__________________________________________________________________________
+
+# Import phyloseq objects for computing distances
+physeq.rel <- readRDS(file.path(path, "data/analysis-individual/LoPresti-2019/02_EDA-LoPresti/physeq_relative.rds"))
+physeq.clr <- readRDS(file.path(path, "data/analysis-individual/LoPresti-2019/02_EDA-LoPresti/physeq_clr.rds"))
+physeq.CSN <- readRDS(file.path(path, "data/analysis-individual/LoPresti-2019/02_EDA-LoPresti/physeq_CSN.rds"))
+physeq.NZcomp <- readRDS(file.path(path, "data/analysis-individual/LoPresti-2019/02_EDA-LoPresti/physeq_NZcomp.rds"))
+```
+
+
+
+##################
+## DEMOGRAPHICS ##
+##################
+
+This dataset has several covariates (gender, age, bmi, sample_storage_duration). We will check whether there is the same distribution of these covariates between healthy and IBS patients.
+
+```{r demographics-stats}
+# Number of individuals in each group (keeping just 1 sample per individual)
+metadata <- data.frame(sample_data(physeq.lopresti)) %>%
+  select(host_disease, host_age, host_sex, host_ID) %>%
+  group_by(host_ID) %>%
+  summarise_all(first)
+  
+metadata %>%
+  count(host_disease)
+
+# Age
+metadata %>%
+  group_by(host_disease) %>%
+  summarize(mean_age=mean(host_age), sd_age=sd(host_age))
+wilcox.test(metadata[metadata$host_disease == "IBS", ]$host_age,
+            metadata[metadata$host_disease == "Healthy", ]$host_age) # p=0.25
+
+# Gender
+metadata %>%
+  count(host_disease, host_sex)
+chisq.test(data.frame("Female" = c(12,17),
+                      "Male" = c(18,6))) # p=0.02 -> more females than males in IBS group
+```
+
+
+
+
+################
+## ABUNDANCES ##
+################
+
+### 1. Absolute abundances
+
+```{r plot-absolute-abundance, fig.width=10, fig.height = 5}
 # Plot Phylum
-plot_bar(physeq, fill = "Phylum") + facet_wrap("env_material", scales="free") +
-  theme(axis.text.x = element_text(size = 8))+
-  labs(x = "Samples", y = "Total read count", title = "LoPresti dataset (2019)")+
-  ylim(0,7000)
+plot_bar(physeq.lopresti, fill = "Phylum") + facet_wrap("sample_type", scales="free_x") +
+  theme(axis.text.x = element_text(size = 5))+
+  labs(x = "Samples", y = "Absolute abundance", title = "Lo Presti dataset (2019)") +
+  ylim(0,4000)
+
+# Plot Class
+plot_bar(physeq.lopresti, fill = "Class")+ facet_wrap("sample_type", scales="free_x") +
+  theme(axis.text.x = element_text(size = 5))+
+  labs(x = "Samples", y = "Absolute abundance", title = "Lo Presti dataset (2019)")+
+  ylim(0,4000)
 ```
 
-
-```{r}
-# Replace "IBS-A" by "IBS-M"
-sample_data(physeq)[sample_data(physeq)$gastrointest_disord == "IBS-A", "gastrointest_disord"] <- "IBS-M"
-sample_data(physeq)
-```
+**Sequencing depth** characteristics of the Hugerth dataset:  
+- minimum of `r min(sample_sums(physeq.lopresti))` total count per sample  
+- median: `r median(sample_sums(physeq.lopresti))` total count per sample  
+- maximum of `r max(sample_sums(physeq.lopresti))` total count per sample  
 
 
-As many samples have a very low count number, we will remove samples that have less than 500 total reads
 
+### 2. Relative abundances
 
-```{r plot-abundances-2, fig.height = 6}
-physeq_best <- prune_samples(sample_sums(physeq)>=1000, physeq)
-physeq_best
-# Plot Phylum
-plot_bar(physeq_best, fill = "Phylum") + facet_wrap("env_material", scales="free") +
-  theme(axis.text.x = element_text(size = 8))+
-  labs(x = "Samples", y = "Total read count", title = "LoPresti dataset (2019)")+
-  ylim(0,7000)
-
-# Relative abundance for Phylum
-phylum.table <- physeq_best %>%
+```{r plot-relative-abundances, fig.width=10, fig.height = 5, message=FALSE}
+# Agglomerate to phylum & class levels
+phylum.table <- physeq.lopresti %>%
   tax_glom(taxrank = "Phylum") %>%                     # agglomerate at phylum level
   transform_sample_counts(function(x) {x/sum(x)} ) %>% # Transform to rel. abundance
   psmelt()                                             # Melt to long format
 
-ggplot(phylum.table, aes(x = Sample.Name, y = Abundance, fill = Phylum))+
-  facet_wrap(~ host_disease + env_material, scales = "free") + # scales = "free" removes empty lines
+class.table <- physeq.lopresti %>%
+  tax_glom(taxrank = "Class") %>%
+  transform_sample_counts(function(x) {x/sum(x)} ) %>%
+  psmelt()
+
+
+# Plot relative abundances
+ggplot(phylum.table, aes(x = reorder(Sample, Sample, function(x) mean(phylum.table[Sample == x & Phylum == 'Bacteroidota', 'Abundance'])),
+                         y = Abundance, fill = Phylum))+
+  facet_wrap(~ sample_type + host_disease, scales = "free") + # scales = "free" removes empty lines
   geom_bar(stat = "identity") +
-  theme(axis.text.x = element_text(size = 8, angle = -90))+
-  labs(x = "Individuals", y = "Relative abundance", title = "LoPresti dataset (2019)")
+  theme(axis.text.x = element_blank())+
+  labs(x = "Samples", y = "Relative abundance", title = "Lo Presti dataset (2019)")
 
-# Plot Class
-plot_bar(physeq_best, fill = "Class")+ facet_wrap("host_disease", scales="free") +
-  theme(axis.text.x = element_text(size = 8))+
-  labs(x = "Samples", y = "Total read count", title = "LoPresti dataset (2019)")+
-  ylim(0,7000)
-
-# Relative abundance for Class
-class.table <- physeq_best %>%
-  tax_glom(taxrank = "Class") %>%                     # agglomerate at class level
-  transform_sample_counts(function(x) {x/sum(x)} ) %>% # Transform to rel. abundance
-  psmelt()                                             # Melt to long format
-
-ggplot(class.table, aes(x = Sample, y = Abundance, fill = Class))+
-  facet_wrap(~ host_disease, scales = "free") + # scales = "free" removes empty lines
+ggplot(class.table, aes(x = reorder(Sample, Sample, function(x) mean(class.table[Sample == x & Phylum == 'Bacteroidota', 'Abundance'])),
+                        y = Abundance, fill = Class))+
+  facet_wrap(~ sample_type + host_disease, scales = "free") +
   geom_bar(stat = "identity") +
-  theme(axis.text.x = element_text(size = 8, angle = -90))+
-  labs(x = "Samples", y = "Relative abundance", title = "LoPresti dataset (2019)")
+  theme(axis.text.x = element_blank(),
+        legend.key.size = unit(0.2, 'cm'),
+        legend.text = element_text(size=8))+
+  labs(x = "Samples", y = "Relative abundance", title = "Lo Presti dataset (2019)")
 ```
 
 
-```{r plot-log-ratio, fig.height = 3, fig.width=7}
-# Extract abundance only Bacteroidota and Firmicutes
-bacter <- phylum.table[phylum.table[,'Phylum'] == 'Bacteroidota', c('Sample', 'Abundance', 'Phylum',
-                                                                    'host_disease', 'gastrointest_disord', 'env_material')]
-bacter <- bacter[order(bacter$Sample),] # order by sample name
-firmi <- phylum.table[phylum.table[,'Phylum'] == 'Firmicutes', c('Sample', 'Abundance', 'Phylum',
-                                                                    'host_disease', 'gastrointest_disord', 'env_material')]
-firmi <- firmi[order(firmi$Sample),] # order by sample name
+
+
+### 3. Firmicutes/Bacteroidota ratio
+
+```{r plot-log-ratio, fig.height = 5, fig.width=5}
+# Extract abundance of only Bacteroidota and Firmicutes
+relevant.covariates <- c('Sample', 'Abundance', 'host_disease', 'host_subtype', 'Phylum', 'sample_type', 'host_ID', 'host_age', 'host_sex')
+
+bacter <- phylum.table %>%
+  filter(Phylum == "Bacteroidota") %>%
+  select(all_of(relevant.covariates)) %>%
+  dplyr::rename(Bacteroidota = Abundance) %>%
+  select(-Phylum)
+
+firmi <- phylum.table %>%
+  filter(Phylum == "Firmicutes") %>%
+  select(all_of(relevant.covariates)) %>%
+  dplyr::rename(Firmicutes = Abundance) %>%
+  select(-Phylum)
 
 # Calculate log2 ratio Firmicutes/Bacteroidota
-ratio_FB <- data.table('Sample' = bacter$Sample,
-                       'host_disease' = bacter$host_disease,
-                       'host_subtype' = bacter$gastrointest_disord,
-                       'sample_type' = bacter$env_material,
-                       'Bacteroidota' = bacter$Abundance,
-                       'Firmicutes' = firmi$Abundance)
-ratio_FB[,"Log_ratio_FB"] <- log2(ratio_FB[,"Firmicutes"] / ratio_FB[,"Bacteroidota"])
+ratio.FB <- left_join(x=bacter, y=firmi, by=c('Sample', 'host_disease', 'host_subtype', 'sample_type', 'host_ID', 'host_age', 'host_sex')) %>%
+  relocate(Firmicutes, .after=Bacteroidota) %>%
+  # Compute log ratios
+  mutate(logRatioFB = log2(Firmicutes/Bacteroidota))
+
 
 # Plot log2 ratio Firmicutes/Bacteroidota
-par(mar = c(3, 10, 3, 10))
-boxplot(data = ratio_FB, Log_ratio_FB ~ host_subtype, ylab = "Log2 Ratio Abundance", xlab = "", main = "Firmicutes to Bacteroidota ratio")
+ggplot(ratio.FB, aes(x = host_disease, y = logRatioFB))+
+  geom_violin(aes(fill=host_disease))+
+  scale_fill_manual(values=scales::alpha(c("blue", "red"), .3))+
+  geom_jitter(width=0.1)+
+  facet_wrap(~sample_type) +
+  labs(x = "",  y = 'Log2(Firmicutes/Bacteroidota)', title = "Firmicutes:Bacteroidota ratio")+
+  theme_cowplot()+
+  theme(legend.position="none")
 
-par(mar = c(3, 10, 3, 10))
-boxplot(data = ratio_FB, Log_ratio_FB ~ sample_type, ylab = "Log2 Ratio Abundance", xlab = "", main = "Firmicutes to Bacteroidota ratio")
+# Statistical test sigmoid samples
+wilcox.test(ratio.FB[ratio.FB$sample_type == "sigmoid" & ratio.FB$host_disease == "IBS","logRatioFB"],
+            ratio.FB[ratio.FB$sample_type == "sigmoid" & ratio.FB$host_disease == "Healthy","logRatioFB"]) # p = 0.4
+# Statistical test stool samples
+wilcox.test(ratio.FB[ratio.FB$sample_type == "stool" & ratio.FB$host_disease == "IBS","logRatioFB"],
+            ratio.FB[ratio.FB$sample_type == "stool" & ratio.FB$host_disease == "Healthy","logRatioFB"]) # p=0.01 significant difference in stool samples
+
+
+# Plot log2 ratio Firmicutes/Bacteroidota per IBS subtype
+ggplot(ratio.FB %>% filter(sample_type == "stool"), aes(x = host_subtype, y = logRatioFB))+
+  geom_violin(aes(fill=host_subtype))+
+  scale_fill_manual(values=scales::alpha(c("blue", "brown", "red", "orange"), .3))+
+  geom_jitter(width=0.1)+
+  labs(x = "",  y = 'Log2(Firmicutes/Bacteroidota)', title = "Fecal samples")+
+  theme_cowplot()+
+  theme(legend.position="none")
+
+
+# Paired data
+ggplot(ratio.FB, aes(x = sample_type, y = logRatioFB))+
+  geom_violin(aes(fill=host_disease))+
+  scale_fill_manual(values=scales::alpha(c("blue", "red"), .3))+
+  geom_point()+
+  geom_line(aes(group=host_ID), lwd=0.1) +
+  facet_wrap(~host_disease) +
+  labs(x = "",  y = 'Log2(Firmicutes/Bacteroidota)', title = "Paired data") +
+  theme_cowplot()+
+  theme(legend.position="none")
+
+# Statistical test sigmoid vs stool samples
+wilcox.test(ratio.FB[ratio.FB$sample_type == "stool" & ratio.FB$host_disease == "Healthy","logRatioFB"],
+            ratio.FB[ratio.FB$sample_type == "sigmoid" & ratio.FB$host_disease == "Healthy","logRatioFB"]) # p=0.001
+wilcox.test(ratio.FB[ratio.FB$sample_type == "stool" & ratio.FB$host_disease == "IBS","logRatioFB"],
+            ratio.FB[ratio.FB$sample_type == "sigmoid" & ratio.FB$host_disease == "IBS","logRatioFB"]) # p=0.04
 ```
 
-```{r statistics, echo = FALSE, eval = FALSE}
-# Nb of samples and individuals
-table(metadata_table$host_disease)
-table(metadata_table$env_material)
-table(metadata_table[metadata_table$env_material == 'stool',]$host_disease)
-
-# Nb of counts per sample
-max(sample_sums(physeq))
-min(sample_sums(physeq))
-median(sample_sums(physeq))
-
-max(sample_sums(physeq_best))
-min(sample_sums(physeq_best))
-median(sample_sums(physeq_best))
-
-# Nb of phyla & classes
-table(taxa[,2])
-table(taxa[,3])
-
-# Take out the '.A' at the end of the Sample.Names
-phylum.table$Sample.Name <- gsub("\\.A$", '', phylum.table$Sample.Name)
-phylum.table$Sample.Name <- gsub("A$", '', phylum.table$Sample.Name)
-
-metadata_table$Sample.Name <- gsub("\\.A$", '', metadata_table$Sample.Name)
-metadata_table$Sample.Name <- gsub("A$", '', metadata_table$Sample.Name)
-table(metadata_table[metadata_table$host_disease == 'Healthy',]$Sample.Name) # How many individuals do we have?
-
-# Percentage of main phyla
-mean(phylum.table[phylum.table[,'Phylum'] == 'Firmicutes', 'Abundance'])
-mean(phylum.table[phylum.table[,'Phylum'] == 'Bacteroidota', 'Abundance'])
-mean(phylum.table[phylum.table[,'Phylum'] == 'Proteobacteria', 'Abundance'])
-
-# Percentage of main classes
-mean(class.table[class.table[,'Class'] == 'Clostridia', 'Abundance'])
-mean(class.table[class.table[,'Class'] == 'Bacteroidia', 'Abundance'])
-mean(class.table[class.table[,'Class'] == 'Gammaproteobacteria', 'Abundance'])
-
-```
 
 
 
 ```{r export-plots-1, eval = FALSE, echo = FALSE}
+# Save path to plots
+path.plots <- file.path(path, "data/analysis-individual/PLOTS/plots-LoPresti-EDA")
 
-jpeg("./Plots/plot_phylum_absAbundance.jpg", width = 4000, height = 2000)
-plot_bar(physeq, fill = "Phylum") + facet_wrap("host_disease", scales="free") +
-  theme(axis.text.x = element_text(size = 20, angle = -90),
+# Absolute abundance phylum
+jpeg(file.path(path.plots, "absAbundance_phylum.jpg"), width = 4000, height = 2000)
+plot_bar(physeq.lopresti, fill = "Phylum") + facet_wrap("sample_type", scales="free_x") +
+  theme(axis.text.x = element_blank(),
         axis.text.y = element_text(size = 30),
         legend.text = element_text(size = 50),
         axis.title = element_text(size = 50),
         title = element_text(size = 70),
         strip.text = element_text(size = 50))+
-  labs(x = "Samples", y = "Total read count", title = "LoPresti dataset (2019)")+
-  ylim(0,6500)
+  labs(x = "Samples", y = "Total read count", title = "Lo Presti dataset (2019)")+
+  ylim(0, 4000)
 dev.off()
 
-jpeg("./Plots/plot_phylum_absAbundance_BEST.jpg", width = 4000, height = 2000)
-plot_bar(physeq_best, fill = "Phylum") + facet_wrap("host_disease", scales="free") +
-  theme(axis.text.x = element_text(size = 20, angle = -90),
-        axis.text.y = element_text(size = 30),
-        legend.text = element_text(size = 50),
-        axis.title = element_text(size = 50),
-        title = element_text(size = 70),
-        strip.text = element_text(size = 50))+
-  labs(x = "Samples", y = "Total read count", title = "LoPresti dataset (2019)")+
-  ylim(0,6500)
-dev.off()
-
-jpeg("./Plots/phylum_relAbundance.jpg", width = 4000, height = 2000)
-ggplot(phylum.table, aes(x = Sample, y = Abundance, fill = Phylum))+
-  facet_wrap(~ host_disease, scales = "free") + # scales = "free" removes empty lines
+# Relative abundances
+jpeg(file.path(path.plots, "relAbundance_phylum.jpg"), width = 4000, height = 2000)
+ggplot(phylum.table, aes(x = reorder(Sample, Sample, function(x) mean(phylum.table[Sample == x & Phylum == 'Bacteroidota', 'Abundance'])),
+                         y = Abundance, fill = Phylum))+
+  facet_wrap(~ sample_type + host_disease, scales = "free") + # scales = "free" removes empty lines
   geom_bar(stat = "identity") +
-  theme(axis.text.x = element_text(size = 20, angle = -90),
+  theme(axis.text.x = element_blank(),
         axis.text.y = element_text(size = 30),
         legend.text = element_text(size = 50),
         axis.title = element_text(size = 50),
         title = element_text(size = 70),
         strip.text = element_text(size = 50))+
-  labs(x = "Samples", y = "Relative abundance", title = "LoPresti dataset (2019)")
+  labs(x = "Samples", y = "Relative abundance", title = "Lo Presti dataset (2019)")
 dev.off()
 
-jpeg("./Plots/plot_phylum_relAbundance.jpg", width = 4000, height = 2000)
-ggplot(phylum.table, aes(x = Sample.Name, y = Abundance, fill = Phylum))+
-  facet_wrap(~ host_disease + env_material, scales = "free") + # scales = "free" removes empty lines
+jpeg(file.path(path.plots, "relAbundance_class.jpg"), width = 4000, height = 2000)
+ggplot(class.table, aes(x = reorder(Sample, Sample, function(x) mean(phylum.table[Sample == x & Phylum == 'Bacteroidota', 'Abundance'])),
+                        y = Abundance, fill = Class))+
+  facet_wrap(~ sample_type + host_disease, scales = "free") +
   geom_bar(stat = "identity") +
-  theme(axis.text.x = element_text(size = 20, angle = -90),
+  theme(axis.text.x = element_blank(),
         axis.text.y = element_text(size = 30),
         legend.text = element_text(size = 50),
         axis.title = element_text(size = 50),
         title = element_text(size = 70),
         strip.text = element_text(size = 50))+
-  labs(x = "Individuals", y = "Relative abundance", title = "LoPresti dataset (2019)")
+  labs(x = "Samples", y = "Relative abundance", title = "Lo Presti dataset (2019)")
 dev.off()
 
-jpeg("./Plots/plot_class_relAbundance.jpg", width = 4000, height = 2000)
-ggplot(class.table, aes(x = Sample, y = Abundance, fill = Class))+
-  facet_wrap(~ host_disease, scales = "free") + # scales = "free" removes empty lines
-  geom_bar(stat = "identity") +
-  theme(axis.text.x = element_text(size = 20, angle = -90),
-        axis.text.y = element_text(size = 30),
-        legend.text = element_text(size = 50),
-        axis.title = element_text(size = 50),
-        title = element_text(size = 70),
-        strip.text = element_text(size = 50))+
-  labs(x = "Samples", y = "Relative abundance", title = "LoPresti dataset (2019)")
-dev.off()
 
-jpeg("./Plots/log2ratio_FirmBact.jpg", width = 1500, height = 2000)
-ggplot(ratio_FB, aes(x = host_disease, y = Log_ratio_FB))+
-  geom_boxplot(lwd = 2)+
-  labs(x = "",  y = 'Log2 Firmicutes/Bacteroidota Abundance Ratio', title = "LoPresti dataset (2019)")+
-  theme_classic()+
+# Firmicutes:Bacteroidota log ratio (healthy/IBS)
+jpeg(file.path(path.plots, "ratioFB.jpg"), width = 1500, height = 1500)
+ggplot(ratio.FB, aes(x = host_disease, y = logRatioFB))+
+  geom_violin(lwd=3, aes(fill=host_disease))+
+  geom_jitter(size = 10, width=0.1)+
+  scale_fill_manual(values=scales::alpha(c("blue", "red"), .3))+
+  facet_wrap(~sample_type) +
+  labs(x = "",  y = 'Log2(Firmicutes/Bacteroidota)', title = "Firmicutes:Bacteroidota ratio")+
+  theme_cowplot()+
   theme(axis.text = element_text(size = 50),
-        legend.text = element_text(size = 50),
+        strip.text = element_text(size=50),
+        legend.position = "none",
         axis.title = element_text(size = 50),
         title = element_text(size = 50))
 dev.off()
 
-jpeg("./Plots/log2ratio_FirmBact_subtypes.jpg", width = 1500, height = 2000)
-ggplot(ratio_FB, aes(x = host_subtype, y = Log_ratio_FB))+
-  geom_boxplot(lwd = 2)+
-  labs(x = "",  y = 'Log2 Firmicutes/Bacteroidota Abundance Ratio', title = "LoPresti dataset (2019)")+
-  theme_classic()+
+# Firmicutes:Bacteroidota log ratio (paired data stool/sigmoid)
+jpeg(file.path(path.plots, "ratioFB_paired-data.jpg"), width = 1500, height = 1500)
+ggplot(ratio.FB, aes(x = sample_type, y = logRatioFB))+
+  geom_violin(lwd=3, aes(fill=host_disease))+
+  geom_point(size = 10)+
+  geom_line(aes(group=host_ID), lwd=0.5) +
+  scale_fill_manual(values=scales::alpha(c("blue", "red"), .3))+
+  facet_wrap(~host_disease) +
+  labs(x = "",  y = 'Log2(Firmicutes/Bacteroidota)', title = "Paired data") +
+  theme_cowplot()+
   theme(axis.text = element_text(size = 50),
-        axis.text.x = element_text(angle = 45, vjust = 0.5),
-        legend.text = element_text(size = 50),
-        axis.title = element_text(size = 50),
-        title = element_text(size = 50))+
-  ylim(-3, 10)
-dev.off()
-
-jpeg("./Plots/log2ratio_FirmBact_sample.jpg", width = 1500, height = 2000)
-ggplot(ratio_FB, aes(x = sample_type, y = Log_ratio_FB))+
-  geom_boxplot(lwd = 2)+
-  labs(x = "",  y = 'Log2 Firmicutes/Bacteroidota Abundance Ratio', title = "LoPresti dataset (2019)")+
-  theme_classic()+
-  theme(axis.text = element_text(size = 50),
-        legend.text = element_text(size = 50),
+        strip.text = element_text(size=50),
+        legend.position = "none",
         axis.title = element_text(size = 50),
         title = element_text(size = 50))
 dev.off()
-
 ```
+
 
 
 
@@ -461,70 +329,67 @@ dev.off()
 ####################
 
 ```{r normalize-data, eval = FALSE, echo = TRUE}
-# REMOVE SAMPLES WITH LESS THAN 1000 COUNTS
-physeq_best <-  prune_samples(sample_sums(physeq)>=1000, physeq)
-physeq_best <- subset_taxa(physeq_best, !is.na(Phylum)) # remove the 5 NA Phyla
-physeq_best
+# Sanity check no sample with less than 500 total count
+table(sample_sums(physeq.lopresti)<500) # all FALSE
 
 #____________________________________________________________________
 # PHYLOSEQ OBJECT WITH NON-ZERO COMPOSITIONS
-physeq.NZcomp <- physeq_best
-otu_table(physeq.NZcomp)[otu_table(physeq.NZcomp) == 0] <- 0.5
+physeq.NZcomp <- physeq.lopresti
+otu_table(physeq.NZcomp)[otu_table(physeq.NZcomp) == 0] <- 0.5 # pseudocounts
 
-# check the 0 values have been replaced
-otu_table(physeq_best)[1:5,1:5]
-otu_table(physeq.NZcomp)[1:5,1:5]
+# Sanity check that 0 values have been replaced
+# otu_table(physeq.lopresti)[1:5,1:5]
+# otu_table(physeq.NZcomp)[1:5,1:5]
 
 # transform into compositions
-physeq.NZcomp <- transform_sample_counts(physeq.NZcomp, function(x) x / sum(x) ) # divide each count by the total number of counts (per sample)
-sum(otu_table(physeq.NZcomp) < 0) # see how many negative values are present in the matrix
+physeq.NZcomp <- transform_sample_counts(physeq.NZcomp, function(x) x / sum(x) )
 table(rowSums(otu_table(physeq.NZcomp))) # check if there is any row not summing to 1
 
-# save the physeq.NZcomp object
-saveRDS(physeq.NZcomp, "/Users/scarcy/Desktop/Praktikum/Data/LoPresti_2019/Rproject_DataAnalysis/physeq_NZcomp.rds")
+# Save object
+saveRDS(physeq.NZcomp, file.path(path, "data/analysis-individual/LoPresti-2019/02_EDA-LoPresti/physeq_NZcomp.rds"))
 
 #____________________________________________________________________
 # PHYLOSEQ OBJECT WITH RELATIVE COUNT (BETWEEN 0 AND 1)
-physeq.rel <- physeq_best
-physeq.rel <- transform_sample_counts(physeq.rel, function(x) x / sum(x) ) # divide each count by the total number of counts (per sample)
+physeq.rel <- physeq.lopresti
+physeq.rel <- transform_sample_counts(physeq.rel, function(x) x / sum(x) )
 
 # check the counts are all relative
-otu_table(physeq)[1:5, 1:5]
-otu_table(physeq.rel)[1:5, 1:5]
+# otu_table(physeq.lopresti)[1:5, 1:5]
+# otu_table(physeq.rel)[1:5, 1:5]
 
 # sanity check
-sum(otu_table(physeq.rel) < 0) # see how many negative values are present in the matrix
-sum(rowSums(otu_table(physeq.rel)) == 1) # check if there is any row not summing to 1
+table(rowSums(otu_table(physeq.rel))) # check if there is any row not summing to 1
 
 # save the physeq.rel object
-saveRDS(physeq.rel, "/Users/scarcy/Desktop/Praktikum/Data/LoPresti_2019/Rproject_DataAnalysis/physeq_relative.rds")
+saveRDS(physeq.rel, file.path(path, "data/analysis-individual/LoPresti-2019/02_EDA-LoPresti/physeq_relative.rds"))
 
 #____________________________________________________________________
 # PHYLOSEQ OBJECT WITH COMMON-SCALE NORMALIZATION
-physeq.CSN <- physeq_best
-min(sample_sums(physeq.CSN)) # sanity check
-physeq.CSN <- transform_sample_counts(physeq.CSN, function(x) (x*min(sample_sums(physeq.CSN))) / sum(x) ) # divide each count by the total number of counts (per sample)
+physeq.CSN <- physeq.lopresti
+physeq.CSN <- transform_sample_counts(physeq.CSN, function(x) (x*min(sample_sums(physeq.CSN))) / sum(x) )
 
 # sanity check
-sum(otu_table(physeq.CSN) < 0) # see how many negative values are present in the matrix
-table(rowSums(otu_table(physeq.CSN))) # check if there is any row not summing to 1
+table(rowSums(otu_table(physeq.CSN))) # check that all rows are summing to the same total
 
 # save the physeq.CSN object
-saveRDS(physeq.CSN, "/Users/scarcy/Desktop/Praktikum/Data/LoPresti_2019/Rproject_DataAnalysis/physeq_CSN.rds")
+saveRDS(physeq.CSN, file.path(path, "data/analysis-individual/LoPresti-2019/02_EDA-LoPresti/physeq_CSN.rds"))
 
 
 #____________________________________________________________________
 # PHYLOSEQ OBJECT WITH CENTERED LOG RATIO COUNT
-physeq.clr <- physeq_best
-physeq.clr <- transform(physeq.clr, "clr") # the function adds pseudocounts itself
+physeq.clr <- physeq.lopresti
+physeq.clr <- microbiome::transform(physeq.lopresti, "clr") # the function adds pseudocounts itself
 
 # Compare the otu tables in the original phyloseq object and the new one after CLR transformation
-otu_table(physeq_best)[1:5, 1:5] # should contain absolute counts
-otu_table(physeq.clr)[1:5, 1:5] # should all be relative
+# otu_table(physeq.lopresti)[1:5, 1:5] # should contain absolute counts
+# otu_table(physeq.clr)[1:5, 1:5] # should all be relative
 
 # save the physeq.rel object
-saveRDS(physeq.clr, "/Users/scarcy/Desktop/Praktikum/Data/LoPresti_2019/Rproject_DataAnalysis/physeq_clr.rds")
+saveRDS(physeq.clr, file.path(path, "data/analysis-individual/LoPresti-2019/02_EDA-LoPresti/physeq_clr.rds"))
 ```
+
+
+
 
 
 
@@ -532,22 +397,40 @@ saveRDS(physeq.clr, "/Users/scarcy/Desktop/Praktikum/Data/LoPresti_2019/Rproject
 ## COMPUTE DISTANCES ##
 #######################
 
-```{r dist-thesis, fig.width = 15, fig.height = 4}
+### 1. UniFrac, Aitchison, Bray-Curtis and Canberra
+
+First, let's look at these four distances of interest.
+
+```{r dist-functions, fig.width = 15, fig.height = 4}
 #____________________________________________________________________________________
 # Measure distances
-Distances <- function(){
+getDistances <- function(relPhyseq=physeq.rel, clrPhyseq=physeq.clr, csnPhyseq=physeq.CSN, nzcompPhyseq=physeq.NZcomp){
+  # sanity check
+  cat("nb samples relPhyseq:", nsamples(relPhyseq), "\n")
+  cat("nb samples clrPhyseq:", nsamples(clrPhyseq), "\n")
+  cat("nb samples csnPhyseq:", nsamples(csnPhyseq), "\n")
+  cat("nb samples nzcompPhyseq:", nsamples(nzcompPhyseq), "\n")
+  
+  # Compute distances
+  print("Unifrac...")
   set.seed(123) # for unifrac, need to set a seed
-  glom.UniF <-  UniFrac(physeq.rel, weighted=TRUE, normalized=TRUE) # weighted unifrac
-  glom.ait <- distance(physeq.clr, method = 'euclidean') # aitchison
-  glom.bray <- distance(physeq.CSN, method = "bray") # bray-curtis
-  glom.can <- distance(physeq.NZcomp, method = "canberra") # canberra
+  glom.UniF <- UniFrac(relPhyseq, weighted=TRUE, normalized=TRUE) # weighted unifrac
+  print("Aitchison...")
+  glom.ait <- phyloseq::distance(clrPhyseq, method = 'euclidean') # aitchison
+  print("Bray des bois...")
+  glom.bray <- phyloseq::distance(csnPhyseq, method = "bray") # bray-curtis
+  print("Canberra <3...")
+  glom.can <- phyloseq::distance(nzcompPhyseq, method = "canberra") # canberra
+  
   dist.list <- list("UniF" = glom.UniF, "Ait" = glom.ait, "Canb" = glom.can, "Bray" = glom.bray)
   
   return(dist.list)
 }
-#subset_samples(physeq.clr, sample_names(physeq.clr) != 'SRR5245605')
 
-DistancesPlot <- function(d){
+
+#____________________________________________________________________________________
+# Plot in 2D the distances
+plotDistances2D <- function(dlist, ordination="MDS", relPhyseq=physeq.rel, clrPhyseq=physeq.clr, csnPhyseq=physeq.CSN, nzcompPhyseq=physeq.NZcomp){
   plist <- NULL
   plist <- vector("list", 4)
   names(plist) <- c("Weighted Unifrac", "Aitchison", "Bray-Curtis", "Canberra")
@@ -555,188 +438,133 @@ DistancesPlot <- function(d){
   print("Unifrac")
   # Weighted UniFrac
   set.seed(123)
-  iMDS.UniF <- ordinate(physeq.rel, "MDS", distance=d$UniF)
-  plist[[1]] <- plot_ordination(physeq.rel, iMDS.UniF, color="host_disease")
+  iMDS.UniF <- ordinate(relPhyseq, ordination, distance=dlist$UniF)
+  plist[[1]] <- plot_ordination(relPhyseq, iMDS.UniF, color="host_disease")
   
   print("Aitchison")
   # Aitchison
   set.seed(123)
-  iMDS.Ait <- ordinate(physeq.clr, "MDS", distance=d$Ait)
-  plist[[2]] <- plot_ordination(physeq.clr, iMDS.Ait, color="host_disease")
+  iMDS.Ait <- ordinate(clrPhyseq, ordination, distance=dlist$Ait)
+  plist[[2]] <- plot_ordination(clrPhyseq, iMDS.Ait, color="host_disease")
   
   print("Bray")
   # Bray-Curtis
   set.seed(123)
-  iMDS.Bray <- ordinate(physeq.CSN, "MDS", distance=d$Bray)
-  plist[[3]] <- plot_ordination(physeq.CSN, iMDS.Bray, color="host_disease")
+  iMDS.Bray <- ordinate(csnPhyseq, ordination, distance=dlist$Bray)
+  plist[[3]] <- plot_ordination(csnPhyseq, iMDS.Bray, color="host_disease")
   
   print("Canberra")
   # Canberra
   set.seed(123)
-  iMDS.Can <- ordinate(physeq.NZcomp, "MDS", distance=d$Can)
-  plist[[4]] <- plot_ordination(physeq.NZcomp, iMDS.Can, color="host_disease")
+  iMDS.Can <- ordinate(nzcompPhyseq, ordination, distance=dlist$Can)
+  plist[[4]] <- plot_ordination(nzcompPhyseq, iMDS.Can, color="host_disease")
   
   # Creating a dataframe to plot everything
-  plot.df = ldply(plist, function(x) x$data)
+  plot.df = plyr::ldply(plist, function(x) x$data)
   names(plot.df)[1] <- "distance"
   
   return(plot.df)
 }
-
-dist.thesis <- Distances()
-plot.df <- DistancesPlot(dist.thesis)
-plot.df$author <- "Lo Presti"
-# change name "intestinal mucosa"
-plot.df$sample_type <- as.character(plot.df$sample_type)
-plot.df[plot.df$sample_type == "intestinal mucosa", 'sample_type'] <- "sigmoid mucosa"
-
-
-p1 <- ggplot(plot.df[plot.df$sample_type == "stool" & plot.df$distance == "Weighted Unifrac",], aes(Axis.1, Axis.2, color=host_disease))+
-  geom_point(size=12, alpha=0.4)  + scale_color_manual(values = c('blue', 'red'))+
-  facet_grid(author~distance, scales='free')+
-  theme_bw()+
-  theme(axis.title = element_blank(),
-        #axis.title.x = element_text(size = 40),
-        axis.text = element_text(size = 30),
-        legend.text = element_text(size = 40),
-        legend.title = element_text(size = 40),
-        strip.background = element_rect(fill = "white", size = 3),
-        panel.border = element_rect(size = 2),
-        #strip.text.x = element_text(size = 50, margin = margin(1,0,1,0, "cm")),
-        strip.text.x = element_blank(),
-        strip.text.y = element_text(size = 70, margin = margin(0,1,0,1, "cm")),
-        #axis.line = element_line(size = 1, arrow = arrow(length = unit(0.1, "inches")))
-        )+
-  labs(color="Disease")
-
-p2 <- ggplot(plot.df[plot.df$sample_type == "stool" & plot.df$distance != "Weighted Unifrac",], aes(Axis.1, Axis.2, color=host_disease))+
-  geom_point(size=12, alpha=0.4)  + scale_color_manual(values = c('blue', 'red'))+
-  facet_wrap(~distance, scales='free', nrow = 1)+
-  guides(color = FALSE)+
-  theme_bw()+
-  theme(axis.text = element_text(size = 30),
-        axis.title.y = element_text(size = 40),
-        axis.title.x = element_blank(),
-        strip.background = element_rect(fill = "white", size = 1),
-        panel.border = element_rect(size = 2),
-        #strip.text = element_text(size = 50, margin = margin(1,0,1,0, "cm")),
-        strip.text.x = element_blank(),
-        #axis.line = element_line(size = 1, arrow = arrow(length = unit(0.1, "inches")))
-        )
-
-library(ggplot2)
-library(ggpubr)
-
-jpeg("/Users/scarcy/Desktop/Praktikum/Thesis/dist_LoPresti.jpeg", height = 800, width = 4000, res = 100)
-ggarrange(p2, p1, ncol = 2, widths = c(2,1))
-dev.off()
-
-# COLOR BY SAMPLE TYPE
-p3 <- ggplot(plot.df[plot.df$distance == "Weighted Unifrac",], aes(Axis.1, Axis.2, color=sample_type))+
-  geom_point(size=12, alpha=0.7)  + scale_color_manual(values = c('#CC00FF', '#66CC00'))+
-  facet_grid(author~distance, scales='free')+
-  theme_minimal()+
-  theme(axis.title = element_blank(),
-        axis.title.x = element_text(size = 40),
-        axis.text = element_text(size = 30),
-        legend.text = element_text(size = 40),
-        legend.title = element_text(size = 40),
-        strip.background = element_rect(size = 1),
-        strip.text.x = element_text(size = 50, margin = margin(1,0,1,0, "cm")),
-        #strip.text.x = element_blank(),
-        strip.text.y = element_text(size = 50, margin = margin(0,1,0,1, "cm")),
-        axis.line = element_line(size = 1, arrow = arrow(length = unit(0.1, "inches"))))+
-  labs(color="Sample type")
-
-p4 <- ggplot(plot.df[plot.df$distance != "Weighted Unifrac",], aes(Axis.1, Axis.2, color=sample_type))+
-  geom_point(size=12, alpha=0.7)  + scale_color_manual(values = c('#CC00FF', '#66CC00'))+
-  facet_wrap(~distance, scales='free', nrow = 1)+
-  guides(color = FALSE)+
-  theme_minimal()+
-  theme(axis.text = element_text(size = 30),
-        axis.title.y = element_text(size = 40),
-        axis.title.x = element_text(size = 40),
-        strip.background = element_rect(size = 1),
-        strip.text = element_text(size = 50, margin = margin(1,0,1,0, "cm")),
-        #strip.text.x = element_blank(),
-        axis.line = element_line(size = 1, arrow = arrow(length = unit(0.1, "inches"))))
-
-jpeg("/Users/scarcy/Desktop/Praktikum/Thesis/dist_LoPresti_sampleType.jpeg", height = 1000, width = 4000, res = 100)
-ggarrange(p4, p3, ncol = 2, widths = c(1.75,1))
-dev.off()
-
 ```
 
-```{r dist-functions, eval = TRUE, echo = TRUE}
-#____________________________________________________________________________________
-# Measure distances
-Distances <- function(physeq_obj){
-  set.seed(123) # for unifrac, need to set a seed
-  glom.UniF <-  UniFrac(physeq_obj, weighted=TRUE, normalized=TRUE) # weighted unifrac
-  glom.ait <- dist(x = otu_table(physeq.clr), method = 'euc') # aitchison
-  glom.bray <- phyloseq::distance(physeq_obj, method = "bray") # bray-curtis
-  glom.can <- phyloseq::distance(physeq_obj, method = "canberra") # canberra
-  dist.list <- list("UniF" = glom.UniF, "Ait" = glom.ait, "Canb" = glom.can, "Bray" = glom.bray)
-  
-  return(dist.list)
-}
+
+Now let's plot!
 
 
-#____________________________________________________________________________________
-# Plot 2D ordination
-MDS_2D <- function(physeq_obj, ait_dist){
-  
-  plist <- NULL
-  plist <- vector("list", length(dist_methods)+1) # save each plot to a list
-  names(plist) <- dist_methods # save the name of each method
-  names(plist)[17] <- "aitchison" # save the name of aitchison
-  
-  # Loop through all distance methods
-  for(i in dist_methods){
-    # Calculate distance matrix
-    #print(i)
-    set.seed(123) # in case the distance method needs a rooted tree (weighted unifrac)
-    iDist <- phyloseq::distance(physeq_obj, method=i)
-    # Calculate ordination
-    set.seed(123)
-    iMDS  <- ordinate(physeq_obj, "MDS", distance=iDist)
-    ## Make plot
-    # Don't carry over previous plot (if error, p will be blank)
-    p <- NULL
-    # Create plot, store as temporary variable, p
-    p <- plot_ordination(physeq_obj, iMDS, color="host_disease")
-    # Add title to each plot
-    p <- p + ggtitle(paste("MDS using distance method ", i, sep=""))
-    # Save the graphic to the plot list
-    plist[[i]] = p
-  }
-  
-  # Add aitchison
-  iMDS  <- ordinate(physeq_obj, "MDS", distance=ait_dist)
-  p <- NULL
-  p <- plot_ordination(physeq_obj, iMDS, color="host_disease")
-  p <- p + ggtitle("MDS using distance method Aitchison")
-  plist[[17]] = p
-  
-  # Creating a dataframe to plot everything
-  plot.df = ldply(plist, function(x) x$data)
-  names(plot.df)[1] <- "distance"
-  
-  # Plot
-  p.alldist <-  ggplot(plot.df, aes(Axis.1, Axis.2, color=host_disease))+
-    geom_point(size=5, alpha=0.5)+
-    facet_wrap(~distance, scales='free')+
-    theme(strip.text = element_text(size = 40),
-          legend.text = element_text(size = 20),
-          axis.text.x = element_text(size = 20),
-          axis.text.y = element_text(size = 20))
+#### a) Fecal samples
+```{r dist-run-fecal}
+#________________
+# FECAL DATA
+#________________
 
-  return(p.alldist)
-}
+# Get the distances & the plot data
+dist.lopresti.fecal <- getDistances(relPhyseq = subset_samples(physeq.rel, sample_type=="stool"),
+                                    clrPhyseq = subset_samples(physeq.clr, sample_type=="stool"),
+                                    csnPhyseq = subset_samples(physeq.CSN, sample_type=="stool"),
+                                    nzcompPhyseq = subset_samples(physeq.NZcomp, sample_type=="stool"))
+plot.df.fecal <- plotDistances2D(dlist=dist.lopresti.fecal,
+                                 relPhyseq = subset_samples(physeq.rel, sample_type=="stool"),
+                                 clrPhyseq = subset_samples(physeq.clr, sample_type=="stool"),
+                                 csnPhyseq = subset_samples(physeq.CSN, sample_type=="stool"),
+                                 nzcompPhyseq = subset_samples(physeq.NZcomp, sample_type=="stool"))
 
+# Plot
+ggplot(plot.df.fecal, aes(Axis.1, Axis.2, color=host_disease))+
+  geom_point(size=4, alpha=0.5)  + scale_color_manual(values = c('blue', 'red'))+
+  facet_wrap(distance~., scales='free', nrow=1)+
+  theme_bw()+
+  theme(strip.text.x = element_text(size=20))+
+  labs(color="Disease", title="Fecal samples")
+# ggsave(file.path(path.plots, "distances4_MDS_stool.jpg"), height = 4, width = 15)
+```
+
+#### b) Sigmoid samples
+```{r dist-run-sigmoid}
+#________________
+# SIGMOID DATA
+#________________
+
+# Get the distances & the plot data
+dist.hugerth.sigmoid <- getDistances(relPhyseq = subset_samples(physeq.rel, sample_type=="sigmoid"),
+                                   clrPhyseq = subset_samples(physeq.clr, sample_type=="sigmoid"),
+                                   csnPhyseq = subset_samples(physeq.CSN, sample_type=="sigmoid"),
+                                   nzcompPhyseq = subset_samples(physeq.NZcomp, sample_type=="sigmoid"))
+plot.df.sigmoid <- plotDistances2D(dlist=dist.hugerth.sigmoid,
+                                 relPhyseq = subset_samples(physeq.rel, sample_type=="sigmoid"),
+                                 clrPhyseq = subset_samples(physeq.clr, sample_type=="sigmoid"),
+                                 csnPhyseq = subset_samples(physeq.CSN, sample_type=="sigmoid"),
+                                 nzcompPhyseq = subset_samples(physeq.NZcomp, sample_type=="sigmoid"))
+
+# Plot
+ggplot(plot.df.sigmoid, aes(Axis.1, Axis.2, color=host_disease))+
+  geom_point(size=4, alpha=0.5)  + scale_color_manual(values = c('blue', 'red'))+
+  facet_wrap(distance~., scales='free', nrow=1)+
+  theme_bw()+
+  theme(strip.text.x = element_text(size=20))+
+  labs(color="Disease", title="Sigmoid samples")
+# ggsave(file.path(path.plots, "distances4_MDS_sigmoid.jpg"), height = 4, width = 15)
+```
+
+#### c) All samples
+```{r dist-run-all, fig.width = 15, fig.height = 10}
+#________________
+# ALL DATA
+#________________
+
+# Get the distances & the plot data
+dist.hugerth <- getDistances()
+plot.df <- plotDistances2D(dlist=dist.hugerth)
+
+# Plot
+p1 <- ggplot(plot.df, aes(Axis.1, Axis.2, color=host_disease))+
+  geom_point(size=4, alpha=0.5)  + scale_color_manual(values = c('blue', 'red'))+
+  facet_wrap(distance~., scales='free', nrow=1)+
+  theme_bw()+
+  theme(strip.text.x = element_text(size=20),
+        axis.title.x = element_blank())+
+  labs(color="Disease")
+p2 <- ggplot(plot.df, aes(Axis.1, Axis.2, color=sample_type))+
+  geom_line(aes(group=host_ID), color="black", lwd=0.1)+
+  geom_point(size=4, alpha=0.5)  + scale_color_manual(values = c('#33CC00', 'purple'))+
+  facet_wrap(distance~., scales='free', nrow=1)+
+  theme_bw()+
+  theme(strip.text.x = element_blank())+
+  labs(color="Sample type")
+ggpubr::ggarrange(p1,p2, nrow=2)
+# ggsave(file.path(path.plots, "distances4_MDS_all.jpg"), height = 8, width = 15)
+```
+
+
+
+
+### 2. Plot in 3D
+
+For better visualization, we will also take a glance at reduction to 3D.
+
+```{r 3D-function, eval = TRUE, echo = TRUE}
 #____________________________________________________________________________________
 # Plot 3D ordination
-MDS_3D <- function(d, name_dist){
+plotDistances3D <- function(d, name_dist, physeq=physeq.hugerth){
   
   # Reset parameters
   mds.3D <- NULL
@@ -744,14 +572,13 @@ MDS_3D <- function(d, name_dist){
   fig.3D <- NULL
   
   # Reduce distance matrix to 3 dimensions
-  set.seed(123) # to get the same dimensionality reduction at each run
+  set.seed(123)
   mds.3D <- metaMDS(d, method="MDS", k=3, trace = 0)
-  xyz <- scores(mds.3D, display="sites") # pull out the x y z coordinates
+  xyz <- scores(mds.3D, display="sites") # pull out the (x,y,z) coordinates
   
+  # Plot
   fig.3D <- plot_ly(x=xyz[,1], y=xyz[,2], z=xyz[,3], type="scatter3d", mode="markers",
-                    color=sample_data(physeq.rel)$env_material, colors = c('#CC00FF', '#66CC00'))%>%
-    #add_trace(x=xyz[,1], y=xyz[,2], z=xyz[,3],
-    #       type='scatter3d', mode='text', text = rownames(xyz), textfont = list(color = "black")) %>%
+                    color=sample_data(physeq)$host_disease, colors = c("blue", "red"))%>%
     layout(title = paste('MDS in 3D with', name_dist, 'distance', sep = ' '))
   
   return(fig.3D)
@@ -760,154 +587,31 @@ MDS_3D <- function(d, name_dist){
 ```
 
 
-```{r no-glom1, fig.height = 20, fig.width = 30}
-# Get the distances
-no_glom.dist <- Distances(physeq_obj = physeq.rel)
+Now let's plot!
 
-# Get the 2D ordination plots
-no_glom.2D.alldist <- MDS_2D(physeq.rel, no_glom.dist$Ait)
-no_glom.2D.alldist + scale_color_manual(values = c('blue', 'red'))
-```
+```{r 3D-plot, fig.width = 8, fig.height = 5}
+# Fecal samples
+plotDistances3D(dist.hugerth.fecal$UniF, "UniFrac", subset_samples(physeq.hugerth, sample_type=="stool"))
+plotDistances3D(dist.hugerth.fecal$Ait, "Aitchison", subset_samples(physeq.hugerth, sample_type=="stool"))
+plotDistances3D(dist.hugerth.fecal$Canb, "Canberra", subset_samples(physeq.hugerth, sample_type=="stool"))
+plotDistances3D(dist.hugerth.fecal$Bray, "Bray-Curtis", subset_samples(physeq.hugerth, sample_type=="stool"))
 
-```{r plot-2D-ordination-sampleType, fig.height = 20, fig.width = 30}
-# Plot 2D ordination
-MDS_2D_sampleType <- function(physeq_obj, ait_dist){
-  
-  plist <- NULL
-  plist <- vector("list", length(dist_methods)+1) # save each plot to a list
-  names(plist) <- dist_methods # save the name of each method
-  names(plist)[17] <- "aitchison" # save the name of aitchison
-  
-  # Loop through all distance methods
-  for(i in dist_methods){
-    # Calculate distance matrix
-    #print(i)
-    set.seed(123) # in case the distance method needs a rooted tree (weighted unifrac)
-    iDist <- phyloseq::distance(physeq_obj, method=i)
-    # Calculate ordination
-    set.seed(123)
-    iMDS  <- ordinate(physeq_obj, "MDS", distance=iDist)
-    ## Make plot
-    # Don't carry over previous plot (if error, p will be blank)
-    p <- NULL
-    # Create plot, store as temporary variable, p
-    p <- plot_ordination(physeq_obj, iMDS, color="env_material")
-    # Add title to each plot
-    p <- p + ggtitle(paste("MDS using distance method ", i, sep=""))
-    # Save the graphic to the plot list
-    plist[[i]] = p
-  }
-  
-  # Add aitchison
-  iMDS  <- ordinate(physeq_obj, "MDS", distance=ait_dist)
-  p <- NULL
-  p <- plot_ordination(physeq_obj, iMDS, color="env_material")
-  p <- p + ggtitle("MDS using distance method Aitchison")
-  plist[[17]] = p
-  
-  # Creating a dataframe to plot everything
-  plot.df = ldply(plist, function(x) x$data)
-  names(plot.df)[1] <- "distance"
-  
-  # Plot
-  p.alldist <-  ggplot(plot.df, aes(Axis.1, Axis.2, color=env_material))+
-    geom_point(size=5, alpha=0.5)+
-    facet_wrap(~distance, scales='free')+
-    theme(strip.text = element_text(size = 40),
-          legend.text = element_text(size = 20),
-          axis.text.x = element_text(size = 20),
-          axis.text.y = element_text(size = 20))
-
-  return(p.alldist)
-}
-
-
-sampleType.2D.alldist <- MDS_2D_sampleType(physeq.rel, no_glom.dist$Ait)
-sampleType.2D.alldist + scale_color_manual(values = c('#CC00FF', '#66CC00'))
-```
-
-
-```{r plot-2D-ordination-subtypes, fig.height = 20, fig.width = 30}
-# Plot 2D ordination
-MDS_2D_subtypes <- function(physeq_obj, ait_dist){
-  
-  plist <- NULL
-  plist <- vector("list", length(dist_methods)+1) # save each plot to a list
-  names(plist) <- dist_methods # save the name of each method
-  names(plist)[17] <- "aitchison" # save the name of aitchison
-  
-  # Loop through all distance methods
-  for(i in dist_methods){
-    # Calculate distance matrix
-    #print(i)
-    set.seed(123) # in case the distance method needs a rooted tree (weighted unifrac)
-    iDist <- phyloseq::distance(physeq_obj, method=i)
-    # Calculate ordination
-    set.seed(123)
-    iMDS  <- ordinate(physeq_obj, "MDS", distance=iDist)
-    ## Make plot
-    # Don't carry over previous plot (if error, p will be blank)
-    p <- NULL
-    # Create plot, store as temporary variable, p
-    p <- plot_ordination(physeq_obj, iMDS, color="gastrointest_disord")
-    # Add title to each plot
-    p <- p + ggtitle(paste("MDS using distance method ", i, sep=""))
-    # Save the graphic to the plot list
-    plist[[i]] = p
-  }
-  
-  # Add aitchison
-  iMDS  <- ordinate(physeq_obj, "MDS", distance=ait_dist)
-  p <- NULL
-  p <- plot_ordination(physeq_obj, iMDS, color="gastrointest_disord")
-  p <- p + ggtitle("MDS using distance method Aitchison")
-  plist[[17]] = p
-  
-  # Creating a dataframe to plot everything
-  plot.df = ldply(plist, function(x) x$data)
-  names(plot.df)[1] <- "distance"
-  
-  # Plot
-  p.alldist <-  ggplot(plot.df, aes(Axis.1, Axis.2, color=gastrointest_disord))+
-    geom_point(size=5, alpha=0.5)+
-    facet_wrap(~distance, scales='free')+
-    theme(strip.text = element_text(size = 40),
-          legend.text = element_text(size = 20),
-          axis.text.x = element_text(size = 20),
-          axis.text.y = element_text(size = 20))
-
-  return(p.alldist)
-}
-
-
-subtypes.2D.alldist <- MDS_2D_subtypes(physeq.rel, no_glom.dist$Ait)
-subtypes.2D.alldist + scale_color_manual(values = c('black', '#6600FF', '#00CC66', '#FF6633'))
-```
-
-
-```{r save-distances, eval = FALSE, echo = FALSE}
-getwd()
-
-write.csv(as.matrix(no_glom.dist$UniF), file = "dist_wunifrac.csv", row.names = TRUE)
-write.csv(as.matrix(no_glom.dist$Ait), file = "dist_aitchison.csv", row.names = TRUE)
-write.csv(as.matrix(no_glom.dist$Canb), file = "dist_canberra.csv", row.names = TRUE)
-
+# Sigmoid samples
+plotDistances3D(dist.hugerth.sigmoid$UniF, "UniFrac", subset_samples(physeq.hugerth, sample_type=="sigmoid"))
+plotDistances3D(dist.hugerth.sigmoid$Ait, "Aitchison", subset_samples(physeq.hugerth, sample_type=="sigmoid"))
+plotDistances3D(dist.hugerth.sigmoid$Canb, "Canberra", subset_samples(physeq.hugerth, sample_type=="sigmoid"))
+plotDistances3D(dist.hugerth.sigmoid$Bray, "Bray-Curtis", subset_samples(physeq.hugerth, sample_type=="sigmoid"))
 ```
 
 
 
-```{r no-glom2, fig.height = 6, fig.width = 10, eval = FALSE, echo = TRUE}
-# Get 3D MDS plots
-no_glom.3D.UniF <- MDS_3D(no_glom.dist$UniF, 'weighted Unifrac')
-no_glom.3D.Ait <- MDS_3D(no_glom.dist$Ait, 'Aitchison')
-no_glom.3D.Can <- MDS_3D(no_glom.dist$Canb, 'Canberra')
-no_glom.3D.Bray <- MDS_3D(no_glom.dist$Bray, 'Bray-Curtis')
 
-no_glom.3D.UniF
-no_glom.3D.Ait
-no_glom.3D.Can
-no_glom.3D.Bray
-```
+
+XXXXXXXXXXXXXXXXXXXXXXX
+
+
+
+
 
 
 
