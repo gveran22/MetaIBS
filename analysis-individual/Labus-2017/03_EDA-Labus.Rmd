@@ -1,0 +1,560 @@
+---
+title: "Labus2017_DataAnalysis"
+output:
+  html_document:
+    df_print: paged
+    toc: true
+  pdf_document: default
+---
+
+```{r, include=FALSE}
+knitr::opts_chunk$set(fig.width = 15, fig.height = 5, warning=FALSE, message=FALSE,
+                      root.dir = "~/Projects/IBS_Meta-analysis_16S/analysis-individual/Labus-2017/")
+```
+
+
+
+############
+## IMPORT ##
+############
+
+### 1. Librairies
+
+```{r library-import}
+library(phyloseq) # for phyloseq object
+library(ggplot2)
+library(cowplot)
+library(plyr)
+library(dplyr)
+library("plotly") # plot 3D
+library("microbiome") # for centered log-ratio
+library("coda") # Aitchison distance
+library("coda.base") # Aitchison distance
+library("vegan") # NMDS
+library(pheatmap) # for heatmap
+```
+
+### 2. Data
+
+```{r import-data}
+# Set path
+path <- "~/Projects/IBS_Meta-analysis_16S"
+
+# Import phyloseq object
+physeq.labus <- readRDS(file.path(path, "phyloseq-objects/physeq_labus.rds"))
+
+# Sanity check
+physeq.labus
+```
+
+
+Phylogenetic tree was computed with the package `phangorn`, and the script was run on a cluster. Let's check we have correctly generated a phylogenetic tree.
+
+```{r plot-tree, fig.height = 6, fig.width = 10}
+# Look at the tree
+plot_tree(physeq.labus, color = "host_disease", ladderize="left")
+```
+
+
+```{r import-for-html, echo = FALSE}
+#__________________________________________________________________________
+#____________ THIS IS ONLY FOR (quicker) PDF/HTML OUTPUT __________________
+#__________________________________________________________________________
+
+# Import phyloseq objects for computing distances
+physeq.rel <- readRDS(file.path(path, "data/analysis-individual/Labus-2017/02_EDA-Labus/physeq_relative.rds"))
+physeq.clr <- readRDS(file.path(path, "data/analysis-individual/Labus-2017/02_EDA-Labus/physeq_clr.rds"))
+physeq.CSN <- readRDS(file.path(path, "data/analysis-individual/Labus-2017/02_EDA-Labus/physeq_CSN.rds"))
+physeq.NZcomp <- readRDS(file.path(path, "data/analysis-individual/Labus-2017/02_EDA-Labus/physeq_NZcomp.rds"))
+```
+
+
+
+##################
+## DEMOGRAPHICS ##
+##################
+
+This dataset has several covariates (gender, age, bmi). We will check whether there is the same distribution of these covariates between healthy and IBS patients.
+
+```{r demographics-stats}
+# Number of individuals in each group
+metadata <- data.frame(sample_data(physeq.labus))
+metadata %>%
+  count(host_disease)
+
+# Age
+metadata %>%
+  group_by(host_disease) %>%
+  summarize(mean_age=mean(host_age), sd_age=sd(host_age))
+wilcox.test(metadata[metadata$host_disease == "IBS", ]$host_age,
+            metadata[metadata$host_disease == "Healthy", ]$host_age)
+
+# Gender
+metadata %>%
+  count(host_disease, host_sex)
+chisq.test(data.frame("Female" = c(21,14),
+                      "Male" = c(8,9)))
+
+# BMI
+metadata %>%
+  group_by(host_disease) %>%
+  summarize(mean_bmi=mean(na.omit(host_bmi)), sd_bmi=sd(na.omit(host_bmi)))
+wilcox.test(metadata[metadata$host_disease == "IBS",]$host_bmi,
+            metadata[metadata$host_disease == "Healthy", ]$host_bmi)
+```
+
+
+################
+## ABUNDANCES ##
+################
+
+### 1. Absolute abundances
+
+```{r plot-absolute-abundance, fig.width=10, fig.height = 5}
+# Plot Phylum
+plot_bar(physeq.labus, fill = "Phylum") + facet_wrap("host_disease", scales="free") +
+  theme(axis.text.x = element_text(size = 8))+
+  labs(x = "Samples", y = "Absolute abundance", title = "Labus dataset (2017)") +
+  ylim(0,7000)
+
+# Plot Class
+plot_bar(physeq.labus, fill = "Class")+ facet_wrap("host_disease", scales="free") +
+  theme(axis.text.x = element_text(size = 8))+
+  labs(x = "Samples", y = "Absolute abundance", title = "Labus dataset (2017)")+
+  ylim(0,7000)
+```
+
+**Sequencing depth** characteristics of the Labus dataset:  
+- minimum of `r min(sample_sums(physeq.labus))` total count per sample  
+- median: `r median(sample_sums(physeq.labus))` total count per sample  
+- maximum of `r max(sample_sums(physeq.labus))` total count per sample  
+
+### 2. Relative abundances
+
+```{r plot-relative-abundances, fig.width=10, fig.height = 5, message=FALSE}
+# Agglomerate to phylum & class levels
+phylum.table <- physeq.labus %>%
+  tax_glom(taxrank = "Phylum") %>%                     # agglomerate at phylum level
+  transform_sample_counts(function(x) {x/sum(x)} ) %>% # Transform to rel. abundance
+  psmelt()                                             # Melt to long format
+
+class.table <- physeq.labus %>%
+  tax_glom(taxrank = "Class") %>%
+  transform_sample_counts(function(x) {x/sum(x)} ) %>%
+  psmelt()
+
+
+# Plot relative abundances
+ggplot(phylum.table, aes(x = reorder(Sample, Sample, function(x) mean(phylum.table[Sample == x & Phylum == 'Firmicutes', 'Abundance'])),
+                         y = Abundance, fill = Phylum))+
+  facet_wrap(~ host_disease, scales = "free") + # scales = "free" removes empty lines
+  geom_bar(stat = "identity") +
+  theme(axis.text.x = element_text(size = 8, angle = -90))+
+  labs(x = "Samples", y = "Relative abundance", title = "Labus dataset (2017)")
+
+ggplot(class.table, aes(x = reorder(Sample, Sample, function(x) mean(class.table[Sample == x & Phylum == 'Firmicutes', 'Abundance'])),
+                        y = Abundance, fill = Class))+
+  facet_wrap(~ host_disease, scales = "free") + # scales = "free" removes empty lines
+  geom_bar(stat = "identity") +
+  theme(axis.text.x = element_text(size = 8, angle = -90))+
+  labs(x = "Samples", y = "Relative abundance", title = "Labus dataset (2017)")
+
+```
+
+
+### 3. Firmicutes/Bacteroidota ratio
+
+```{r plot-log-ratio, fig.height = 5, fig.width=3}
+# Extract abundance of only Bacteroidota and Firmicutes
+bacter <- phylum.table %>%
+  filter(Phylum == "Bacteroidota") %>%
+  select(c('Sample', 'Abundance', 'host_disease', 'host_subtype', 'Phylum', 'host_age', 'host_sex', 'host_bmi')) %>%
+  arrange(Sample)
+
+firmi <- phylum.table %>%
+  filter(Phylum == "Firmicutes") %>%
+  select(c('Sample', 'Abundance', 'host_disease', 'host_subtype', 'Phylum', 'host_age', 'host_sex', 'host_bmi')) %>%
+  arrange(Sample)
+
+# Calculate log2 ratio Firmicutes/Bacteroidota
+ratio.FB <- data.frame('Sample' = bacter$Sample,
+                       'host_disease' = bacter$host_disease,
+                       'host_subtype' = bacter$host_subtype,
+                       'Bacteroidota' = bacter$Abundance,
+                       'Firmicutes' = firmi$Abundance,
+                       'host_age' = bacter$host_age,
+                       'host_sex' = bacter$host_sex,
+                       'host_bmi' = bacter$host_bmi)
+ratio.FB$logRatioFB <- log2(ratio.FB$Firmicutes / ratio.FB$Bacteroidota)
+
+# Plot log2 ratio Firmicutes/Bacteroidota
+ggplot(ratio.FB, aes(x = host_disease, y = logRatioFB))+
+  geom_boxplot(outlier.shape = NA)+
+  geom_jitter(width=0.1)+
+  labs(x = "",  y = 'Log2(Firmicutes/Bacteroidota)', title = "Firmicutes:Bacteroidota ratio")+
+  theme_cowplot()
+
+# Per IBS subtype
+ggplot(ratio.FB, aes(x = host_subtype, y = logRatioFB))+
+  geom_boxplot(outlier.shape = NA)+
+  geom_jitter(width=0.1)+
+  labs(x = "",  y = 'Log2(Firmicutes/Bacteroidota)', title = "")+
+  theme_cowplot() +
+  theme(axis.text.x = element_text(angle=90, vjust=0.5, hjust=1))
+```
+
+
+```{r export-plots-1, eval = FALSE, echo = FALSE}
+# Save path to plots
+path.plots <- file.path(path, "data/analysis-individual/PLOTS/plots-Labus-EDA")
+
+# Absolute abundance phylum
+jpeg(file.path(path.plots, "absAbundance_phylum.jpg"), width = 4000, height = 2000)
+plot_bar(physeq.labus, fill = "Phylum") + facet_wrap("host_disease", scales="free") +
+  theme(axis.text.x = element_text(size = 30, angle = -90),
+        axis.text.y = element_text(size = 30),
+        legend.text = element_text(size = 50),
+        axis.title = element_text(size = 50),
+        title = element_text(size = 70),
+        strip.text = element_text(size = 50))+
+  labs(x = "Samples", y = "Total read count", title = "Labus dataset (2017)")+
+  ylim(0, 7000)
+dev.off()
+
+# Relative abundances
+jpeg(file.path(path.plots, "relAbundance_phylum.jpg"), width = 4000, height = 2000)
+ggplot(phylum.table, aes(x = Sample, y = Abundance, fill = Phylum))+
+  facet_wrap(~ host_disease, scales = "free") + # scales = "free" removes empty lines
+  geom_bar(stat = "identity") +
+  theme(axis.text.x = element_text(size = 30, angle = -90),
+        axis.text.y = element_text(size = 30),
+        legend.text = element_text(size = 50),
+        axis.title = element_text(size = 50),
+        title = element_text(size = 70),
+        strip.text = element_text(size = 50))+
+  labs(x = "Samples", y = "Relative abundance", title = "Labus dataset (2017)")
+dev.off()
+
+jpeg(file.path(path.plots, "relAbundance_class.jpg"), width = 4000, height = 2000)
+ggplot(class.table, aes(x = Sample, y = Abundance, fill = Class))+
+  facet_wrap(~ host_disease, scales = "free") + # scales = "free" removes empty lines
+  geom_bar(stat = "identity") +
+  theme(axis.text.x = element_text(size = 30, angle = -90),
+        axis.text.y = element_text(size = 30),
+        legend.text = element_text(size = 50),
+        axis.title = element_text(size = 50),
+        title = element_text(size = 70),
+        strip.text = element_text(size = 50))+
+  labs(x = "Samples", y = "Relative abundance", title = "Labus dataset (2017)")
+dev.off()
+
+# Firmicutes:Bacteroidota log ratio
+jpeg(file.path(path.plots, "ratioFB.jpg"), width = 1500, height = 2000)
+ggplot(ratio.FB, aes(x = host_disease, y = logRatioFB))+
+  geom_boxplot(outlier.size = 0, lwd = 3)+
+  geom_jitter(size = 10, width=0.1)+
+  labs(x = "",  y = 'Log2(Firmicutes/Bacteroidota)', title = "Labus dataset (2017)")+
+  theme_classic()+
+  theme(axis.text = element_text(size = 50),
+        legend.text = element_text(size = 50),
+        axis.title = element_text(size = 50),
+        title = element_text(size = 50))
+dev.off()
+```
+
+
+
+####################
+## NORMALIZE DATA ##
+####################
+
+```{r normalize-data, eval = FALSE, echo = TRUE}
+# Sanity check no sample with less than 500 total count
+table(sample_sums(physeq.labus)<500) # all FALSE
+
+#____________________________________________________________________
+# PHYLOSEQ OBJECT WITH NON-ZERO COMPOSITIONS
+physeq.NZcomp <- physeq.labus
+otu_table(physeq.NZcomp)[otu_table(physeq.NZcomp) == 0] <- 0.5 # pseudocounts
+
+# Sanity check that 0 values have been replaced
+# otu_table(physeq.labus)[1:5,1:5]
+# otu_table(physeq.NZcomp)[1:5,1:5]
+
+# transform into compositions
+physeq.NZcomp <- transform_sample_counts(physeq.NZcomp, function(x) x / sum(x) )
+table(rowSums(otu_table(physeq.NZcomp))) # check if there is any row not summing to 1
+
+# Save object
+saveRDS(physeq.NZcomp, file.path(path, "data/analysis-individual/Labus-2017/02_EDA-Labus/physeq_NZcomp.rds"))
+
+#____________________________________________________________________
+# PHYLOSEQ OBJECT WITH RELATIVE COUNT (BETWEEN 0 AND 1)
+physeq.rel <- physeq.labus
+physeq.rel <- transform_sample_counts(physeq.rel, function(x) x / sum(x) )
+
+# check the counts are all relative
+# otu_table(physeq.labus)[1:5, 1:5]
+# otu_table(physeq.rel)[1:5, 1:5]
+
+# sanity check
+table(rowSums(otu_table(physeq.rel))) # check if there is any row not summing to 1
+
+# save the physeq.rel object
+saveRDS(physeq.rel, file.path(path, "data/analysis-individual/Labus-2017/02_EDA-Labus/physeq_relative.rds"))
+
+#____________________________________________________________________
+# PHYLOSEQ OBJECT WITH COMMON-SCALE NORMALIZATION
+physeq.CSN <- physeq.labus
+physeq.CSN <- transform_sample_counts(physeq.CSN, function(x) (x*min(sample_sums(physeq.CSN))) / sum(x) )
+
+# sanity check
+table(rowSums(otu_table(physeq.CSN))) # check that all rows are summing to the same total
+
+# save the physeq.CSN object
+saveRDS(physeq.CSN, file.path(path, "data/analysis-individual/Labus-2017/02_EDA-Labus/physeq_CSN.rds"))
+
+
+#____________________________________________________________________
+# PHYLOSEQ OBJECT WITH CENTERED LOG RATIO COUNT
+physeq.clr <- physeq.labus
+physeq.clr <- microbiome::transform(physeq.labus, "clr") # the function adds pseudocounts itself
+
+# Compare the otu tables in the original phyloseq object and the new one after CLR transformation
+otu_table(physeq.labus)[1:5, 1:5] # should contain absolute counts
+otu_table(physeq.clr)[1:5, 1:5] # should all be relative
+
+# save the physeq.rel object
+saveRDS(physeq.clr, file.path(path, "data/analysis-individual/Labus-2017/02_EDA-Labus/physeq_clr.rds"))
+```
+
+
+#######################
+## COMPUTE DISTANCES ##
+#######################
+
+### 1. UniFrac, Aitchison, Bray-Curtis and Canberra
+
+First, let's look at these four distances of interest.
+
+```{r dist-functions, fig.width = 15, fig.height = 4}
+#____________________________________________________________________________________
+# Measure distances
+getDistances <- function(){
+  set.seed(123) # for unifrac, need to set a seed
+  glom.UniF <- UniFrac(physeq.rel, weighted=TRUE, normalized=TRUE) # weighted unifrac
+  glom.ait <- phyloseq::distance(physeq.clr, method = 'euclidean') # aitchison
+  glom.bray <- phyloseq::distance(physeq.CSN, method = "bray") # bray-curtis
+  glom.can <- phyloseq::distance(physeq.NZcomp, method = "canberra") # canberra
+  dist.list <- list("UniF" = glom.UniF, "Ait" = glom.ait, "Canb" = glom.can, "Bray" = glom.bray)
+  
+  return(dist.list)
+}
+
+
+#____________________________________________________________________________________
+# Plot in 2D the distances
+plotDistances2D <- function(dlist, ordination="MDS"){
+  plist <- NULL
+  plist <- vector("list", 4)
+  names(plist) <- c("Weighted Unifrac", "Aitchison", "Bray-Curtis", "Canberra")
+  
+  print("Unifrac")
+  # Weighted UniFrac
+  set.seed(123)
+  iMDS.UniF <- ordinate(physeq.rel, ordination, distance=dlist$UniF)
+  plist[[1]] <- plot_ordination(physeq.rel, iMDS.UniF, color="host_disease")
+  
+  print("Aitchison")
+  # Aitchison
+  set.seed(123)
+  iMDS.Ait <- ordinate(physeq.clr, ordination, distance=dlist$Ait)
+  plist[[2]] <- plot_ordination(physeq.clr, iMDS.Ait, color="host_disease")
+  
+  print("Bray")
+  # Bray-Curtis
+  set.seed(123)
+  iMDS.Bray <- ordinate(physeq.CSN, ordination, distance=dlist$Bray)
+  plist[[3]] <- plot_ordination(physeq.CSN, iMDS.Bray, color="host_disease")
+  
+  print("Canberra")
+  # Canberra
+  set.seed(123)
+  iMDS.Can <- ordinate(physeq.NZcomp, ordination, distance=dlist$Can)
+  plist[[4]] <- plot_ordination(physeq.NZcomp, iMDS.Can, color="host_disease")
+  
+  # Creating a dataframe to plot everything
+  plot.df = ldply(plist, function(x) x$data)
+  names(plot.df)[1] <- "distance"
+  
+  return(plot.df)
+}
+```
+
+
+Now let's plot!
+
+```{r dist-run}
+# Get the distances & the plot data
+dist.labus <- getDistances()
+plot.df <- plotDistances2D(dist.labus)
+
+# Plot
+ggplot(plot.df, aes(Axis.1, Axis.2, color=host_disease))+
+  geom_point(size=6, alpha=0.5)  + scale_color_manual(values = c('blue', 'red'))+
+  facet_wrap(distance~., scales='free', nrow=1)+
+  theme_bw()+
+  theme(strip.text.x = element_text(size=20))+
+  labs(color="Disease")
+
+# ggsave(file.path(path.plots, "distances4_MDS.jpg"), height = 4, width = 15)
+```
+
+
+
+### 2. Plot in 3D
+
+For better visualization, we will also take a glance at reduction to 3D.
+
+```{r 3D-function, eval = TRUE, echo = TRUE}
+#____________________________________________________________________________________
+# Plot 3D ordination
+plotDistances3D <- function(d, name_dist){
+  
+  # Reset parameters
+  mds.3D <- NULL
+  xyz <- NULL
+  fig.3D <- NULL
+  
+  # Reduce distance matrix to 3 dimensions
+  set.seed(123)
+  mds.3D <- metaMDS(d, method="MDS", k=3, trace = 0)
+  xyz <- scores(mds.3D, display="sites") # pull out the (x,y,z) coordinates
+  
+  # Plot
+  fig.3D <- plot_ly(x=xyz[,1], y=xyz[,2], z=xyz[,3], type="scatter3d", mode="markers",
+                    color=sample_data(physeq.labus)$host_disease, colors = c("blue", "red"))%>%
+    layout(title = paste('MDS in 3D with', name_dist, 'distance', sep = ' '))
+  
+  return(fig.3D)
+}
+
+```
+
+
+Now let's plot!
+
+```{r 3D-plot, fig.width = 8, fig.height = 5}
+plotDistances3D(dist.labus$UniF, "UniFrac")
+plotDistances3D(dist.labus$Ait, "Aitchison")
+plotDistances3D(dist.labus$Canb, "Canberra")
+plotDistances3D(dist.labus$Bray, "Bray-Curtis")
+```
+
+
+
+
+#############################
+## HIERARCHICAL CLUSTERING ##
+#############################
+
+```{r hierarchical-clust, fig.width = 25, fig.width = 7}
+# For heatmaps: have group color
+matcol <- data.frame(group = sample_data(physeq.labus)[,"host_disease"])
+
+
+# Function to get heatmap from the distances computed
+plotHeatmaps <- function(dlist, fontsize){
+  
+  # Initialize variables
+  i=1
+  plist <- vector("list", 4)
+  names(plist) <- names(dlist)
+  
+  # Loop through distances
+  for(d in dlist){
+    plist[[i]] <- pheatmap(as.matrix(d), 
+                          clustering_distance_rows = d,
+                          clustering_distance_cols = d,
+                          fontsize = fontsize,
+                          fontsize_col = fontsize-5,
+                          fontsize_row = fontsize-5,
+                          annotation_col = matcol,
+                          annotation_row = matcol,
+                          annotation_colors = list(host_disease = c('Healthy' = 'blue', 'IBS' = 'red')),
+                          cluster_rows = T,
+                          cluster_cols = T,
+                          clustering_method = 'complete', # hc method
+                          main = names(dlist)[i]) # have name of distance as title
+    i <- i+1
+  }
+  
+  return(plist)
+}
+
+
+# Get the heatmaps
+heatmp.labus <- plotHeatmaps(dlist = dist.labus, fontsize = 8)
+```
+
+
+
+################################
+## REPRODUCE PLOTS FROM PAPER ##
+################################
+
+First, let's reproduce figure 1A. They performed a PCoA on the unweighted Unifrac distance.
+
+```{r reproduce-fig1A, eval = TRUE, echo = TRUE, fig.height = 6, fig.width = 10}
+#___________________________________________________________________
+# FIGURE 1A
+set.seed(785)
+UniF.test = UniFrac(physeq.labus, weighted=FALSE, normalized=T) # unweighted Unifrac dist
+
+UniF.PCoA <- ordinate(physeq.labus, "PCoA", distance = UniF.test) # PCoA on unweighted unifrac dist
+# plot_ordination(physeq.labus, UniF.PCoA, color="host_disease")
+
+# Plotting the first 3 dimensions of the PCoA
+xyz <- as.matrix(UniF.PCoA$vectors[,1:3])
+test.plot <- plot_ly(x=xyz[,1], y=xyz[,2], z=xyz[,3], type="scatter3d",
+                       mode="markers", color=sample_data(physeq.labus)$host_disease, colors = c("blue", "red"))%>%
+  layout(title = "PCoA in 3D with unweighted Unifrac distance")
+test.plot
+```
+
+
+Now let's try to reproduce figure 1B. It's a hierarchical clustering using average linkage on the unweighted UniFrac.
+
+```{r reproduce-fig1B, fig.height = 6, fig.width = 10}
+#___________________________________________________________________
+# FIGURE 1B
+
+# Hierarchical clustering using average linkage
+hc.average <- hclust(UniF.test, method = "average")
+dend.average <- as.dendrogram(hc.average)
+color_leaf<<-function(n){
+    if(is.leaf(n)){
+        # take the current attributes
+        a=attributes(n)
+        
+        # deduce the line in the original data, to get the corresponding disease status
+        line=match(attributes(n)$label, rownames(sample_data(physeq.labus)))
+        disease=sample_data(physeq.labus)[line, "host_disease"];
+            if(disease=="Healthy"){col_disease="blue"};if(disease=="IBS"){col_disease="red"}
+        
+        #Modification of leaf attribute
+        attr(n,"nodePar") <- c(a$nodePar, list(cex=1.5, lab.cex=0.6, pch=20, col=col_disease, lab.font=1, lab.cex=1))
+        }
+    return(n)
+}
+dend.average <- dendrapply(dend.average, color_leaf)
+
+#Plot
+par(mar=c(3,2,3,7), xpd=T, cex = 0.8)
+plot(dend.average , main="Hierarchical clustering: average linkage", horiz = T, cex = 0.1)
+legend('topleft',
+     legend = c("Healthy" , "IBS"), 
+     col = c("blue", "red"), 
+     pch = c(20,20), bty = "n",  pt.cex = 1.5, cex = 1, 
+     text.col = "black", horiz = FALSE, inset = c(0, 0.1))
+```
