@@ -40,7 +40,6 @@ library(pheatmap) # for heatmap
 path <- "~/Projects/IBS_Meta-analysis_16S"
 
 # Import phyloseq object
-physeq.lopresti <- readRDS(file.path(path, "data/analysis-individual/CLUSTER/PhyloTree/output/physeq_lopresti.rds"))
 physeq.lopresti <- readRDS(file.path(path, "phyloseq-objects/physeq_lopresti.rds"))
 
 # Sanity check
