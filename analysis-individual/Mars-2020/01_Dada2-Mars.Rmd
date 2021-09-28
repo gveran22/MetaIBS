@@ -288,9 +288,11 @@ hist(nchar(getSequences(seqtable)), breaks = 100, xlab = "ASV length", ylab = "N
 
 # Sequences should be between 515F - 806R, so around ~250bp (removing the primers lengths).
 # Remove any sequence variant below outside 200-300bp
-seqtable.new <- seqtable[,nchar(colnames(seqtable)) %in% 200:300]
+seqtable.new <- seqtable[,nchar(colnames(seqtable)) %in% 200:310]
 dim(seqtable.new)
 hist(nchar(getSequences(seqtable.new)), breaks = 100, xlab = "ASV length", ylab = "Number of ASVs", main="")
+# check we haven't lost too many counts
+sum(seqtable.new)/sum(seqtable)
 ```
 
 
@@ -368,8 +370,8 @@ taxa.print <- taxa
 rownames(taxa.print) <- NULL # Removing sequence rownames for display only
 head(taxa.print)
 
-table(taxa.print[,1]) # Show the different kingdoms (should be only bacteria)
-taxa.print[taxa.print[,1] == 'Eukaryota',2] # the eukaryota are all NAs
+table(taxa.print[,1], useNA="ifany") # Show the different kingdoms (should be only bacteria)
+table(taxa.print[taxa.print[,1] == 'Eukaryota',2], useNA="ifany") # the eukaryota are all NAs
 
 table(taxa.print[,2]) # Show the different phyla
 table(is.na(taxa.print[,2])) # is there any NA phyla?
@@ -409,9 +411,12 @@ physeq <- phyloseq(otu_table(seqtable.nochim, taxa_are_rows=FALSE), # by default
 
 # Remove taxa that are eukaryota, or have unassigned Phyla
 physeq <- subset_taxa(physeq, Kingdom != "Eukaryota")
+physeq <- subset_taxa(physeq, !is.na(Kingdom))
 physeq <- subset_taxa(physeq, !is.na(Phylum))
 # Remove samples with less than 500 reads
 physeq <- prune_samples(sample_sums(physeq)>=500, physeq)
+# Some taxa might have been present only in these low-count samples, so we will make sure to remove taxa that are absent in all samples
+physeq <- prune_taxa(taxa_sums(physeq)>0, physeq)
 ```
 
 
