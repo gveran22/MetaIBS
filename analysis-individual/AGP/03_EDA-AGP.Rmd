@@ -411,7 +411,7 @@ plot_ordination(physeq.CSN,
                 ordinate(physeq.CSN, "PCoA", distance=dist.agp$Bray),
                 color="host_disease") +
   theme_bw()
-ggsave(file.path(path.plots, "PCoA_bray.jpg"), height = 5, width = 7)
+# ggsave(file.path(path.plots, "PCoA_bray.jpg"), height = 5, width = 7)
 ```
 
 
