@@ -15,9 +15,13 @@
 library(phyloseq)
 library(ggplot2)
 library(tidyverse)
+library(trac)
+library(treeio)
+library(ggtree)
+library(RColorBrewer)
 
 # Data
-path.phy <- "~/Projects/IBS_Meta-analysis_16S/phyloseq-objects"
+path.phy <- "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/CLUSTER/PhyloTree/input"
 physeq.ringel <- readRDS(file.path(path.phy, "physeq_ringel.rds"))
 physeq.labus <- readRDS(file.path(path.phy, "physeq_labus.rds"))
 physeq.lopresti <- readRDS(file.path(path.phy, "physeq_lopresti.rds"))
@@ -33,121 +37,142 @@ physeq.nagel <- readRDS(file.path(path.phy, "physeq_nagel.rds"))
 physeq.zeber <- readRDS(file.path(path.phy, "physeq_zeber.rds"))
 
 
+###################
+# PREPROCESS DATA #
+###################
+
+# Merge phyloseq objects
+cat("\n++ MERGE PHYLOSEQ OBJECTS ++\n")
+physeq.all <- merge_phyloseq(physeq.ringel,
+                             physeq.labus,
+                             physeq.lopresti,
+                             physeq.pozuelo,
+                             physeq.zhuang,
+                             physeq.zhu,
+                             physeq.hugerth,
+                             physeq.fukui,
+                             physeq.mars,
+                             physeq.liu,
+                             physeq.agp,
+                             physeq.nagel,
+                             physeq.zeber)
+
+# Separate fecal & sigmoid samples
+physeq.fecal <- subset_samples(physeq.all, sample_type == 'stool') # 2,220 samples
+physeq.sigmoid <- subset_samples(physeq.all, sample_type == 'sigmoid') # 431 samples
+cat("Nb of fecal samples:", nsamples(physeq.fecal))
+cat("\nNb of sigmoid samples:", nsamples(physeq.sigmoid))
 
 
-###########################
-# TESTING STUFF WITH TRAC #
-###########################
 
-library(trac)
-physeq.labus <- tax_glom(physeq.labus, "Genus")
 
-#____________________________________________________
-# GET THE PHYLO OBJECT
-tax <- physeq.labus@tax_table@.Data[,1:6]
+####################
+# GET PHYLO OBJECT #
+####################
+
+physeq.glom <- tax_glom(physeq.all, "Genus")
+# saveRDS(physeq.glom, "~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/03_TaxonomicTree/physeq_all_glomGenus.rds")
+# physeq.glom <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/03_TaxonomicTree/physeq_all_glomGenus.rds")
+
+## ***********************
+## 1 - GET TAXONOMIC TABLE
+tax <- physeq.glom@tax_table@.Data[,1:6]
 # Add a "Life" column (rank0)
-tax <- cbind("Life", tax); colnames(tax)[1] <- "Rank0"
+tax <- cbind("Life", tax)
+colnames(tax)[1] <- "Life"
 # add an ASV column
 # tax <- cbind(tax, rownames(tax))
 # colnames(tax)[ncol(tax)] <- "ASV"
 
+
+#_____________________________________________________
+# FOR UNAGGLOMERATED DATA (if we have some taxa with unassigned taxonomy)
 # replace NA taxa by a character
-tax[is.na(tax[,"Class"]) == TRUE, "Class"] <- "c__"
-tax[is.na(tax[,"Order"]) == TRUE, "Order"] <- "o__"
-tax[is.na(tax[,"Family"]) == TRUE, "Family"] <- "f__"
-tax[is.na(tax[,"Genus"]) == TRUE, "Genus"] <- "g__"
-# tax[is.na(tax[,"Species"]) == TRUE, "Species"] <- "s__"
+# tax[is.na(tax[,"Class"]) == TRUE, "Class"] <- "c__"
+# tax[is.na(tax[,"Order"]) == TRUE, "Order"] <- "o__"
+# tax[is.na(tax[,"Family"]) == TRUE, "Family"] <- "f__"
+# tax[is.na(tax[,"Genus"]) == TRUE, "Genus"] <- "g__"
+# # tax[is.na(tax[,"Species"]) == TRUE, "Species"] <- "s__"
+# 
+# 
+# # Make it so labels are unique, from Class (4th column) to Genus (7th column)
+# for (i in 4:7) {
+#   # add a number when the type is unknown... e.g. "g__"
+#   NAtaxa <- grep("__", tax[,i], value = TRUE)
+#   # 
+#   if(length(NAtaxa) > 0){
+#     tax[names(NAtaxa), i] <- paste0(tax[names(NAtaxa), i], 1:length(NAtaxa))
+#   }
+# }
+#_____________________________________________________
+
+# See how taxonomic table looks like (matrix)
+tax[1:5,1:7]
 
 
-# make it so labels are unique
-for (i in seq(2, 7)) {
-  # add a number when the type is unknown... e.g. "g__"
-  # ii <- nchar(tax[, i]) == 3
-  ii <- grep("__", tax[,i], value = TRUE)
-  # if (sum(ii) > 0){
-  if(length(ii) > 0){
-    # tax[ii, i] <- paste0(tax[ii, i], 1:sum(ii))
-    tax[names(ii), i] <- paste0(tax[names(ii), i], 1:length(ii))
-  }
-}
-
-
+## ***********************
+## 2 - GET TAXONOMIC TABLE WITH CUMULATIVE LABELS
 full_tax <- tax
-# cumulative labels are harder to read but easier to work with:
 for (i in 2:7) {
   full_tax[, i] <- paste(full_tax[, i-1], full_tax[, i], sep = "::")
 }
 full_tax <- as.data.frame(full_tax, stringsAsFactors = TRUE)
+full_tax[1:5,1:7]
 
 
-###### DOESN'T WORK (R SESSION ABORTS) ##########
-# form phylo object:
-# tree1 <- tax_table_to_phylo(~Rank0/Rank1/Rank2/Rank3/Rank4/Rank5/Rank6/Rank7/ASV,
-#                             data = tax, collapse = TRUE)
-tree1 <- tax_table_to_phylo(~Rank0/Kingdom/Phylum/Class/Order/Family/Genus,
-                            data = full_tax, collapse = TRUE)
+## ***********************
+## 3 - GET PHYLO OBJECT
+tree.phylo <- tax_table_to_phylo(~Life/Kingdom/Phylum/Class/Order/Family/Genus,
+                                 data = full_tax, collapse = TRUE)
 
 
-# # convert this to an A matrix to be used for aggregation:
-# A <- phylo_to_A(tree1)
-# 
-# dat <- list(y = y[keep],
-#             x = t(physeq.labus@otu_table@.Data[, keep]),
-#             tree = tree1,
-#             tax = tax,
-#             A = A,
-#             sample_data = as_tibble(sample_data(agp))[keep, ])
-# # rows of A correspond to OTUs as do columns of x
-# # rearrange columns of x to be in the order of rows of A:
-# dat$x <- dat$x[, match(str_match(rownames(A), "::([^:]+)$")[, 2],
-#                        colnames(dat$x))]
-# identical(str_match(rownames(A), "::([^:]+)$")[,2],
-#           colnames(dat$x))
-# saveRDS(dat, file = "AGP_processed.RDS")
-# 
-# 
-# # aggregate to higher levels (for comparison to log-contrast regression at
-# # fixed aggregation levels)
-# dat <- readRDS("AGP_processed.RDS")
-# level_names <- c("Phylum",
-#                  "Class",
-#                  "Order",
-#                  "Family",
-#                  "Genus",
-#                  "Species",
-#                  "OTU")
-# dat_agg <- list()
-# for (i in seq(1,6)) {
-#   dat_agg[[level_names[i]]] <- aggregate_to_level(x = dat$x,
-#                                                   y = dat$y, 
-#                                                   A = dat$A,
-#                                                   tax = dat$tax, 
-#                                                   level = i + 2,
-#                                                   collapse = TRUE)
-# }
-# dat_agg[["OTU"]] <- dat
-# saveRDS(dat_agg, file = "AGP_aggregated.RDS")
 
 
-# Modify tip labels
-library(treeio)
-tax[1:5,1:5]
+#######################
+# PLOT TAXONOMIC TREE #
+#######################
 
+## ***********************
+## 1 - GET TREEDATA OBJECT
+
+# We will define new labels for the tips
 d <- data.frame(label=full_tax$Genus,
                 new_label=tax[,"Genus"],
                 phylum=tax[,"Phylum"])
-# test <- rename_taxa(tree=tree1, data=d, key=label, value=new_label) %>% write.tree
-test <- full_join(tree1, d, by="label")
+d[!d$phylum %in% c("Actinobacteriota", "Bacteroidota", "Firmicutes", "Proteobacteria", "Verrucomicrobiota"), "phylum"] <- "Other"
 
-ggtree(test, layout="circular", aes(color=I(phylum))) +
-  # aes(color=I(phylum)) +
-  # geom_tree(aes(color=phylum)) +
-  geom_tiplab(aes(label=new_label), size=2)
+# Create a treedata object, that will contain the new_label
+tree.td <- full_join(tree.phylo, d, by="label")
+
+# Get the list of tip labels belonging to each phylum (phyla are the names of the elements in the list)
+l <- list()
+for (phylum in unique(d$phylum)){
+  print(phylum)
+  l[[phylum]] <- d[d$phylum==phylum,"label"]
+}
+
+# Group the nodes and edges by phylum (to color the branches by phylum)
+tree.td <- groupOTU(tree.td, l)
 
 
-#____________________________________________________
-# PLOT
-library(ggtree)
+## ***********************
+## 2 - PLOT <3
+# Find the last 2 characters for alpha
+rgb(0,255,0, max=255, alpha=0.6*255)
 
-ggtree(tree1, layout="circular") +
-  geom_tiplab(size=1)
+colors <- paste0(brewer.pal(6, "Set1"), "B2", sep="")
+names(colors) <- c("Actinobacteriota", "Bacteroidota", "Firmicutes", "Proteobacteria", "Verrucomicrobiota", "Other")
+
+jpeg("~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/03_TaxonomicTree/taxTree_all.jpg", width=2000, height=2000, res=400)
+ggtree(tree.td, layout="circular", aes(color=group))+
+  # geom_tiplab(aes(label=new_label), size=0.5, color="black")+
+  geom_nodepoint(size=0.1, color="black")+
+  scale_color_manual(values=colors)+
+  labs(color="Phylum")
+dev.off()
+
+
+
+
+
+
