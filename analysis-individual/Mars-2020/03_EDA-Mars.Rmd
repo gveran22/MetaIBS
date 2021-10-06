@@ -18,13 +18,14 @@ knitr::opts_chunk$set(fig.width = 15, fig.height = 5, warning=FALSE, message=FAL
 ## IMPORT ##
 ############
 
-## Librairies
+### Librairies
 
 ```{r library-import}
 library(phyloseq) # for phyloseq object
 library(ggplot2)
 library(cowplot)
 library(tidyverse)
+library(reshape2)
 library("plotly") # plot 3D
 library("microbiome") # for centered log-ratio
 library("coda") # Aitchison distance
@@ -34,7 +35,7 @@ library(pheatmap) # for heatmap
 ```
 
 
-## Data
+### Data
 
 ```{r import-data}
 # Set path
@@ -651,11 +652,7 @@ heatmp.mars <- plotHeatmaps(dlist = dist.mars, fontsize = 8)
 
 Figure 1 - Comparison of the Bray-Curtis beta-diversity dispersion
 
-```{r reproduce-fig1J, eval = TRUE, echo = TRUE, fig.height = 6, fig.width = 10}
-#___________________________________________________________________
-# FIGURE 3
-library(reshape2)
-
+```{r reproduce-fig1J, eval = TRUE, echo = TRUE, fig.height = 5, fig.width = 3}
 # get useful metadata
 metadata <- sample_data(physeq.mars) %>%
   as_tibble() %>%
@@ -696,10 +693,13 @@ ggplot(bc.comp, aes(x=compare_subtype, y=value))+
   labs(x='', y='Within subject BC dissimilarity')
 ```
 
+![(J) Community variability within each group based on mean Bray Curtis Distance (HC versus IBS-C, p value = 0.02, ANOVA Tukey HSD, n = 10, 11, and 9 mucosal microbiome samples for IBS-C, IBS-D, and HC, respectively).](/Users/scarcy/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Mars-2020/02_EDA-Mars/fig1J.png){width=20%}
+
+
 
 As a proxy of the fig1G, let's compute the between-subject BC distance.
 
-```{r reproduce-fig1, eval = TRUE, echo = TRUE, fig.height = 6, fig.width = 10}
+```{r reproduce-fig1G, eval = TRUE, echo = TRUE, fig.height = 5, fig.width = 5}
 #___________________________________________________________________
 
 # Build dataframe with Bray-Curtis distance between IBS-HC, IBS-IBS, HC-HC
@@ -708,8 +708,16 @@ bc.comp <- melt(as.matrix(dist.mars$Bray), varnames = c("row", "col")) %>%
   dplyr::rename(row_disease=host_disease, row_subtype=host_subtype, row_hostID=host_ID) %>%
   inner_join(metadata, by=c("col"="Run")) %>%
   dplyr::rename(col_disease=host_disease, col_subtype=host_subtype, col_hostID=host_ID) %>%
-  # Keep only comparison between subject (row_hostID != col_hostID)
+  # Keep only comparison between different subjects (row_hostID != col_hostID)
   filter(row_hostID != col_hostID) %>%
+  # Remove duplicate values (comparison(A,B) = comparison(B,A), so remove one of them)
+  rowwise() %>%
+  mutate(comp = paste(sort(c(row, col)), collapse="-")) %>%
+  ungroup() %>%
+  group_by(comp) %>%
+  summarise_all(first) %>%
+  ungroup() %>%
+  select(-comp) %>%
   # Classify comparison as between diseases, between Healthy, or between IBS samples
   mutate(compare_disease=ifelse(row_disease != col_disease, "Between",
                         ifelse(row_disease == "Healthy", "Healthy",
@@ -733,18 +741,11 @@ bc.comp %>%
 bc.comp %>%
   dplyr::count(row_subtype, col_subtype, compare_subtype)
 
-# Plot
-ggplot(bc.comp, aes(x=compare_disease, y=value))+
-  geom_violin()+
-  geom_boxplot(width=0.1, outlier.shape = NA)+
-  geom_jitter(size=0.1, width=0.01)+
-  theme_cowplot()+
-  labs(x='', y='Bray-Curtis dissimilarity')
 
-# We can't compute the 
+# Attempt at reproducing fig1G
 ggplot(bc.comp, aes(x=compare_subtype, y=value))+
   geom_boxplot(width=0.2, outlier.shape = NA)+
-  geom_jitter(aes(color=compare_subtype), size=1, width=0.01, alpha=0.5)+
+  geom_jitter(aes(color=compare_subtype), size=2, width=0.01, alpha=0.5)+
   scale_color_manual(values=c("#ff7f00", "#a1d76a", "#999999", "#9ecae1", "#2171b5", "#807dba"))+
   theme_cowplot()+
   theme(axis.text.x = element_text(angle=45, hjust=1),
@@ -752,4 +753,20 @@ ggplot(bc.comp, aes(x=compare_subtype, y=value))+
   labs(x='', y='Bray-Curtis dissimilarity')
 ```
 
+![(G) Community variability determined by the mean within-subject Bray Curtis distance (within-IBS-D versus within-IBS-C, p = < 0.005, ANOVA Tukey, n = 22, 46, 24, 53, and 29, Bray-Curtis distances between stool samples of the same subject for within-IBS-C, Healthy versus IBS-C, within-Healthy, Healthy versus IBS-D, and within-IBS-D, respectively).](/Users/scarcy/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Mars-2020/02_EDA-Mars/fig1G.png){width=30%}
+
+
+<br/>
+
+Just as personal interest, let's look at the disease level (IBS-HC-IBSvsHC):
+
+```{r, fig.height = 4, fig.width = 4}
+# Plot within IBS, within Healthy, and between IBS-Healthy BC dissimilarity
+ggplot(bc.comp, aes(x=compare_disease, y=value))+
+  geom_violin()+
+  geom_boxplot(width=0.1, outlier.shape = NA)+
+  geom_jitter(size=0.1, width=0.01)+
+  theme_cowplot()+
+  labs(x='', y='Bray-Curtis dissimilarity')
+```
 
