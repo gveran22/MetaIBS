@@ -108,15 +108,17 @@ ggplot(common.asv, aes(x=Datasets))+
 
 
 
-################################################
+#################################################
 # CREATE PHYLOSEQ OBJECTS WITH ONLY COMMON ASVs #
-################################################
+#################################################
 
 # Get a phyloseq object with only the identified common ASVs
 physeq.common <- prune_taxa(taxa_names(physeq.all) %in% common.asv$asv, physeq.all)
 
+
 # Remove samples with 0 count
 physeq.common <- prune_samples(sample_sums(physeq.common)>0, physeq.common)
+
 
 # Create a phyloseq object for each datasets having common ASVs
 physeq.common.NagPoz <- subset_samples(physeq.common, author %in% c("Nagel", "Pozuelo"))
@@ -131,6 +133,7 @@ physeq.common.HugZhu <- prune_taxa(taxa_sums(physeq.common.HugZhu)>0, physeq.com
 physeq.common.LopRin <- subset_samples(physeq.common, author %in% c("LoPresti", "Ringel"))
 physeq.common.LopRin <- prune_taxa(taxa_sums(physeq.common.LopRin)>0, physeq.common.LopRin)
 
+
 # Sanity check
 # ntaxa(physeq.common.NagPoz)
 # ntaxa(physeq.common.LiuZhug)
@@ -143,7 +146,60 @@ physeq.common.LopRin <- prune_taxa(taxa_sums(physeq.common.LopRin)>0, physeq.com
 #   filter(length(Datasets)>1) # should give 806 OTUs that are present in both datasets
 
 
+# Save the phyloseq objects
+path <- "~/Projects/IBS_Meta-analysis_16S/phyloseq-objects/common-ASVs"
+saveRDS(physeq.common.NagPoz, file.path(path, "physeq_commonASV_Nagel-Pozuelo.rds"))
+saveRDS(physeq.common.LiuZhug, file.path(path, "physeq_commonASV_Liu-Zhuang.rds"))
+saveRDS(physeq.common.HugZhu, file.path(path, "physeq_commonASV_Hugerth-Zhu.rds"))
+saveRDS(physeq.common.LopRin, file.path(path, "physeq_commonASV_Lopresti-Ringel.rds"))
 
 
 
+
+#############################
+# CREATE LONG SHAPED TABLES #
+#############################
+
+# If need to re-import data
+# physeq.common.NagPoz <- readRDS(file.path(path, "physeq_commonASV_Nagel-Pozuelo.rds"))
+# physeq.common.LiuZhug <- readRDS(file.path(path, "physeq_commonASV_Liu-Zhuang.rds"))
+# physeq.common.HugZhu <- readRDS(file.path(path, "physeq_commonASV_Hugerth-Zhu.rds"))
+# physeq.common.LopRin <- readRDS(file.path(path, "physeq_commonASV_Lopresti-Ringel.rds"))
+
+# Columns we can remove (only AGP dataset has info on these columns, and "Run" is being duplicated in a "Sample" column)
+col_to_remove <- c("Run", "age_cat", "bmi_cat", "country", "RACE", "exercise_frequency", "alcohol_frequency", "probiotic_frequency", "gluten",
+                   "bowel_movement_frequency", "bowel_movement_quality", "collection_season", "sibo", "lactose", "lung_disease", "liver_disease",
+                   "kidney_disease", "clinical_condition")
+
+
+# Get long-shaped dataframes
+df.common.NagPoz <- psmelt(physeq.common.NagPoz) %>% select(-all_of(col_to_remove))
+df.common.LiuZhug <- psmelt(physeq.common.LiuZhug) %>% select(-all_of(col_to_remove))
+df.common.HugZhu <- psmelt(physeq.common.HugZhu) %>% select(-all_of(col_to_remove))
+df.common.LopRin <- psmelt(physeq.common.LopRin) %>% select(-all_of(col_to_remove))
+
+
+# Sanity checks
+# length(unique(df.common.NagPoz$OTU))
+# length(unique(df.common.LiuZhug$OTU))
+# length(unique(df.common.HugZhu$OTU))
+# length(unique(df.common.LopRin$OTU))
+# 
+# sum(df.common.NagPoz$Abundance) == sum(otu_table(physeq.common.NagPoz))
+# sum(df.common.LiuZhug$Abundance) == sum(otu_table(physeq.common.LiuZhug))
+# sum(df.common.HugZhu$Abundance) == sum(otu_table(physeq.common.HugZhu))
+# sum(df.common.LopRin$Abundance) == sum(otu_table(physeq.common.LopRin))
+# 
+# unique(df.common.NagPoz$author)
+# unique(df.common.LiuZhug$author)
+# unique(df.common.HugZhu$author)
+# unique(df.common.LopRin$author)
+
+
+# Save tables!
+path <- "~/Projects/IBS_Meta-analysis_16S/aggregated-tables/common-ASVs"
+write.csv(df.common.NagPoz, file.path(path, "commonASV_Nagel-Pozuelo.csv"))
+write.csv(df.common.LiuZhug, file.path(path, "commonASV_Liu-Zhuang.csv"))
+write.csv(df.common.HugZhu, file.path(path, "commonASV_Hugerth-Zhu.csv"))
+write.csv(df.common.LopRin, file.path(path, "commonASV_Lopresti-Ringel.csv"))
 
