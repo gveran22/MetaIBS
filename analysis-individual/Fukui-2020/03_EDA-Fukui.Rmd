@@ -43,7 +43,7 @@ library(dendextend) # for dendrogram
 path <- "~/Projects/IBS_Meta-analysis_16S"
 
 # Import phyloseq object
-physeq.fukui <- readRDS(file.path(path, "data/analysis-individual/Fukui-2020/01_Dada2-Fukui/physeq_fukui(postDADA2).rds"))
+physeq.fukui <- readRDS(file.path(path, "phyloseq-objects/physeq_fukui.rds"))
 
 # Sanity check
 physeq.fukui
@@ -126,20 +126,6 @@ ggplot(class.table, aes(x = Sample, y = Abundance, fill = Class))+
 ```
 
 
-The sample SRR11944160 in the IBS population is the only one with lower sequencing depth and only composed of Bacteroidota.
-
-```{r outlier}
-# Look at the ASVs with non-0 count in this sample
-non0_ASVs <-  apply(otu_table(physeq.fukui)["SRR11944160",], 2, function(col) all(col !=0 ))
-otu_table(physeq.fukui)["SRR11944160",non0_ASVs]
-
-# There are only 3 ASVs in this sample, so we will remove it.
-physeq.fukui <- subset_samples(physeq.fukui, Run != "SRR11944160")
-
-# Save the updated phyloseq object
-# saveRDS(physeq.fukui, "~/Projects/IBS_Meta-analysis_16S/phyloseq-objects/physeq_fukui.rds")
-```
-
 
 ### 3. Firmicutes/Bacteroidota ratio
 
@@ -168,6 +154,11 @@ ggplot(ratio.FB, aes(x = host_disease, y = logRatioFB))+
   geom_jitter(width=0.1)+
   labs(x = "",  y = 'Log2(Firmicutes/Bacteroidota)', title = "Firmicutes:Bacteroidota ratio")+
   theme_cowplot()
+
+
+# Statistical test
+wilcox.test(ratio.FB[ratio.FB$host_disease == "IBS","logRatioFB"],
+            ratio.FB[ratio.FB$host_disease == "Healthy","logRatioFB"]) # p = 0.24
 ```
 
 
@@ -189,7 +180,8 @@ dev.off()
 
 # Relative abundances
 jpeg(file.path(path.plots, "relAbundance_phylum.jpg"), width = 4000, height = 2000)
-ggplot(phylum.table, aes(x = Sample, y = Abundance, fill = Phylum))+
+ggplot(phylum.table, aes(x = reorder(Sample, Sample, function(x) mean(phylum.table[Sample == x & Phylum == 'Bacteroidota', 'Abundance'])),
+                         y = Abundance, fill = Phylum))+
   facet_wrap(~ host_disease, scales = "free") + # scales = "free" removes empty lines
   geom_bar(stat = "identity") +
   theme(axis.text.x = element_text(size = 30, angle = -90),
@@ -202,7 +194,8 @@ ggplot(phylum.table, aes(x = Sample, y = Abundance, fill = Phylum))+
 dev.off()
 
 jpeg(file.path(path.plots, "relAbundance_class.jpg"), width = 4000, height = 2000)
-ggplot(class.table, aes(x = Sample, y = Abundance, fill = Class))+
+ggplot(class.table, aes(x = reorder(Sample, Sample, function(x) mean(phylum.table[Sample == x & Phylum == 'Bacteroidota', 'Abundance'])),
+                        y = Abundance, fill = Class))+
   facet_wrap(~ host_disease, scales = "free") + # scales = "free" removes empty lines
   geom_bar(stat = "identity") +
   theme(axis.text.x = element_text(size = 30, angle = -90),
@@ -217,8 +210,9 @@ dev.off()
 # Firmicutes:Bacteroidota log ratio
 jpeg(file.path(path.plots, "ratioFB.jpg"), width = 1500, height = 2000)
 ggplot(ratio.FB, aes(x = host_disease, y = logRatioFB))+
-  geom_boxplot(outlier.size = 0, lwd = 3)+
-  geom_jitter(size = 8, width=0.1)+
+  geom_violin(lwd=3, aes(fill=host_disease))+
+  geom_jitter(size = 10, width=0.1)+
+  scale_fill_manual(values=scales::alpha(c("blue", "red"), .3))+
   labs(x = "",  y = 'Log2(Firmicutes/Bacteroidota)', title = "Fukui dataset (2020)")+
   theme_classic()+
   theme(axis.text = element_text(size = 50),
@@ -350,7 +344,7 @@ plotDistances2D <- function(dlist, ordination="MDS"){
   plist[[4]] <- plot_ordination(physeq.NZcomp, iMDS.Can, color="host_disease")
   
   # Creating a dataframe to plot everything
-  plot.df = ldply(plist, function(x) x$data)
+  plot.df = plyr::ldply(plist, function(x) x$data)
   names(plot.df)[1] <- "distance"
   
   return(plot.df)
@@ -480,7 +474,7 @@ plot_ordination(physeq.rel, fig.2A, color="host_disease", shape = "host_disease"
   geom_point(size=5, alpha=0.5) +
   scale_color_manual(values = c('blue', 'red'))+ scale_shape_manual(values = c(17,16))+
   theme_classic()+
-  ggtitle("PCoA on weighted-UniFrac distance")
+  ggtitle("PCoA on unweighted-UniFrac distance")
 
 ```
 
@@ -488,7 +482,7 @@ plot_ordination(physeq.rel, fig.2A, color="host_disease", shape = "host_disease"
 
 Now, let's reproduce figure 2B. They performed a hierarchical clustering with Ward linkage on the unweighted Unifrac distance.
 
-```{r reproduce-fig1A, fig.width = 10, fig.height = 5}
+```{r reproduce-fig1A, fig.width = 10, fig.height = 7}
 # ___________________________________________________________________________________________________________
 # FIGURE 1A
 
@@ -514,7 +508,8 @@ color_leaf<<-function(n){
             if(disease=="Healthy"){col_disease="blue"};if(disease=="IBS"){col_disease="red"}
         
         #Modification of leaf attribute
-        attr(n,"nodePar") <- c(a$nodePar, list(cex=1.5, lab.cex=0.6, pch=20, col=col_disease, lab.font=1, lab.cex=1))
+        attr(n,"nodePar") <- c(a$nodePar, list(cex=0.8, pch=20, col=col_disease, # size & shape leaf
+                                               lab.cex=0.4)) # size leaf label
         }
     return(n)
 }

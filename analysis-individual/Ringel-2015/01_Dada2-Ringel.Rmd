@@ -279,6 +279,8 @@ hist(nchar(getSequences(seqtable)), breaks = 100, xlab = "ASV length", ylab = "N
 seqtable.new <- seqtable[,nchar(colnames(seqtable)) %in% 260:360]
 dim(seqtable.new)
 hist(nchar(getSequences(seqtable.new)), breaks = 100, xlab = "ASV length", ylab = "Number of ASVs", main="")
+# check we haven't lost too many counts
+sum(seqtable.new)/sum(seqtable)
 ```
 
 

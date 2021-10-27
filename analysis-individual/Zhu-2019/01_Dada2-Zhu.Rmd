@@ -329,9 +329,11 @@ hist(nchar(getSequences(seqtable.small)), breaks = 100, xlab = "ASV length", yla
 
 # Sequences should be between 515F - 806R, so around ~250bp (removing the primers lengths).
 # Remove any sequence variant outside 200:300bp
-seqtable.small <- seqtable.small[,nchar(colnames(seqtable.small)) %in% 200:300]
-dim(seqtable.small)
-hist(nchar(getSequences(seqtable.small)), breaks = 100, xlab = "ASV length", ylab = "Number of ASVs", main="")
+seqtable.small.new <- seqtable.small[,nchar(colnames(seqtable.small)) %in% 200:300]
+dim(seqtable.small.new)
+hist(nchar(getSequences(seqtable.small.new)), breaks = 100, xlab = "ASV length", ylab = "Number of ASVs", main="")
+# check we haven't lost too many counts
+sum(seqtable.small.new)/sum(seqtable.small)
 ```
 
 
@@ -565,3 +567,4 @@ ggplot(phylum.table, aes(x = Sample, y = Abundance, fill = Phylum))+
 
 ```
 
+For any further analysis, we will be doing it on the _physeq_shortASV_ object, as the ASVs sequences better reflect the V4 **variable** region.

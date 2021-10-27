@@ -138,7 +138,7 @@ aggTable <- function(physeq, tax_rank){
   # Sanity check reshape df
   randomTaxa <- rownames(agglomeratedTable)[10]
   randomSample <- colnames(agglomeratedTable)[785]
-  valueAgg <- sum(long.agg[long.agg[,tax_rank] == randomGenus & long.agg$Sample == randomSample, "Abundance"])
+  valueAgg <- sum(long.agg[long.agg[,tax_rank] == randomTaxa & long.agg$Sample == randomSample, "Abundance"])
   wideAgg <- agglomeratedTable[randomTaxa, randomSample]
   cat("-> Sanity check: value in long shaped df is", valueAgg, "while in wide shaped df is", wideAgg)
   

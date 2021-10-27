@@ -9,15 +9,13 @@ library(stats)
 library(Biostrings)
 library(base)
 
-
 #____________________________________________________________________
 # IMPORT DATA
-physeq <- readRDS("~/IBS/PhyloTree/physeq_fukui.rds")
+physeq <- readRDS("~/IBS/PhyloTree/input/physeq_fukui.rds")
 seqtable.nochim <- as.matrix(as.data.frame(otu_table(physeq)))
 
 # Sanity check
 print(dim(seqtable.nochim))
-
 
 #____________________________________________________________________
 # PHYLOGENETIC TREE
@@ -48,7 +46,6 @@ fitGTR <- optim.pml(fitGTR, model="GTR", optInv=TRUE, optGamma=TRUE, # gamma rat
 print("-- Add to phyloseq object --")
 physeq <- merge_phyloseq(physeq, phy_tree(fitGTR$tree))
 
-
 #____________________________________________________________________
 # GIVE SURNAMES TO OTUs
 
@@ -59,4 +56,4 @@ physeq <- merge_phyloseq(physeq, dna) # store the dna sequences in the refseq of
 taxa_names(physeq) <- paste0("ASV", seq(ntaxa(physeq))) # replace the whole dna sequences in the taxa_names by a surname ASV1, ASV2, etc.
 
 # Save physeq object
-saveRDS(physeq, "~/IBS/PhyloTree/Phangorn/OutputPhangorn/physeq_fukui.rds")
+saveRDS(physeq, "~/IBS/PhyloTree/output/physeq_fukui.rds")

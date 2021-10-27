@@ -12,47 +12,122 @@
 # Libraries
 library(tidyverse)
 library(phyloseq)
+library(reshape2)
+library(ggupset)
 
 # Data
 path <- "~/Projects/IBS_Meta-analysis_16S"
-physeq.fukui <- readRDS(file.path(path, "phyloseq-objects/physeq_fukui.rds"))
-physeq.hugerth <- readRDS(file.path(path, "phyloseq-objects/physeq_hugerth.rds"))
-physeq.labus <- readRDS(file.path(path, "phyloseq-objects/physeq_labus.rds"))
-physeq.lopresti <- readRDS(file.path(path, "phyloseq-objects/physeq_lopresti.rds"))
-physeq.nagel <- readRDS(file.path(path, "phyloseq-objects/physeq_nagel.rds"))
-physeq.pozuelo <- readRDS(file.path(path, "phyloseq-objects/physeq_pozuelo.rds"))
-physeq.zeber <- readRDS(file.path(path, "phyloseq-objects/physeq_zeber.rds"))
-physeq.zhu <- readRDS(file.path(path, "phyloseq-objects/physeq_zhu.rds"))
-physeq.zhuang <- readRDS(file.path(path, "phyloseq-objects/physeq_zhuang.rds"))
+path.phy <- "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/CLUSTER/PhyloTree/input"
+physeq.ringel <- readRDS(file.path(path.phy, "physeq_ringel.rds"))
+physeq.labus <- readRDS(file.path(path.phy, "physeq_labus.rds"))
+physeq.lopresti <- readRDS(file.path(path.phy, "physeq_lopresti.rds"))
+physeq.pozuelo <- readRDS(file.path(path.phy, "physeq_pozuelo.rds"))
+physeq.zhuang <- readRDS(file.path(path.phy, "physeq_zhuang.rds"))
+physeq.zhu <- readRDS(file.path(path.phy, "physeq_zhu.rds"))
+physeq.hugerth <- readRDS(file.path(path.phy, "physeq_hugerth.rds"))
+physeq.fukui <- readRDS(file.path(path.phy, "physeq_fukui.rds"))
+physeq.mars <- readRDS(file.path(path.phy, "physeq_mars.rds"))
+physeq.liu <- readRDS(file.path(path.phy, "physeq_liu.rds"))
+physeq.agp <- readRDS(file.path(path.phy, "physeq_agp.rds"))
+physeq.nagel <- readRDS(file.path(path.phy, "physeq_nagel.rds"))
+physeq.zeber <- readRDS(file.path(path.phy, "physeq_zeber.rds"))
 
-datasets <- list("fukui" = physeq.fukui,
-                 "hugerth" = physeq.hugerth,
-                 "labus" = physeq.labus,
+
+
+
+##############################################
+# MERGE PHYLOSEQ OBJECTS WITH MERGE_PHYLOSEQ #
+##############################################
+
+# Merge phyloseq objects
+physeq.all <- merge_phyloseq(physeq.labus,
+                             physeq.lopresti,
+                             physeq.ringel,
+                             physeq.agp,
+                             physeq.liu,
+                             physeq.pozuelo,
+                             physeq.fukui,
+                             physeq.mars,
+                             physeq.hugerth,
+                             physeq.zhu,
+                             physeq.zhuang,
+                             physeq.nagel,
+                             physeq.zeber)
+
+# Compare the number of ASVs before/after merging
+sum(ntaxa(physeq.labus)+
+    ntaxa(physeq.lopresti)+
+    ntaxa(physeq.ringel)+
+    ntaxa(physeq.agp)+
+    ntaxa(physeq.liu)+
+    ntaxa(physeq.pozuelo)+
+    ntaxa(physeq.fukui)+
+    ntaxa(physeq.mars)+
+    ntaxa(physeq.hugerth)+
+    ntaxa(physeq.zhu)+
+    ntaxa(physeq.zhuang)+
+    ntaxa(physeq.nagel)+
+    ntaxa(physeq.zeber)) # 81,452 before
+
+ntaxa(physeq.all) # 79,918 after
+min(nchar(taxa_names(physeq.all)))
+
+# Put datasets in a list
+datasets <- list("labus"    = physeq.labus,
                  "lopresti" = physeq.lopresti,
-                 "nagel" = physeq.nagel,
-                 "pozuelo" = physeq.pozuelo,
-                 "zeber" = physeq.zeber,
-                 "zhu" = physeq.zhu,
-                 "zhuang" = physeq.zhuang)
+                 "ringel"   = physeq.ringel,
+                 "agp"      = physeq.agp,
+                 "liu"      = physeq.liu,
+                 "pozuelo"  = physeq.pozuelo,
+                 "fukui"    = physeq.fukui,
+                 "mars"     = physeq.mars,
+                 "hugerth"  = physeq.hugerth,
+                 "zhu"      = physeq.zhu,
+                 "zhuang"   = physeq.zhuang,
+                 "nagel"    = physeq.nagel,
+                 "zeber"    = physeq.zeber)
 
 
-#####################
-# MERGE COMMON ASVs #
-#####################
+# Let's get all ASVs in a dataframe and check if we can find common ones
+asv.df <- melt(lapply(datasets, function(x) taxa_names(x)))
+colnames(asv.df) <- c("asv", "author")
+length(unique(asv.df$asv)) # we do find 79,918 unique sequences
+
+# Let's see which datasets share the exact same ASV sequence
+common.asv <- asv.df %>%
+  group_by(asv) %>%
+  summarize(Datasets = list(unique(author))) %>%
+  filter(lengths(Datasets)>1)
+
+# jpeg("~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/01_Merge-Datasets/commonASV_merge-phyloseq-funct.jpg", width=2000, height=2000, res=400)
+ggplot(common.asv, aes(x=Datasets))+
+  geom_bar() +
+  scale_x_upset()+
+  labs(y="# of common ASVs")
+# dev.off()
+
+
+
+
+
+
+##############################
+# MERGE COMMON ASVs MANUALLY #
+##############################
 
 #_______________________________________
 # MOCK DATA
 # Create mock data
-df <- data.frame("author" = c("fukui", "fukui", "zhu", "pozuelo", "fukui"),
-                 "ASV" = paste("ASV", rep(1:5), sep=""),
-                 "Sequence" = c("ATTTGAC", "GCATTAGCTTTA", "TTTGA", "GCTATCG", "AGCTTTA"),
-                 "Phylum" = c("Firmicutes", "Bacteroidota", "Firmicutes", "Actinobacteria", "Bacteroidota"),
-                 "Class" = c("Clostridia", "Bacteria", "Clostridia", "Proteomachin", "Bacteria")) %>%
+df <- data.frame("author" = c("fukui", "fukui", "zhu", "pozuelo", "fukui", "pozuelo"),
+                 "ASV" = paste("ASV", rep(1:6), sep=""),
+                 "Sequence" = c("ATTTGAC", "GCATTAGCTTTA", "TTTGA", "GCTATCG", "AGCTTTA", "TTTGAT"),
+                 "Phylum" = c("Firmicutes", "Bacteroidota", "Firmicutes", "Actinobacteria", "Bacteroidota", "Proteobacteria"),
+                 "Class" = c("Clostridia", "Bacteria", NA, "Proteomachin", "Bacteria", "Gammaproteo")) %>%
   arrange(nchar(Sequence))
 
 
 # Init
-new.df <- data.frame(matrix(ncol=5, nrow=0))
+new.df <- data.frame(matrix(ncol=6, nrow=0))
 colnames(new.df) <- c(colnames(df), "ASV_new")
 
 allseq <- df$Sequence
@@ -67,7 +142,8 @@ while(length(allseq) !=0 ){
   
   # Subset df by sequence
   tempdf <- df %>%
-    filter(str_detect(Sequence, seq)) %>%
+    filter(str_detect(string=Sequence, pattern=seq)) %>%
+    filter(n_distinct(Phylum) == 1) %>%
     mutate(ASV_new = paste("ASV", i, sep=""))
   
   # Add to new.df
@@ -129,7 +205,7 @@ while(length(allseq) !=0 ){
   
   # Subset df by sequence
   tempdf <- taxtable %>%
-    filter(str_detect(sequence, seq)) %>%
+    filter(str_detect(string=sequence, pattern=seq)) %>%
     mutate(ASV = paste("ASV", i, sep=""))
   
   # Add to new.df
@@ -144,7 +220,7 @@ while(length(allseq) !=0 ){
   i=i+1
 }
 
-saveRDS(taxtable.new, "~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/01_Merge-Datasets/taxtable_merged.rds")
+# saveRDS(taxtable.new, "~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/01_Merge-Datasets/taxtable_merged.rds")
 
 # Sanity check
 taxtable.new <- readRDS(file.path(path, "data/analysis-combined/01_Merge-Datasets/taxtable_merged.rds"))
@@ -153,15 +229,25 @@ taxtable.new %>%
   group_by(ASV) %>%
   mutate(verif = str_detect(string=sequence, pattern=sequence[which.min(nchar(sequence))])) %>%
   ungroup() %>%
-  count(verif)
+  summarise(n_true = sum(verif), n_false=sum(!verif))
 # Only TRUEs!! =)
 
-# check that ASVs with several sequence have the same taxa assigned to them
+# check that for each ASV, the "middle-length" sequences can be found in the bigger length sequences
+test <- taxtable.new %>%
+  group_by(ASV) %>%
+  filter(sequence != sequence[which.min(nchar(sequence))]) %>% # remove shortest sequence
+  mutate(verif = str_detect(string=sequence, pattern=sequence[which.min(nchar(sequence))]),
+         length = nchar(sequence)) %>%
+  ungroup() %>%
+  summarise(n_true = sum(verif), n_false=sum(!verif))
+
+
+# check that ASVs with several sequences have the same taxa assigned to them
 test <- taxtable.new %>%
   group_by(ASV) %>%
   # if several sequences for the ASV, replace NA values by the known Genus of other sequences
-  fill(Genus, .direction="downup") %>%
-  filter(n_distinct(Genus)>1) %>%
+  # fill(Genus, .direction="downup") %>%
+  filter(n_distinct(Genus, na.rm=TRUE)>1) %>%
   arrange(nchar(sequence)) %>%
   arrange(ASV) %>%
   mutate(seqlength=nchar(sequence))

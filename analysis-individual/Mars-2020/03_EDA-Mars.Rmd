@@ -1,0 +1,772 @@
+---
+title: "Mars2020_DataAnalysis"
+output:
+  html_document:
+    df_print: paged
+    toc: true
+  pdf_document: default
+---
+
+```{r, include=FALSE}
+knitr::opts_chunk$set(fig.width = 15, fig.height = 5, warning=FALSE, message=FALSE,
+                      root.dir = "~/Projects/IBS_Meta-analysis_16S/analysis-individual/Mars-2020/")
+```
+
+
+
+############
+## IMPORT ##
+############
+
+### Librairies
+
+```{r library-import}
+library(phyloseq) # for phyloseq object
+library(ggplot2)
+library(cowplot)
+library(tidyverse)
+library(reshape2)
+library("plotly") # plot 3D
+library("microbiome") # for centered log-ratio
+library("coda") # Aitchison distance
+library("coda.base") # Aitchison distance
+library("vegan") # NMDS
+library(pheatmap) # for heatmap
+```
+
+
+### Data
+
+```{r import-data}
+# Set path
+path <- "~/Projects/IBS_Meta-analysis_16S"
+
+# Import phyloseq object
+physeq.mars <- readRDS(file.path(path, "phyloseq-objects/physeq_mars.rds"))
+
+# Sanity check
+physeq.mars
+```
+
+Phylogenetic tree was computed with the package `phangorn`, and the script was run on a cluster. Let's check we have correctly generated a phylogenetic tree.
+
+```{r plot-tree, echo=TRUE, eval=FALSE, fig.height = 6, fig.width = 10}
+# Look at the tree
+plot_tree(physeq.mars, color = "host_disease", ladderize="left")
+```
+
+
+```{r import-for-pdf, echo = FALSE}
+#__________________________________________________________________________
+#____________ THIS IS ONLY FOR (quicker) PDF/HTML OUTPUT __________________
+#__________________________________________________________________________
+
+# Import phyloseq objects for computing distances
+physeq.rel <- readRDS(file.path(path, "data/analysis-individual/Mars-2020/02_EDA-Mars/physeq_relative.rds"))
+physeq.clr <- readRDS(file.path(path, "data/analysis-individual/Mars-2020/02_EDA-Mars/physeq_clr.rds"))
+physeq.CSN <- readRDS(file.path(path, "data/analysis-individual/Mars-2020/02_EDA-Mars/physeq_CSN.rds"))
+physeq.NZcomp <- readRDS(file.path(path, "data/analysis-individual/Mars-2020/02_EDA-Mars/physeq_NZcomp.rds"))
+```
+
+
+
+
+##################
+## DEMOGRAPHICS ##
+##################
+
+This dataset has several covariates (gender, age, bmi). We will check whether there is the same distribution of these covariates between healthy and IBS patients.
+
+```{r demographics-stats}
+# Number of individuals in each group (keeping just 1 sample per individual)
+metadata <- data.frame(sample_data(physeq.mars)) %>%
+  select(host_disease, host_bmi, host_age, host_sex, host_ID) %>%
+  group_by(host_ID) %>%
+  summarise_all(first)
+  
+metadata %>%
+  count(host_disease)
+
+# Age
+metadata %>%
+  group_by(host_disease) %>%
+  summarize(mean_age=mean(host_age), sd_age=sd(host_age))
+wilcox.test(metadata[metadata$host_disease == "IBS", ]$host_age,
+            metadata[metadata$host_disease == "Healthy", ]$host_age,
+            correct=FALSE) # p=0.84
+
+# Gender
+metadata %>%
+  count(host_disease, host_sex)
+# Can't use chi^2 test because one of the values < 5
+fisher.test(data.frame("Female" = c(8,21),
+                      "Male" = c(4,6),
+                      row.names = c("Healthy", "IBS"))) # p=0.7
+
+# BMI
+metadata %>%
+  group_by(host_disease) %>%
+  summarize(mean_bmi=mean(na.omit(host_bmi)), sd_bmi=sd(na.omit(host_bmi)))
+wilcox.test(metadata[metadata$host_disease == "IBS",]$host_bmi,
+            metadata[metadata$host_disease == "Healthy", ]$host_bmi,
+            correct=FALSE) # 0.98
+```
+
+
+
+
+################
+## ABUNDANCES ##
+################
+
+### 1. Absolute abundances
+
+```{r plot-absolute-abundance, fig.width=10, fig.height = 5}
+# Plot Phylum
+plot_bar(physeq.mars, fill = "Phylum") + facet_wrap("host_disease", scales="free_x") +
+  theme(axis.text.x = element_text(size = 8))+
+  labs(x = "Samples", y = "Absolute abundance", title = "Mars dataset (2020)")
+
+# Plot Class
+plot_bar(physeq.mars, fill = "Class")+ facet_wrap("host_disease", scales="free_x") +
+  theme(axis.text.x = element_text(size = 8))+
+  labs(x = "Samples", y = "Absolute abundance", title = "Mars dataset (2020)")
+```
+
+**Sequencing depth** characteristics of the Mars dataset:  
+- minimum of `r min(sample_sums(physeq.mars))` total count per sample  
+- median: `r median(sample_sums(physeq.mars))` total count per sample  
+- maximum of `r max(sample_sums(physeq.mars))` total count per sample  
+
+
+### 2. Relative abundances
+
+```{r plot-relative-abundances, fig.width=10, fig.height = 5}
+# Agglomerate to phylum & class levels
+phylum.table <- physeq.mars %>%
+  tax_glom(taxrank = "Phylum") %>%                     # agglomerate at phylum level
+  transform_sample_counts(function(x) {x/sum(x)} ) %>% # Transform to rel. abundance
+  psmelt()                                             # Melt to long format
+
+class.table <- physeq.mars %>%
+  tax_glom(taxrank = "Class") %>%
+  transform_sample_counts(function(x) {x/sum(x)} ) %>%
+  psmelt()
+
+sample_data(physeq.mars)$host_ID <- as.character(sample_data(physeq.mars)$host_ID)
+
+# Plot relative abundances
+ggplot(phylum.table, aes(x = reorder(Sample, Sample, function(x) mean(phylum.table[Sample == x & Phylum == 'Bacteroidota', 'Abundance'])),
+                         y = Abundance, fill = Phylum))+
+  facet_wrap(~ host_disease, scales = "free") + # scales = "free" removes empty lines
+  geom_bar(stat = "identity") +
+  theme(axis.text.x = element_blank())+
+  labs(x = "Samples", y = "Relative abundance", title = "Mars dataset (2020)")
+
+ggplot(class.table, aes(x = reorder(Sample, Sample, function(x) mean(phylum.table[Sample == x & Phylum == 'Bacteroidota', 'Abundance'])),
+                        y = Abundance, fill = Class))+
+  facet_wrap(~ host_disease, scales = "free") + # scales = "free" removes empty lines
+  geom_bar(stat = "identity") +
+  theme(axis.text.x = element_blank(),
+        legend.key.size = unit(0.2, 'cm'),
+        legend.text = element_text(size=8))+
+  labs(x = "Samples", y = "Relative abundance", title = "Mars dataset (2020)")
+
+# As curiosity, group samples per host_ID (is there a big difference between collection times?)
+ggplot(phylum.table, aes(x = Sample, y = Abundance, fill = Phylum))+
+  facet_wrap(~ host_ID, scales = "free_x", nrow=2) + # scales = "free" removes empty lines
+  geom_bar(stat = "identity", width=1) +
+  theme_cowplot()+
+  theme(axis.text.x = element_blank(),
+        panel.spacing = unit(0.1, "lines"),
+        strip.text = element_text(size=8),
+        legend.key.size = unit(0.2, 'cm'),
+        legend.text = element_text(size=8))+
+  labs(x = "Samples", y = "Relative abundance", title = "Mars dataset (2020)")
+```
+
+
+### 3. Firmicutes/Bacteroidota ratio
+
+```{r plot-log-ratio, fig.height = 5, fig.width=3}
+# Extract abundance of only Bacteroidota and Firmicutes
+relevant.covariates <- c('Sample', 'Abundance', 'host_disease', 'Phylum', 'host_ID', 'host_subtype', 'Collection', 'host_sex')
+
+bacter <- phylum.table %>%
+  filter(Phylum == "Bacteroidota") %>%
+  select(all_of(relevant.covariates)) %>%
+  dplyr::rename(Bacteroidota = Abundance) %>%
+  select(-Phylum)
+
+firmi <- phylum.table %>%
+  filter(Phylum == "Firmicutes") %>%
+  select(all_of(relevant.covariates)) %>%
+  dplyr::rename(Firmicutes = Abundance) %>%
+  select(-Phylum)
+
+# Calculate log2 ratio Firmicutes/Bacteroidota
+ratio.FB <- left_join(x=bacter, y=firmi, by=c('Sample', 'host_disease', 'host_ID', 'host_subtype', 'Collection', 'host_sex')) %>%
+  relocate(Firmicutes, .after=Bacteroidota) %>%
+  # Compute log ratios
+  mutate(logRatioFB = log2(Firmicutes/Bacteroidota))
+
+
+# Plot log2 ratio Firmicutes/Bacteroidota
+ggplot(ratio.FB, aes(x = host_disease, y = logRatioFB))+
+  geom_violin(aes(fill=host_disease))+
+  scale_fill_manual(values=scales::alpha(c("blue", "red"), .3))+
+  geom_jitter(width=0.1)+
+  labs(x = "",  y = 'Log2(Firmicutes/Bacteroidota)')+
+  theme_cowplot()+
+  theme(legend.position="none")
+# Statistical test
+wilcox.test(ratio.FB[ratio.FB$host_disease == "IBS","logRatioFB"],
+            ratio.FB[ratio.FB$host_disease == "Healthy","logRatioFB"]) # p = 0.6
+
+# What about per Collection time point?
+ggplot(ratio.FB, aes(x = host_disease, y = logRatioFB))+
+  geom_violin(aes(fill=host_disease))+
+  scale_fill_manual(values=scales::alpha(c("blue", "red"), .3))+
+  geom_jitter(width=0.1)+
+  facet_wrap(~Collection) +
+  labs(x = "",  y = 'Log2(Firmicutes/Bacteroidota)')+
+  theme_cowplot()+
+  theme(legend.position="none")
+
+# Plot by IBS subtype
+ggplot(ratio.FB, aes(x = host_subtype, y = logRatioFB))+
+  geom_violin(aes(fill=host_subtype))+
+  scale_fill_manual(values=scales::alpha(c("blue", "brown", "red"), .3))+
+  geom_jitter(width=0.1)+
+  labs(x = "",  y = 'Log2(Firmicutes/Bacteroidota)')+
+  theme_cowplot()+
+  theme(legend.position="none")
+
+# Statistical test HC vs IBS-C
+wilcox.test(ratio.FB[ratio.FB$host_subtype == "HC","logRatioFB"],
+            ratio.FB[ratio.FB$host_subtype == "IBS-C","logRatioFB"]) # p = 0.15
+# Statistical test HC vs IBS-D
+wilcox.test(ratio.FB[ratio.FB$host_subtype == "HC","logRatioFB"],
+            ratio.FB[ratio.FB$host_subtype == "IBS-D","logRatioFB"]) # p = 0.5
+# Statistical test IBS-D vs IBS-C
+wilcox.test(ratio.FB[ratio.FB$host_subtype == "IBS-C","logRatioFB"],
+            ratio.FB[ratio.FB$host_subtype == "IBS-D","logRatioFB"]) # p = 0.1
+
+
+# Just for curiosty, look by host_sex
+ggplot(ratio.FB, aes(x = host_disease, y = logRatioFB))+
+  geom_violin(aes(fill=host_disease))+
+  scale_fill_manual(values=scales::alpha(c("blue", "red"), .3))+
+  geom_jitter(width=0.1)+
+  facet_wrap(~host_sex) +
+  labs(x = "",  y = 'Log2(Firmicutes/Bacteroidota)')+
+  theme_cowplot()+
+  theme(legend.position="none")
+```
+
+
+```{r export-plots-1, eval = FALSE, echo = FALSE}
+# Save path to plots
+path.plots <- file.path(path, "data/analysis-individual/PLOTS/plots-Mars-EDA")
+
+# Absolute abundance phylum
+jpeg(file.path(path.plots, "absAbundance_phylum.jpg"), width = 4000, height = 2000)
+plot_bar(physeq.mars, fill = "Phylum") + facet_wrap("host_disease", scales="free_x") +
+  theme(axis.text.x = element_text(size = 30, angle = -90),
+        axis.text.y = element_text(size = 30),
+        legend.text = element_text(size = 50),
+        axis.title = element_text(size = 50),
+        title = element_text(size = 70),
+        strip.text = element_text(size = 50))+
+  labs(x = "Samples", y = "Total read count", title = "Mars dataset (2020)")
+dev.off()
+
+# Relative abundances
+jpeg(file.path(path.plots, "relAbundance_phylum.jpg"), width = 4000, height = 2000)
+ggplot(phylum.table, aes(x = reorder(Sample, Sample, function(x) mean(phylum.table[Sample == x & Phylum == 'Bacteroidota', 'Abundance'])),
+                         y = Abundance, fill = Phylum))+
+  facet_wrap(~ host_disease, scales = "free") + # scales = "free" removes empty lines
+  geom_bar(stat = "identity") +
+  theme(axis.text.x = element_text(size = 30, angle = -90),
+        axis.text.y = element_text(size = 30),
+        legend.text = element_text(size = 50),
+        axis.title = element_text(size = 50),
+        title = element_text(size = 70),
+        strip.text = element_text(size = 50))+
+  labs(x = "Samples", y = "Relative abundance", title = "Mars dataset (2020)")
+dev.off()
+
+jpeg(file.path(path.plots, "relAbundance_class.jpg"), width = 4000, height = 2000)
+ggplot(class.table, aes(x = reorder(Sample, Sample, function(x) mean(phylum.table[Sample == x & Phylum == 'Bacteroidota', 'Abundance'])),
+                        y = Abundance, fill = Class))+
+  facet_wrap(~ host_disease, scales = "free") + # scales = "free" removes empty lines
+  geom_bar(stat = "identity") +
+  theme(axis.text.x = element_text(size = 30, angle = -90),
+        axis.text.y = element_text(size = 30),
+        legend.text = element_text(size = 50),
+        axis.title = element_text(size = 50),
+        title = element_text(size = 70),
+        strip.text = element_text(size = 50))+
+  labs(x = "Samples", y = "Relative abundance", title = "Mars dataset (2020)")
+dev.off()
+
+# Firmicutes:Bacteroidota log ratio
+jpeg(file.path(path.plots, "ratioFB.jpg"), width = 1000, height = 1500)
+ggplot(ratio.FB, aes(x = host_disease, y = logRatioFB))+
+  geom_violin(lwd=3, aes(fill=host_disease))+
+  geom_jitter(size = 10, width=0.1)+
+  scale_fill_manual(values=scales::alpha(c("blue", "red"), .3))+
+  labs(x = "",  y = 'Log2(Firmicutes/Bacteroidota)', title = "Firmicutes:Bacteroidota ratio")+
+  theme_cowplot()+
+  theme(axis.text = element_text(size = 50),
+        strip.text = element_text(size=50),
+        legend.position = "none",
+        axis.title = element_text(size = 50),
+        title = element_text(size = 50))
+dev.off()
+
+# Firmicutes:Bacteroidota log ratio with paired data
+jpeg(file.path(path.plots, "ratioFB_paired-data.jpg"), width = 1000, height = 1500)
+ggplot(ratio.FB, aes(x = Collection, y = logRatioFB))+
+  geom_violin(lwd=3, aes(fill=host_disease))+
+  facet_wrap(~host_disease)+
+  geom_point(size = 10)+
+  geom_line(aes(group=host_ID), lwd=0.5) +
+  scale_fill_manual(values=scales::alpha(c("blue", "red"), .3))+
+  labs(x = "Collection time",  y = 'Log2(Firmicutes/Bacteroidota)')+
+  theme_cowplot()+
+  theme(axis.text = element_text(size = 50),
+        strip.text = element_text(size=50),
+        legend.position = "none",
+        axis.title = element_text(size = 50),
+        title = element_text(size = 50))
+dev.off()
+```
+
+
+
+####################
+## NORMALIZE DATA ##
+####################
+
+```{r normalize-data, eval = FALSE, echo = TRUE}
+# Sanity check no sample with less than 500 total count
+table(sample_sums(physeq.mars)<500) # all FALSE
+
+#____________________________________________________________________
+# PHYLOSEQ OBJECT WITH NON-ZERO COMPOSITIONS
+physeq.NZcomp <- physeq.mars
+otu_table(physeq.NZcomp)[otu_table(physeq.NZcomp) == 0] <- 0.5 # pseudocounts
+
+# Sanity check that 0 values have been replaced
+# otu_table(physeq.mars)[1:5,1:5]
+# otu_table(physeq.NZcomp)[1:5,1:5]
+
+# transform into compositions
+physeq.NZcomp <- transform_sample_counts(physeq.NZcomp, function(x) x / sum(x) )
+table(rowSums(otu_table(physeq.NZcomp))) # check if there is any row not summing to 1
+
+# Save object
+saveRDS(physeq.NZcomp, file.path(path, "data/analysis-individual/Mars-2020/02_EDA-Mars/physeq_NZcomp.rds"))
+
+#____________________________________________________________________
+# PHYLOSEQ OBJECT WITH RELATIVE COUNT (BETWEEN 0 AND 1)
+physeq.rel <- physeq.mars
+physeq.rel <- transform_sample_counts(physeq.rel, function(x) x / sum(x) ) # divide each count by the total number of counts (per sample)
+
+# check the counts are all relative
+# otu_table(physeq.mars)[1:5, 1:5]
+# otu_table(physeq.rel)[1:5, 1:5]
+
+# sanity check
+table(rowSums(otu_table(physeq.rel))) # check if there is any row not summing to 1
+
+# save the physeq.rel object
+saveRDS(physeq.rel, file.path(path, "data/analysis-individual/Mars-2020/02_EDA-Mars/physeq_relative.rds"))
+
+#____________________________________________________________________
+# PHYLOSEQ OBJECT WITH COMMON-SCALE NORMALIZATION
+physeq.CSN <- physeq.mars
+physeq.CSN <- transform_sample_counts(physeq.CSN, function(x) (x*min(sample_sums(physeq.CSN))) / sum(x) )
+
+# sanity check
+table(rowSums(otu_table(physeq.CSN))) # check that all rows are summing to the same total
+
+# save the physeq.CSN object
+saveRDS(physeq.CSN, file.path(path, "data/analysis-individual/Mars-2020/02_EDA-Mars/physeq_CSN.rds"))
+
+
+#____________________________________________________________________
+# PHYLOSEQ OBJECT WITH CENTERED LOG RATIO COUNT
+physeq.clr <- physeq.mars
+physeq.clr <- microbiome::transform(physeq.mars, "clr") # the function adds pseudocounts itself
+
+# Compare the otu tables in the original phyloseq object and the new one after CLR transformation
+# otu_table(physeq.mars)[1:5, 1:5] # should contain absolute counts
+# otu_table(physeq.clr)[1:5, 1:5] # should all be relative
+
+# save the physeq.rel object
+saveRDS(physeq.clr, file.path(path, "data/analysis-individual/Mars-2020/02_EDA-Mars/physeq_clr.rds"))
+```
+
+
+#######################
+## COMPUTE DISTANCES ##
+#######################
+
+### 1. UniFrac, Aitchison, Bray-Curtis and Canberra
+
+First, let's look at these four distances of interest.
+
+```{r dist-functions, fig.width = 15, fig.height = 4}
+#____________________________________________________________________________________
+# Measure distances
+getDistances <- function(relPhyseq=physeq.rel, clrPhyseq=physeq.clr, csnPhyseq=physeq.CSN, nzcompPhyseq=physeq.NZcomp){
+  # sanity check
+  cat("nb samples relPhyseq:", nsamples(relPhyseq), "\n")
+  cat("nb samples clrPhyseq:", nsamples(clrPhyseq), "\n")
+  cat("nb samples csnPhyseq:", nsamples(csnPhyseq), "\n")
+  cat("nb samples nzcompPhyseq:", nsamples(nzcompPhyseq), "\n")
+  
+  # Compute distances
+  print("Unifrac...")
+  set.seed(123) # for unifrac, need to set a seed
+  glom.UniF <- UniFrac(relPhyseq, weighted=TRUE, normalized=TRUE) # weighted unifrac
+  print("Aitchison...")
+  glom.ait <- phyloseq::distance(clrPhyseq, method = 'euclidean') # aitchison
+  print("Bray des bois...")
+  glom.bray <- phyloseq::distance(csnPhyseq, method = "bray") # bray-curtis
+  print("Canberra <3...")
+  glom.can <- phyloseq::distance(nzcompPhyseq, method = "canberra") # canberra
+  
+  dist.list <- list("UniF" = glom.UniF, "Ait" = glom.ait, "Canb" = glom.can, "Bray" = glom.bray)
+  
+  return(dist.list)
+}
+
+
+#____________________________________________________________________________________
+# Plot in 2D the distances
+plotDistances2D <- function(dlist, ordination="MDS", relPhyseq=physeq.rel, clrPhyseq=physeq.clr, csnPhyseq=physeq.CSN, nzcompPhyseq=physeq.NZcomp){
+  plist <- NULL
+  plist <- vector("list", 4)
+  names(plist) <- c("Weighted Unifrac", "Aitchison", "Bray-Curtis", "Canberra")
+  
+  print("Unifrac")
+  # Weighted UniFrac
+  set.seed(123)
+  iMDS.UniF <- ordinate(relPhyseq, ordination, distance=dlist$UniF)
+  plist[[1]] <- plot_ordination(relPhyseq, iMDS.UniF, color="host_disease")
+  
+  print("Aitchison")
+  # Aitchison
+  set.seed(123)
+  iMDS.Ait <- ordinate(clrPhyseq, ordination, distance=dlist$Ait)
+  plist[[2]] <- plot_ordination(clrPhyseq, iMDS.Ait, color="host_disease")
+  
+  print("Bray")
+  # Bray-Curtis
+  set.seed(123)
+  iMDS.Bray <- ordinate(csnPhyseq, ordination, distance=dlist$Bray)
+  plist[[3]] <- plot_ordination(csnPhyseq, iMDS.Bray, color="host_disease")
+  
+  print("Canberra")
+  # Canberra
+  set.seed(123)
+  iMDS.Can <- ordinate(nzcompPhyseq, ordination, distance=dlist$Can)
+  plist[[4]] <- plot_ordination(nzcompPhyseq, iMDS.Can, color="host_disease")
+  
+  # Creating a dataframe to plot everything
+  plot.df = plyr::ldply(plist, function(x) x$data)
+  names(plot.df)[1] <- "distance"
+  
+  return(plot.df)
+}
+```
+
+
+Now let's plot!
+
+#### a) Samples from 1st collection time point (more samples)
+```{r dist-run-collection1}
+#___________________________
+# 1ST COLLECTION TIME POINT
+#___________________________
+
+# Get the distances & the plot data
+dist.mars.1st <- getDistances(relPhyseq = subset_samples(physeq.rel, Collection=="1st"),
+                              clrPhyseq = subset_samples(physeq.clr, Collection=="1st"),
+                              csnPhyseq = subset_samples(physeq.CSN, Collection=="1st"),
+                              nzcompPhyseq = subset_samples(physeq.NZcomp, Collection=="1st"))
+plot.df.1st <- plotDistances2D(dlist=dist.mars.1st,
+                              relPhyseq = subset_samples(physeq.rel, Collection=="1st"),
+                              clrPhyseq = subset_samples(physeq.clr, Collection=="1st"),
+                              csnPhyseq = subset_samples(physeq.CSN, Collection=="1st"),
+                              nzcompPhyseq = subset_samples(physeq.NZcomp, Collection=="1st"))
+
+# Plot
+ggplot(plot.df.1st, aes(Axis.1, Axis.2, color=host_disease))+
+  geom_point(size=4, alpha=0.5)  + scale_color_manual(values = c('blue', 'red'))+
+  facet_wrap(distance~., scales='free', nrow=1)+
+  theme_bw()+
+  theme(strip.text.x = element_text(size=20))+
+  labs(color="Disease", title="1st collection time point")
+# ggsave(file.path(path.plots, "distances4_MDS_1stcollection.jpg"), height = 4, width = 15)
+```
+
+#### b) All samples
+```{r dist-run-all, fig.width = 15, fig.height = 12}
+#________________
+# ALL DATA
+#________________
+
+# Get the distances & the plot data
+dist.mars <- getDistances()
+plot.df <- plotDistances2D(dlist=dist.mars)
+
+# Plot
+p1 <- ggplot(plot.df, aes(Axis.1, Axis.2, color=host_disease))+
+  geom_point(size=4, alpha=0.5)  + scale_color_manual(values = c('blue', 'red'))+
+  facet_wrap(distance~., scales='free', nrow=1)+
+  theme_bw()+
+  theme(strip.text.x = element_text(size=20),
+        axis.title.x = element_blank())+
+  labs(color="Disease")
+p2 <- ggplot(plot.df, aes(Axis.1, Axis.2, color=host_subtype))+
+  geom_point(size=4, alpha=0.5)  + scale_color_manual(values = c('blue', 'brown', 'red'))+
+  facet_wrap(distance~., scales='free', nrow=1)+
+  theme_bw()+
+  theme(strip.text.x = element_text(size=20),
+        axis.title.x = element_blank())+
+  labs(color="Disease")
+p3 <- ggplot(plot.df, aes(Axis.1, Axis.2, color=Collection))+
+  geom_line(aes(group=host_ID), color="black", lwd=0.1)+
+  geom_point(size=4, alpha=0.7)  +
+  scale_color_manual(values = c('#D95F02', '#7570B3'))+
+  facet_wrap(distance~., scales='free', nrow=1)+
+  theme_bw()+
+  theme(strip.text.x = element_blank())+
+  labs(color="Collection ")
+ggpubr::ggarrange(p1,p2,p3, nrow=3)
+# ggsave(file.path(path.plots, "distances4_MDS_all.jpg"), height = 10, width = 15)
+```
+
+
+
+
+### 2. Plot in 3D
+
+For better visualization, we will also take a glance at reduction to 3D.
+
+```{r 3D-function, eval = TRUE, echo = TRUE}
+#____________________________________________________________________________________
+# Plot 3D ordination
+plotDistances3D <- function(d, name_dist){
+  
+  # Reset parameters
+  mds.3D <- NULL
+  xyz <- NULL
+  fig.3D <- NULL
+  
+  # Reduce distance matrix to 3 dimensions
+  set.seed(123)
+  mds.3D <- metaMDS(d, method="MDS", k=3, trace = 0)
+  xyz <- scores(mds.3D, display="sites") # pull out the (x,y,z) coordinates
+  
+  # Plot
+  fig.3D <- plot_ly(x=xyz[,1], y=xyz[,2], z=xyz[,3], type="scatter3d", mode="markers",
+                    color=sample_data(physeq.mars)$host_disease, colors = c("blue", "red"))%>%
+    layout(title = paste('MDS in 3D with', name_dist, 'distance', sep = ' '))
+  
+  return(fig.3D)
+}
+
+```
+
+
+Now let's plot!
+
+```{r 3D-plot, fig.width = 8, fig.height = 5, warning=TRUE, message=TRUE}
+plotDistances3D(dist.mars$UniF, "UniFrac")
+plotDistances3D(dist.mars$Ait, "Aitchison")
+plotDistances3D(dist.mars$Canb, "Canberra")
+plotDistances3D(dist.mars$Bray, "Bray-Curtis")
+```
+
+
+
+
+#############################
+## HIERARCHICAL CLUSTERING ##
+#############################
+
+```{r hierarchical-clust, fig.width = 25, fig.width = 7}
+# For heatmaps: have group color
+matcol <- data.frame(phenotype = sample_data(physeq.mars)[,"host_disease"],
+                     host_subtype = sample_data(physeq.mars)[,"host_subtype"],
+                     collection = sample_data(physeq.mars)[,"Collection"])
+
+
+# Function to get heatmap from the distances computed
+plotHeatmaps <- function(dlist, fontsize){
+  
+  # Initialize variables
+  i=1
+  plist <- vector("list", 4)
+  names(plist) <- names(dlist)
+  
+  # Loop through distances
+  for(d in dlist){
+    plist[[i]] <- pheatmap(as.matrix(d), 
+                          clustering_distance_rows = d,
+                          clustering_distance_cols = d,
+                          fontsize = fontsize,
+                          show_rownames = F,
+                          show_colnames = F,
+                          annotation_col = matcol,
+                          # annotation_row = matcol,
+                          annotation_colors = list(host_disease = c('Healthy' = 'blue', 'IBS' = 'red'),
+                                                   host_subtype = c('HC'='black', 'IBS-M'='orange', 'IBS-C'='brown', 'IBS-D'='red'),
+                                                   Collection = c("1st"='#D95F02', '2nd'='#7570B3')),
+                          cluster_rows = T,
+                          cluster_cols = T,
+                          clustering_method = 'complete', # hc method
+                          main = names(dlist)[i]) # have name of distance as title
+    i <- i+1
+  }
+  
+  return(plist)
+}
+
+
+# Get the heatmaps
+heatmp.mars <- plotHeatmaps(dlist = dist.mars, fontsize = 8)
+```
+
+
+
+
+################################
+## REPRODUCE PLOTS FROM PAPER ##
+################################
+
+Figure 1 - Comparison of the Bray-Curtis beta-diversity dispersion
+
+```{r reproduce-fig1J, eval = TRUE, echo = TRUE, fig.height = 5, fig.width = 3}
+# get useful metadata
+metadata <- sample_data(physeq.mars) %>%
+  as_tibble() %>%
+  select(Run, host_disease, host_subtype, host_ID)
+
+# Build dataframe with Bray-Curtis distance between IBS-HC, IBS-IBS, HC-HC
+bc.comp <- melt(as.matrix(dist.mars$Bray), varnames = c("row", "col")) %>%
+  inner_join(metadata, by=c("row"="Run")) %>%
+  dplyr::rename(row_disease=host_disease, row_subtype=host_subtype, row_hostID=host_ID) %>%
+  inner_join(metadata, by=c("col"="Run")) %>%
+  dplyr::rename(col_disease=host_disease, col_subtype=host_subtype, col_hostID=host_ID) %>%
+  # Keep only comparison within subject (row_hostID == col_hostID), removing comparison with same sample (BC=0)
+  filter(row_hostID == col_hostID) %>%
+  filter(value != 0) %>%
+  # BC(SampleA,SampleB) == BC(SampleB,SampleA), so remove duplicates
+  group_by(row_hostID) %>%
+  summarise_all(first) %>%
+  ungroup() %>%
+  select(-row_hostID, -col_hostID) %>%
+  # Classify comparison as between disease subtypes
+  mutate(compare_subtype=ifelse(row_subtype == "HC" & col_subtype=="HC", "Within healthy",
+                                ifelse(row_subtype == "IBS-C" & col_subtype=="IBS-C", "Within IBS-C",
+                                       ifelse(row_subtype == "IBS-D" & col_subtype=="IBS-D", "Within IBS-D", "Unknown")))) %>%
+  mutate(compare_subtype=factor(compare_subtype, levels=c("Within IBS-C", "Within IBS-D", "Within healthy")))
+
+# Sanity check
+bc.comp %>%
+  dplyr::count(row_subtype, col_subtype, compare_subtype)
+
+# Plot fig1J
+ggplot(bc.comp, aes(x=compare_subtype, y=value))+
+  geom_boxplot(width=0.2, outlier.shape = NA)+
+  geom_jitter(aes(color=compare_subtype), size=3, width=0.01, alpha=0.7)+
+  scale_color_manual(values=c("#ff7f00", "#377eb8", "#999999"))+
+  theme_cowplot()+
+  theme(axis.text.x = element_text(angle=45, hjust=1),
+        legend.position="none")+
+  labs(x='', y='Within subject BC dissimilarity')
+```
+
+![(J) Community variability within each group based on mean Bray Curtis Distance (HC versus IBS-C, p value = 0.02, ANOVA Tukey HSD, n = 10, 11, and 9 mucosal microbiome samples for IBS-C, IBS-D, and HC, respectively).](/Users/scarcy/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Mars-2020/02_EDA-Mars/fig1J.png){width=20%}
+
+
+
+As a proxy of the fig1G, let's compute the between-subject BC distance.
+
+```{r reproduce-fig1G, eval = TRUE, echo = TRUE, fig.height = 5, fig.width = 5}
+#___________________________________________________________________
+
+# Build dataframe with Bray-Curtis distance between IBS-HC, IBS-IBS, HC-HC
+bc.comp <- melt(as.matrix(dist.mars$Bray), varnames = c("row", "col")) %>%
+  inner_join(metadata, by=c("row"="Run")) %>%
+  dplyr::rename(row_disease=host_disease, row_subtype=host_subtype, row_hostID=host_ID) %>%
+  inner_join(metadata, by=c("col"="Run")) %>%
+  dplyr::rename(col_disease=host_disease, col_subtype=host_subtype, col_hostID=host_ID) %>%
+  # Keep only comparison between different subjects (row_hostID != col_hostID)
+  filter(row_hostID != col_hostID) %>%
+  # Remove duplicate values (comparison(A,B) = comparison(B,A), so remove one of them)
+  rowwise() %>%
+  mutate(comp = paste(sort(c(row, col)), collapse="-")) %>%
+  ungroup() %>%
+  group_by(comp) %>%
+  summarise_all(first) %>%
+  ungroup() %>%
+  select(-comp) %>%
+  # Classify comparison as between diseases, between Healthy, or between IBS samples
+  mutate(compare_disease=ifelse(row_disease != col_disease, "Between",
+                        ifelse(row_disease == "Healthy", "Healthy",
+                               ifelse(row_disease == "IBS", "IBS", "Unknown")))) %>%
+  mutate(compare_disease=factor(compare_disease, levels=c("Between", "IBS", "Healthy"))) %>%
+   # Classify comparison as between disease subtypes
+  mutate(compare_subtype=ifelse(row_subtype == "HC" & col_subtype=="IBS-C", "Healthy_IBS-C",
+                         ifelse(row_subtype == "IBS-C" & col_subtype=="HC", "Healthy_IBS-C",
+                                ifelse(row_subtype == "HC" & col_subtype=="IBS-D", "Healthy_IBS-D",
+                                ifelse(row_subtype == "IBS-D" & col_subtype=="HC", "Healthy_IBS-D",
+                                       ifelse(row_subtype == "IBS-D" & col_subtype=="IBS-C", "Between IBS subtypes",
+                                       ifelse(row_subtype == "IBS-C" & col_subtype=="IBS-D", "Between IBS subtypes",
+                                              ifelse(row_subtype == "HC" & col_subtype=="HC", "Within healthy",
+                                                     ifelse(row_subtype == "IBS-C" & col_subtype=="IBS-C", "Within IBS-C",
+                                                            ifelse(row_subtype == "IBS-D" & col_subtype=="IBS-D", "Within IBS-D", "Unknown")))))))))) %>%
+  mutate(compare_subtype=factor(compare_subtype, levels=c("Within IBS-C", "Healthy_IBS-C", "Within healthy", "Healthy_IBS-D", "Within IBS-D", "Between IBS subtypes")))
+
+# Sanity check
+bc.comp %>%
+  dplyr::count(row_disease, col_disease, compare_disease)
+bc.comp %>%
+  dplyr::count(row_subtype, col_subtype, compare_subtype)
+
+
+# Attempt at reproducing fig1G
+ggplot(bc.comp, aes(x=compare_subtype, y=value))+
+  geom_boxplot(width=0.2, outlier.shape = NA)+
+  geom_jitter(aes(color=compare_subtype), size=2, width=0.01, alpha=0.5)+
+  scale_color_manual(values=c("#ff7f00", "#a1d76a", "#999999", "#9ecae1", "#2171b5", "#807dba"))+
+  theme_cowplot()+
+  theme(axis.text.x = element_text(angle=45, hjust=1),
+        legend.position="none")+
+  labs(x='', y='Bray-Curtis dissimilarity')
+```
+
+![(G) Community variability determined by the mean within-subject Bray Curtis distance (within-IBS-D versus within-IBS-C, p = < 0.005, ANOVA Tukey, n = 22, 46, 24, 53, and 29, Bray-Curtis distances between stool samples of the same subject for within-IBS-C, Healthy versus IBS-C, within-Healthy, Healthy versus IBS-D, and within-IBS-D, respectively).](/Users/scarcy/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Mars-2020/02_EDA-Mars/fig1G.png){width=30%}
+
+
+<br/>
+
+Just as personal interest, let's look at the disease level (IBS-HC-IBSvsHC):
+
+```{r, fig.height = 4, fig.width = 4}
+# Plot within IBS, within Healthy, and between IBS-Healthy BC dissimilarity
+ggplot(bc.comp, aes(x=compare_disease, y=value))+
+  geom_violin()+
+  geom_boxplot(width=0.1, outlier.shape = NA)+
+  geom_jitter(size=0.1, width=0.01)+
+  theme_cowplot()+
+  labs(x='', y='Bray-Curtis dissimilarity')
+```
+

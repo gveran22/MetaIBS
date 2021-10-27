@@ -282,9 +282,11 @@ hist(nchar(getSequences(seqtable)), breaks = 100, xlab = "ASV length", ylab = "N
 # Sequences should be between 27F - 338R, so around 311bp (removing the primers lengths).
 
 # Remove any sequence variant below outside 260-360bp
-seqtable <- seqtable[,nchar(colnames(seqtable)) %in% 260:360]
-dim(seqtable)
-hist(nchar(getSequences(seqtable)), breaks = 100, xlab = "ASV length", ylab = "Number of ASVs", main="")
+seqtable.new <- seqtable[,nchar(colnames(seqtable)) %in% 260:360]
+dim(seqtable.new)
+hist(nchar(getSequences(seqtable.new)), breaks = 100, xlab = "ASV length", ylab = "Number of ASVs", main="")
+# check we haven't lost too many counts
+sum(seqtable.new)/sum(seqtable)
 ```
 
 
@@ -293,7 +295,7 @@ hist(nchar(getSequences(seqtable)), breaks = 100, xlab = "ASV length", ylab = "N
 The core dada method corrects substitution and indel errors, but chimeras remain. Fortunately, the accuracy of sequence variants after denoising makes identifying chimeric ASVs simpler than when dealing with fuzzy OTUs. Chimeric sequences are identified if they can be exactly reconstructed by combining a left-segment and a right-segment from two more abundant “parent” sequences.
 
 ```{r remove-chimeras}
-seqtable.nochim <- removeBimeraDenovo(seqtable, method="consensus", multithread=TRUE, verbose=TRUE)
+seqtable.nochim <- removeBimeraDenovo(seqtable.new, method="consensus", multithread=TRUE, verbose=TRUE)
 
 # Check how many sequence variants we have after removing chimeras
 dim(seqtable.nochim)
@@ -384,7 +386,7 @@ We will remove any sample with less than 500 reads from further analysis, and al
 ### 1. Create phyloseq object
 The preprocessing will be easier to do with ASV, taxonomic and metadata tables combined in a phyloseq object.
 
-```{r phyloseq-preprocess, echo=TRUE, eval=FALSE}
+```{r phyloseq-preprocess, echo=TRUE, eval=TRUE}
 #________________________
 # Import metadata
 metadata_table <- read.table("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Fukui-2020/FukuiSraRunTable.txt", header = TRUE, sep = ",")
@@ -439,11 +441,12 @@ saveRDS(dadaFs, file.path(path, "01_Dada2-Fukui/infered_seq_F.rds"))
 saveRDS(dadaRs, file.path(path, "01_Dada2-Fukui/infered_seq_R.rds"))
 saveRDS(mergers, file.path(path, "01_Dada2-Fukui/mergers.rds"))
 
+# Save the ASV, taxa, metadata tables
 saveRDS(otu_table(physeq), file.path(path, "01_Dada2-Fukui/ASVtable_final.rds")) # ASV table
 saveRDS(tax_table(physeq), file.path(path, "01_Dada2-Fukui/taxa_final.rds")) # taxa table
 saveRDS(sample_data(physeq), file.path(path, "01_Dada2-Fukui/metadata_final.rds")) # metadata table
 
-# Taxa & Phyloseq object
+# Taxa & phyloseq object
 saveRDS(taxa, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/CLUSTER/Taxonomy/output/taxa_fukui.rds")
 saveRDS(physeq, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/CLUSTER/PhyloTree/input/physeq_fukui.rds")
 ```

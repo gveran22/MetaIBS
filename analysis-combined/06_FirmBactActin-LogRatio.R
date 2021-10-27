@@ -52,7 +52,7 @@ physeq <- merge_phyloseq(physeq.labus,
                          physeq.zeber)
 
 # Separate fecal & sigmoid samples
-physeq.fecal <- subset_samples(physeq, sample_type == 'stool') # 2,170 samples
+physeq.fecal <- subset_samples(physeq, sample_type == 'stool') # 2,145 samples
 nsamples(physeq.fecal)
 physeq.sigmoid <- subset_samples(physeq, sample_type == 'sigmoid') # 431 samples
 nsamples(physeq.sigmoid)

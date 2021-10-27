@@ -13,6 +13,8 @@
 library(phyloseq)
 library(ggplot2)
 library(tidyverse)
+# library(pals)
+library(RColorBrewer)
 
 # Data
 path.phy <- "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/CLUSTER/PhyloTree/input"
@@ -52,17 +54,10 @@ physeq <- merge_phyloseq(physeq.labus,
                          physeq.zeber)
 
 # Separate fecal & sigmoid samples
-physeq.fecal <- subset_samples(physeq, sample_type == 'stool') # 2,153 samples
-physeq.sigmoid <- subset_samples(physeq, sample_type == 'sigmoid') # 431 samples
-cat("Nb of fecal samples:", nsamples(physeq.fecal))
-cat("\nNb of sigmoid samples:", nsamples(physeq.sigmoid))
-
-
-
-
-##################################
-# PLOT PHYLA RELATIVE ABUNDANCES #
-##################################
+# physeq.fecal <- subset_samples(physeq, sample_type == 'stool') # 2,145 samples
+# physeq.sigmoid <- subset_samples(physeq, sample_type == 'sigmoid') # 431 samples
+# cat("Nb of fecal samples:", nsamples(physeq.fecal))
+# cat("\nNb of sigmoid samples:", nsamples(physeq.sigmoid))
 
 # Obtain relative abundances
 phylum.table <- physeq %>%
@@ -70,43 +65,104 @@ phylum.table <- physeq %>%
   transform_sample_counts(function(x) {x/sum(x)} ) %>%
   psmelt()
 
-# Plot by sample
-ggplot(phylum.table, aes(x = reorder(Sample, Sample, function(x) mean(phylum.table[Sample == x & Phylum == 'Bacteroidota', 'Abundance'])),
-                         y = Abundance, fill = Phylum))+
+# Look at all the phyla & the main ones (ordered by mean abundance per sample)
+table(phylum.table$Phylum)
+phylum.table %>%
+  group_by(Phylum) %>%
+  summarize(Mean=mean(Abundance)) %>%
+  arrange(-Mean)
+
+# Separate the main phyla (top 5) from the rest
+main_phyla <- c("Firmicutes", "Bacteroidota", "Proteobacteria", "Actinobacteriota", "Verrucomicrobiota")
+phylum.table.main <- phylum.table %>%
+  mutate(Phylum=replace(Phylum, !(Phylum %in% main_phyla), "Other")) %>%
+  mutate(Phylum=factor(Phylum, levels=c("Actinobacteriota", "Bacteroidota", "Firmicutes", "Proteobacteria", "Verrucomicrobiota", "Other")))
+table(phylum.table.main$Phylum) # sanity check
+
+# phylum.table.other <- phylum.table %>%
+#   filter(!Phylum %in%  main_phyla)
+
+
+
+#############################################
+# PLOT PHYLA RELATIVE ABUNDANCES PER SAMPLE #
+#############################################
+
+# Plot main phyla by sample (fecal samples)
+ggplot(phylum.table.main %>% filter(sample_type == "stool"),
+       aes(x = reorder(Sample, Sample, function(x) mean(phylum.table.main[Sample == x & Phylum == 'Bacteroidota', 'Abundance'])),
+           y = Abundance, fill = Phylum))+
   facet_wrap(~ host_disease, scales = "free_x") +
   geom_bar(stat = "identity") +
-  scale_fill_manual(#values=c(colorRampPalette(brewer.pal(8, "Set2"))(48)),
-                    values=brewer.paired(n=48),
-                    guide=guide_legend(nrow=24))+
+  scale_fill_manual(# values=stepped(n=length(unique(phylum.table.main$Phylum))),
+                    values=paste0(brewer.pal(6, "Set1"), "CC", sep=""),
+                    # values=qualitative_hcl(n=6, palette = "Cold"),
+                    guide=guide_legend(nrow=6)
+                    )+
   scale_y_continuous(expand = c(0, 0))+ # remove empty space between axis and plot
   theme(axis.text.x = element_blank(),
         axis.ticks.x = element_blank(),
         strip.background = element_rect(fill="white", color="black"),
         strip.text = element_text(size=15),
         #legend.position = "None",
-        legend.text = element_text(size=7),
+        legend.text = element_text(size=12),
+        legend.title = element_text(size=12),
         legend.key.size = unit(0.2, 'cm'))+
-  labs(x = "Samples", y = "Relative abundance")
+  labs(x = "Fecal samples", y = "Relative abundance")
 
 # Save figure
-ggsave("~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/05_Relative-Abund/phyla_relabund.jpg", width=12, height=5)
+ggsave("~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/05_Relative-Abund/phyla_relabund_fecal.jpg", width=8, height=5)
 
 
+# Plot main phyla by sample (sigmoid samples)
+ggplot(phylum.table.main %>% filter(sample_type == "sigmoid"),
+       aes(x = reorder(Sample, Sample, function(x) mean(phylum.table.main[Sample == x & Phylum == 'Bacteroidota', 'Abundance'])),
+           y = Abundance, fill = Phylum))+
+  facet_wrap(~ host_disease, scales = "free_x") +
+  geom_bar(stat = "identity") +
+  scale_fill_manual(# values=stepped(n=length(unique(phylum.table.main$Phylum))),
+    values=paste0(brewer.pal(6, "Set1"), "CC", sep=""),
+    # values=qualitative_hcl(n=6, palette = "Cold"),
+    guide=guide_legend(nrow=6)
+  )+
+  scale_y_continuous(expand = c(0, 0))+ # remove empty space between axis and plot
+  theme(axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(),
+        strip.background = element_rect(fill="white", color="black"),
+        strip.text = element_text(size=15),
+        #legend.position = "None",
+        legend.text = element_text(size=12),
+        legend.title = element_text(size=12),
+        legend.key.size = unit(0.2, 'cm'))+
+  labs(x = "Biopsy samples", y = "Relative abundance")
+
+# Save figure
+ggsave("~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/05_Relative-Abund/phyla_relabund_sigmoid.jpg", width=8, height=5)
+
+
+
+
+##############################################
+# PLOT PHYLA RELATIVE ABUNDANCES PER DISEASE #
+##############################################
 
 # Plot by host_disease
-ggplot(phylum.table %>% filter(sample_type == "stool" & Collection=="1st"),
+phylum.table %>%
+  filter(sample_type == "stool" & Collection=="1st") %>%
+  group_by(host_disease, Phylum) %>%
+  summarize(Mean=mean(Abundance))
+
+ggplot(phylum.table.main %>% filter(sample_type == "stool" & Collection=="1st"),
        aes(x = host_disease, y = Abundance, fill = Phylum))+
-  #facet_wrap(~ host_disease, scales = "free_x") +
   geom_bar(stat = "identity", position = "fill") +
-  scale_fill_manual(#values=c(colorRampPalette(brewer.pal(8, "Set2"))(48)),
-    values=brewer.paired(n=48),
-    guide=guide_legend(nrow=24))+
+  scale_fill_manual(# values=brewer.paired(n=48),
+                    values=paste0(brewer.pal(6, "Set1"), "CC", sep="")
+                    )+
   scale_y_continuous(expand = c(0, 0))+ # remove empty space between axis and plot
-  #theme_bw()+
   theme(axis.text.x = element_text(size=10, color="black"),
-        #axis.ticks.x = element_blank(),
         #legend.position = "None",
-        legend.text = element_text(size=7),
+        legend.text = element_text(size=12),
+        legend.title = element_text(size=12),
         legend.key.size = unit(0.2, 'cm'),
         panel.grid = element_blank(),
         panel.background=element_blank(),
@@ -114,4 +170,4 @@ ggplot(phylum.table %>% filter(sample_type == "stool" & Collection=="1st"),
   labs(x = "", y = "Proportion")
 
 # Save figure
-ggsave("~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/05_Relative-Abund/phyla_relabund_2.jpg", width=6, height=5)
+ggsave("~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/05_Relative-Abund/phyla_relabund_2.jpg", width=5, height=5)

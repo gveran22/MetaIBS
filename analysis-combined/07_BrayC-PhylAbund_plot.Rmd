@@ -1,0 +1,273 @@
+---
+title: "PCoA plot"
+output:
+  html_document:
+    df_print: paged
+    toc: true
+---
+
+# LIBRARIES
+
+```{r library}
+library(phyloseq)
+library(ggplot2)
+library(ggpubr)
+library(plotly)
+library(pals)
+library(RColorBrewer)
+library(umap)
+library(tidyverse)
+library(gtools)
+```
+
+
+
+
+# DATA
+```{r data}
+path.phy <- "~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/07_PCoA/ceiling/data_pcoa"
+physeq.CSN <- readRDS(file.path(path.phy, "physeq_csn.rds"))
+ord <- readRDS(file.path(path.phy, "ord_bray.rds"))
+p <- readRDS(file.path(path.phy, "plotObject.rds"))
+
+# Sanity checks
+# table(rowSums(otu_table(physeq.CSN)))
+# ord$vectors[1:5,1:5]
+# p$data[1:5,1:5]
+```
+
+
+
+
+# PLOT
+
+## Extract PCoA coordinates with covariates
+```{r}
+# Order for the authors
+author.order <- c('Labus', 'LoPresti', 'Ringel', # 454 pyrosequencing
+                  'AGP', 'Liu', 'Pozuelo', # Illumina single end
+                  'Fukui', 'Hugerth', 'Zhu', 'Zhuang', # Illumina paired end
+                  'Nagel', 'Zeber-Lubecka') # Ion Torrent
+
+# Get relevant covariates
+covariates <- as.tibble(sample_data(physeq.CSN)) %>%
+  select(c("Run", "host_disease", "host_subtype", "author", "sequencing_tech", "variable_region",
+           "Collection", "Bacteroidota", "Firmicutes", "Actinobacteriota", "Proteobacteria")) %>%
+  rename(samples=Run)
+
+# Get the first 3 axes
+pcoa <- as.data.frame(ord$vectors[,1:3]) %>%
+  rownames_to_column("samples")
+
+# Merge all in 1 dataframe
+dims.pcoa <- merge(pcoa, covariates, by="samples")
+dims.pcoa$author <- factor(dims.pcoa$author, levels=author.order)
+```
+
+
+## Functions for plotting
+
+```{r plot-functions}
+#______________________
+# PLOT IN 2D
+plot.covariates <- function(plotDF=dims.pcoa){
+  p1 <- ggplot(plotDF, aes(x = Axis.1, y = Axis.2, color = host_disease))+
+    geom_point(size=1, alpha=0.6) +
+    scale_color_manual(values=c("blue", "red", "black"), name="Disease phenotype")+
+    theme(panel.grid = element_blank(),
+          panel.background=element_blank(),
+          legend.key.size = unit(0.25, 'cm'),
+          legend.text = element_text(size=6),
+          legend.title = element_text(size=10),
+          axis.title = element_text(size=5),
+          axis.text = element_text(size=5))
+  
+  p2 <- ggplot(plotDF, aes(x = Axis.1, y = Axis.2, color = host_subtype))+
+    geom_point(size=1, alpha=0.6) +
+    scale_color_manual(values=c("#EFF3FF", "#D95F02", "#7570B3", "#E7298A", "#FEEDDE", "grey"), name="Disease subtype")+
+    theme(panel.grid = element_blank(),
+          panel.background=element_blank(),
+          legend.key.size = unit(0.25, 'cm'),
+          legend.text = element_text(size=6),
+          legend.title = element_text(size=10),
+          axis.title = element_text(size=5),
+          axis.text = element_text(size=5))
+  
+  p3 <- ggplot(plotDF, aes(x = Axis.1, y = Axis.2, color = sequencing_tech))+
+    geom_point(size=1, alpha=0.6) +
+    scale_color_manual(values=c('#6600FF', '#33CC33', '#006600', '#FF6633'), name="Seq technology")+
+    theme(panel.grid = element_blank(),
+          panel.background=element_blank(),
+          legend.key.size = unit(0.25, 'cm'),
+          legend.text = element_text(size=6),
+          legend.title = element_text(size=10),
+          axis.title = element_text(size=5),
+          axis.text = element_text(size=5))
+  
+  p4 <- ggplot(plotDF, aes(x = Axis.1, y = Axis.2, color = author))+
+    geom_point(size=1, alpha=0.6) +
+    scale_color_manual(values=brewer.paired(n=13), name="Dataset")+
+    theme(panel.grid = element_blank(),
+          panel.background=element_blank(),
+          legend.key.size = unit(0.25, 'cm'),
+          legend.text = element_text(size=6),
+          legend.title = element_text(size=10),
+          axis.title = element_text(size=5),
+          axis.text = element_text(size=5))
+  
+  show(ggpubr::ggarrange(p1, p2, p3, p4, nrow=2, ncol=2))
+}
+
+#______________________
+# PLOT IN 3D
+plot3D <- function(plotDF=dims.pcoa, coloring="host_disease", colorPal=c("blue", "red", "black")){
+  # 3D
+  plotly::plot_ly() %>%
+    add_trace(data=plotDF,
+              x=~Axis.1, y=~Axis.2, z=~Axis.3,
+              color=~plotDF[,coloring],
+              colors=colorPal,
+              type="scatter3d",
+              mode="markers",
+              marker=list(size=5)) %>%
+    layout(title=coloring)
+}
+
+
+#______________________
+# PLOT PHYLA REL ABUNDANCE
+plot.relAbundance <- function(plotDF=dims.pcoa){
+  
+  p1 <- ggplot(plotDF, aes(x = Axis.1, y = Axis.2, color = Firmicutes))+
+    geom_point(size=1) +
+    scale_color_gradient2(midpoint=mean(plotDF$Firmicutes), low="blue", mid="white", high="red")+
+    theme(panel.grid = element_blank(),
+          panel.background=element_blank(),
+          legend.key.size = unit(0.25, 'cm'),
+          legend.text = element_text(size=6),
+          legend.title = element_text(size=10),
+          axis.title = element_text(size=5),
+          axis.text = element_text(size=5))
+  
+  p2 <- ggplot(plotDF, aes(x = Axis.1, y = Axis.2, color = Bacteroidota))+
+    geom_point(size=1) +
+    scale_color_gradient2(midpoint=mean(plotDF$Bacteroidota), low="blue", mid="white", high="red")+
+    theme(panel.grid = element_blank(),
+          panel.background=element_blank(),
+          legend.key.size = unit(0.25, 'cm'),
+          legend.text = element_text(size=6),
+          legend.title = element_text(size=10),
+          axis.title = element_text(size=5),
+          axis.text = element_text(size=5))
+  
+  p3 <- ggplot(plotDF, aes(x = Axis.1, y = Axis.2, color = Actinobacteriota))+
+    geom_point(size=0.5) +
+    scale_color_gradient2(midpoint=mean(plotDF$Actinobacteriota), low="blue", mid="white", high="red")+
+    theme(panel.grid = element_blank(),
+          panel.background=element_blank(),
+          legend.key.size = unit(0.25, 'cm'),
+          legend.text = element_text(size=6),
+          legend.title = element_text(size=10),
+          axis.title = element_text(size=5),
+          axis.text = element_text(size=5))
+  
+  p4 <- ggplot(plotDF, aes(x = Axis.1, y = Axis.2, color = Proteobacteria))+
+    geom_point(size=1) +
+    scale_color_gradient2(midpoint=mean(plotDF$Proteobacteria), low="blue", mid="white", high="red")+
+    theme(panel.grid = element_blank(),
+          panel.background=element_blank(),
+          legend.key.size = unit(0.25, 'cm'),
+          legend.text = element_text(size=6),
+          legend.title = element_text(size=10),
+          axis.title = element_text(size=5),
+          axis.text = element_text(size=5))
+  
+  show(ggpubr::ggarrange(p1, p2, p3, p4, nrow=2, ncol=2))
+}
+```
+
+
+## Plot (genus level)
+
+```{r plot-genus, fig.width=9, fig.height=7}
+# Plot by host_disease, host_subtype, sequencing_tech, author/dataset (in 2D)
+plot.covariates()
+
+# Plot3D
+plot3D(coloring="host_disease", colorPal=c("blue", "red", "black"))
+plot3D(coloring="host_subtype", colorPal=c("#EFF3FF", "#D95F02", "#7570B3", "#E7298A", "#FEEDDE", "grey"))
+plot3D(coloring="sequencing_tech", colorPal=c('#6600FF', '#33CC33', '#006600', '#FF6633'))
+plot3D(coloring="author", colorPal=brewer.paired(n=13))
+
+
+# By Phyla relative abundances (in 2D)
+plot.relAbundance()
+# ggsave("~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/07_PCoA/pcoa_bray_phylRelAbundance.jpg", width=10, height=6)
+
+# By Phyla relative abundances (in 3D)
+plot3D(coloring="Firmicutes", colorPal=rev(brewer.rdbu(50)))
+plot3D(coloring="Bacteroidota", colorPal=rev(brewer.rdbu(50)))
+plot3D(coloring="Actinobacteriota", colorPal=rev(brewer.rdbu(50)))
+plot3D(coloring="Proteobacteria", colorPal=rev(brewer.rdbu(50)))
+```
+
+
+## Plot Firmicutes, Bacteroidota, Disease
+
+```{r plot-firm-bact-disease, fig.width=9, fig.height=7}
+p1 <- ggplot(dims.pcoa, aes(x = Axis.1, y = Axis.2, color = Firmicutes))+
+    geom_point(size=1) +
+    scale_color_gradient2(midpoint=mean(dims.pcoa$Firmicutes), low="blue", mid="white", high="red")+
+    theme(panel.grid = element_blank(),
+          panel.background=element_blank(),
+          legend.key.size = unit(0.25, 'cm'),
+          legend.text = element_text(size=6),
+          legend.title = element_text(size=10),
+          axis.title = element_text(size=5),
+          axis.text = element_text(size=5))
+  
+p2 <- ggplot(dims.pcoa, aes(x = Axis.1, y = Axis.2, color = Bacteroidota))+
+    geom_point(size=1) +
+    scale_color_gradient2(midpoint=mean(dims.pcoa$Bacteroidota), low="blue", mid="white", high="red")+
+    theme(panel.grid = element_blank(),
+          panel.background=element_blank(),
+          legend.key.size = unit(0.25, 'cm'),
+          legend.text = element_text(size=6),
+          legend.title = element_text(size=10),
+          axis.title = element_text(size=5),
+          axis.text = element_text(size=5))
+  
+p3 <- ggplot(dims.pcoa, aes(x = Axis.1, y = Axis.2, color = host_disease))+
+    geom_point(size=0.1, alpha=0.5) +
+    geom_density_2d(data=dims.pcoa %>% filter(host_disease=="Healthy"), bins=8)+
+    scale_color_manual(values=c("blue", "#FEEDDE", "white"), name="Disease phenotype")+
+    theme(panel.grid = element_blank(),
+          panel.background=element_blank(),
+          legend.key.size = unit(0.25, 'cm'),
+          legend.text = element_text(size=6),
+          legend.title = element_text(size=10),
+          axis.title = element_text(size=5),
+          axis.text = element_text(size=5))+
+  xlim(c(-0.5, 0.5))+
+  ylim(c(-0.55, 0.4))
+
+p4 <- ggplot(dims.pcoa, aes(x = Axis.1, y = Axis.2, color = host_disease))+
+    geom_point(size=0.1, alpha=0.5) +
+    geom_density_2d(data=dims.pcoa %>% filter(host_disease=="IBS"), bins=8)+
+    scale_color_manual(values=c("#EFF3FF", "red", "white"), name="Disease phenotype")+
+    theme(panel.grid = element_blank(),
+          panel.background=element_blank(),
+          legend.key.size = unit(0.25, 'cm'),
+          legend.text = element_text(size=6),
+          legend.title = element_text(size=10),
+          axis.title = element_text(size=5),
+          axis.text = element_text(size=5))+
+  xlim(c(-0.5, 0.5))+
+  ylim(c(-0.55, 0.4))
+
+  
+show(ggpubr::ggarrange(p1, p2, p3, p4, nrow=2, ncol=2))
+# ggsave("~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/07_PCoA/pcoa_bray_disease.jpg", width=10, height=6)
+```
+
+
