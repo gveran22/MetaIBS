@@ -145,6 +145,21 @@ physeq.common.LopRin <- prune_taxa(taxa_sums(physeq.common.LopRin)>0, physeq.com
 #   summarize(Datasets = list(unique(author))) %>%
 #   filter(length(Datasets)>1) # should give 806 OTUs that are present in both datasets
 
+# See how many counts the common ASVs represent
+# sum(otu_table(physeq.common.NagPoz)) / ( sum(otu_table(physeq.nagel)) + sum(otu_table(physeq.pozuelo)) )
+# sum(otu_table(subset_samples(physeq.common.NagPoz, author == "Nagel"))) / sum(otu_table(physeq.nagel))
+# sum(otu_table(subset_samples(physeq.common.NagPoz, author == "Pozuelo"))) / sum(otu_table(physeq.pozuelo))
+
+# sum(otu_table(physeq.common.LiuZhug)) / ( sum(otu_table(physeq.liu)) + sum(otu_table(physeq.zhuang)) )
+# sum(otu_table(subset_samples(physeq.common.LiuZhug, author == "Liu"))) / sum(otu_table(physeq.liu))
+# sum(otu_table(subset_samples(physeq.common.LiuZhug, author == "Zhuang"))) / sum(otu_table(physeq.zhuang))
+
+# sum(otu_table(physeq.common.HugZhu)) / ( sum(otu_table(physeq.hugerth)) + sum(otu_table(physeq.zhu)) )
+# sum(otu_table(physeq.common.LopRin)) / ( sum(otu_table(physeq.lopresti)) + sum(otu_table(physeq.ringel)) )
+
+
+
+
 
 # Save the phyloseq objects
 path <- "~/Projects/IBS_Meta-analysis_16S/phyloseq-objects/common-ASVs"
