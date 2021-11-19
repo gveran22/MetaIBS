@@ -590,6 +590,9 @@ plot_richness(physeq.liu, x="host_subtype", measures="Simpson", color="host_subt
   theme_bw() +
   labs(x="", y="Simpson")
 ```
+![(A-C) Simpson, Ace and Chao index of IBS-D and HC groups. Welch's test. Means ± SD](/Users/scarcy/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Liu-2020/02_EDA-Liu/fig1A.png){width=30%}
+
+<br/>
 
 
 ### 2. PCoA on Bray-Curtis distance
@@ -612,8 +615,9 @@ plot_ordination(physeq.CSN, pcoa, color="host_subtype")+
   labs(color="Disease")
 
 ```
+![(D) PCoA of fecal microbiota composition in IBS-D and HC groups based on bray-curtis distance.](/Users/scarcy/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Liu-2020/02_EDA-Liu/fig1D.png){width=40%}
 
-
+<br/>
 
 ### 3. Hierarchical clustering
 
@@ -643,7 +647,9 @@ ggplot(segment(dend.average))+
   theme_bw()
 ```
 
+![(E) Hierarchical clustering of fecal microbiota composition in IBS-D and HC groups based on bray-curtis distance.](/Users/scarcy/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Liu-2020/02_EDA-Liu/fig1E.png){width=30%}
 
+<br/>
 
 ### 4. Relative abundance
 
@@ -669,6 +675,7 @@ ggplot(phylum.table.main, aes(x = host_disease, y = Abundance, fill = Phylum))+
 ```
 
 
+![(A) Relative taxonomic abundances at the level of phylum are shown in bar charts.](/Users/scarcy/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Liu-2020/02_EDA-Liu/fig2A.png){width=40%}
 
 
 
