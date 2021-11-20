@@ -53,12 +53,6 @@ physeq <- merge_phyloseq(physeq.labus,
                          physeq.nagel,
                          physeq.zeber)
 
-# Separate fecal & sigmoid samples
-# physeq.fecal <- subset_samples(physeq, sample_type == 'stool') # 2,145 samples
-# physeq.sigmoid <- subset_samples(physeq, sample_type == 'sigmoid') # 431 samples
-# cat("Nb of fecal samples:", nsamples(physeq.fecal))
-# cat("\nNb of sigmoid samples:", nsamples(physeq.sigmoid))
-
 # Obtain relative abundances
 phylum.table <- physeq %>%
   tax_glom(taxrank = "Phylum") %>%
@@ -79,26 +73,23 @@ phylum.table.main <- phylum.table %>%
   mutate(Phylum=factor(Phylum, levels=c("Actinobacteriota", "Bacteroidota", "Firmicutes", "Proteobacteria", "Verrucomicrobiota", "Other")))
 table(phylum.table.main$Phylum) # sanity check
 
-# phylum.table.other <- phylum.table %>%
-#   filter(!Phylum %in%  main_phyla)
-
-
 
 #############################################
 # PLOT PHYLA RELATIVE ABUNDANCES PER SAMPLE #
 #############################################
+
+# Set the color theme
+rgb(0,1,0, alpha=0.55) # find code for alpha
+colors <- paste0(brewer.pal(6, "Dark2"), "80", sep="")
+names(colors) <- c("Actinobacteriota", "Bacteroidota", "Firmicutes", "Proteobacteria", "Verrucomicrobiota", "Other")
 
 # Plot main phyla by sample (fecal samples)
 ggplot(phylum.table.main %>% filter(sample_type == "stool"),
        aes(x = reorder(Sample, Sample, function(x) mean(phylum.table.main[Sample == x & Phylum == 'Bacteroidota', 'Abundance'])),
            y = Abundance, fill = Phylum))+
   facet_wrap(~ host_disease, scales = "free_x") +
-  geom_bar(stat = "identity") +
-  scale_fill_manual(# values=stepped(n=length(unique(phylum.table.main$Phylum))),
-                    values=paste0(brewer.pal(6, "Set1"), "CC", sep=""),
-                    # values=qualitative_hcl(n=6, palette = "Cold"),
-                    guide=guide_legend(nrow=6)
-                    )+
+  geom_bar(stat = "identity", width=1) +
+  scale_fill_manual(values=colors, guide=guide_legend(nrow=6))+
   scale_y_continuous(expand = c(0, 0))+ # remove empty space between axis and plot
   theme(axis.text.x = element_blank(),
         axis.ticks.x = element_blank(),
@@ -107,11 +98,14 @@ ggplot(phylum.table.main %>% filter(sample_type == "stool"),
         #legend.position = "None",
         legend.text = element_text(size=12),
         legend.title = element_text(size=12),
-        legend.key.size = unit(0.2, 'cm'))+
+        legend.key.size = unit(0.2, 'cm'),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank())+
   labs(x = "Fecal samples", y = "Relative abundance")
 
 # Save figure
-ggsave("~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/05_Relative-Abund/phyla_relabund_fecal.jpg", width=8, height=5)
+ggsave("~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/05_Relative-Abund/phyla_relabund_fecal_02.jpg", width=8, height=5) # high
+ggsave("~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/05_Relative-Abund/phyla_relabund_fecal_03.jpg", width=12, height=3) # large
 
 
 # Plot main phyla by sample (sigmoid samples)
@@ -119,12 +113,8 @@ ggplot(phylum.table.main %>% filter(sample_type == "sigmoid"),
        aes(x = reorder(Sample, Sample, function(x) mean(phylum.table.main[Sample == x & Phylum == 'Bacteroidota', 'Abundance'])),
            y = Abundance, fill = Phylum))+
   facet_wrap(~ host_disease, scales = "free_x") +
-  geom_bar(stat = "identity") +
-  scale_fill_manual(# values=stepped(n=length(unique(phylum.table.main$Phylum))),
-    values=paste0(brewer.pal(6, "Set1"), "CC", sep=""),
-    # values=qualitative_hcl(n=6, palette = "Cold"),
-    guide=guide_legend(nrow=6)
-  )+
+  geom_bar(stat = "identity", width=1) +
+  scale_fill_manual(values=colors, guide=guide_legend(nrow=6))+
   scale_y_continuous(expand = c(0, 0))+ # remove empty space between axis and plot
   theme(axis.text.x = element_blank(),
         axis.ticks.x = element_blank(),
@@ -133,11 +123,14 @@ ggplot(phylum.table.main %>% filter(sample_type == "sigmoid"),
         #legend.position = "None",
         legend.text = element_text(size=12),
         legend.title = element_text(size=12),
-        legend.key.size = unit(0.2, 'cm'))+
+        legend.key.size = unit(0.2, 'cm'),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank())+
   labs(x = "Biopsy samples", y = "Relative abundance")
 
 # Save figure
-ggsave("~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/05_Relative-Abund/phyla_relabund_sigmoid.jpg", width=8, height=5)
+ggsave("~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/05_Relative-Abund/phyla_relabund_sigmoid_02.jpg", width=8, height=5) # high
+ggsave("~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/05_Relative-Abund/phyla_relabund_sigmoid_03.jpg", width=12, height=3) # large
 
 
 

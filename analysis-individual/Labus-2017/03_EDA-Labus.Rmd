@@ -104,6 +104,8 @@ wilcox.test(metadata[metadata$host_disease == "IBS",]$host_bmi,
 ```
 
 
+
+
 ################
 ## ABUNDANCES ##
 ################
@@ -194,6 +196,10 @@ ggplot(ratio.FB, aes(x = host_disease, y = logRatioFB))+
   labs(x = "",  y = 'Log2(Firmicutes/Bacteroidota)', title = "Firmicutes:Bacteroidota ratio")+
   theme_cowplot()
 
+# Statistical test
+wilcox.test(ratio.FB[ratio.FB$host_disease == "IBS","logRatioFB"],
+            ratio.FB[ratio.FB$host_disease == "Healthy","logRatioFB"], correct=FALSE) # p = 0.03
+
 # Per IBS subtype
 ggplot(ratio.FB, aes(x = host_subtype, y = logRatioFB))+
   geom_boxplot(outlier.shape = NA)+
@@ -201,6 +207,14 @@ ggplot(ratio.FB, aes(x = host_subtype, y = logRatioFB))+
   labs(x = "",  y = 'Log2(Firmicutes/Bacteroidota)', title = "")+
   theme_cowplot() +
   theme(axis.text.x = element_text(angle=90, vjust=0.5, hjust=1))
+
+# Statistical test
+wilcox.test(ratio.FB[ratio.FB$host_subtype == "HC","logRatioFB"],
+            ratio.FB[ratio.FB$host_subtype == "IBS-C","logRatioFB"], correct=FALSE) # p = 0.15
+wilcox.test(ratio.FB[ratio.FB$host_subtype == "HC","logRatioFB"],
+            ratio.FB[ratio.FB$host_subtype == "IBS-D","logRatioFB"], correct=FALSE) # p = 0.02
+wilcox.test(ratio.FB[ratio.FB$host_subtype == "HC","logRatioFB"],
+            ratio.FB[ratio.FB$host_subtype == "IBS-M","logRatioFB"], correct=FALSE) # p = 0.38
 ```
 
 

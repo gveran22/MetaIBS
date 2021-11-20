@@ -353,9 +353,9 @@ dim(seqtable.nochim)
 sum(seqtable.nochim)/sum(seqtable)
 
 # Same for the table with ASVs where I cut the FWD primer
-seqtable.small.nochim <- removeBimeraDenovo(seqtable.small, method="consensus", multithread=TRUE, verbose=TRUE)
+seqtable.small.nochim <- removeBimeraDenovo(seqtable.small.new, method="consensus", multithread=TRUE, verbose=TRUE)
 dim(seqtable.small.nochim)
-sum(seqtable.small.nochim)/sum(seqtable.small)
+sum(seqtable.small.nochim)/sum(seqtable.small.new)
 ```
 
 
