@@ -4,289 +4,237 @@ output:
   pdf_document: default
   html_document:
     df_print: paged
+    toc: true
 ---
+
 
 ```{r, include=FALSE}
 knitr::opts_chunk$set(fig.width = 15, fig.height = 5, warning=FALSE, message=FALSE,
-                      root.dir = "/Users/scarcy/Desktop/Praktikum/Data/Pozuelo_2015/")
+                      root.dir = "~/Projects/IBS_Meta-analysis_16S/analysis-individual/Pozuelo-2015/")
 ```
 
 
 
-#######################
-## IMPORT LIBRAIRIES ##
-#######################
-```{r library-import, echo=FALSE}
-library(dada2) # manage fastq file
+############
+## IMPORT ##
+############
 
-library(ShortRead) # manage fastq file
+### 1. Librairies
 
-library(Biostrings) # to manage dna sequences as strings
-
-library(seqTools) # analyse read length in fastq file
-
+```{r library-import}
 library(phyloseq) # for phyloseq object
-
-library(ggplot2) # for plots
-library(ggrepel)
-
-library(data.table)
-
+library(ggplot2)
+library(cowplot)
 library(plyr)
 library(dplyr)
-
-library("doParallel")
-
-library("foreach")
-
-library("DECIPHER") # for phylogenetic tree
-
-library("phangorn")
-
 library("plotly") # plot 3D
-
 library("microbiome") # for centered log-ratio
-
 library("coda") # Aitchison distance
-
 library("coda.base") # Aitchison distance
-
 library("vegan") # NMDS
+library(pheatmap) # for heatmap
+```
 
-library(pheatmap) # for heat map
+### 2. Data
+
+```{r import-data}
+# Set path
+path <- "~/Projects/IBS_Meta-analysis_16S"
+
+# Import phyloseq object
+physeq.pozuelo <- readRDS(file.path(path, "phyloseq-objects/physeq_pozuelo.rds"))
+
+# Sanity check
+physeq.pozuelo
 ```
 
 
-#################
-## IMPORT DATA ##
-#################
-
-XXXX
-```{r TO-DELETE, eval = FALSE, echo = TRUE}
-# Import metadata
-metadata_table <- read.table("/Users/scarcy/Desktop/Praktikum/Data/Pozuelo_2015/PozueloSraRunTable.txt", header = TRUE,
-                             sep = ",")
-# Keep only relevant metadata
-metadata_table <- metadata_table[, c("Run", "Sample.Name")]
-rownames(metadata_table) <- metadata_table$Run # assign sample names as row names
-metadata_table$Sample.Name <- as.character(metadata_table$Sample.Name) # Sample.Name is of class "factor", transform it to characters
-metadata_table$Collection <- "1st" # add column to specify if sample is from first or 2nd collection
-metadata_table[gsub('.*(?=.{2}$)', '', metadata_table$Sample.Name, perl=T) == '.2', 'Collection'] <- "2nd"
-metadata_table$host_disease <- "Healthy" # add column for host_disease
-metadata_table[substr(metadata_table$Sample.Name, 1, 2) == "MO", 'host_disease'] <- "IBS"
-metadata_table[, 'Sample.Name'] <- gsub("MO", "IBS", metadata_table[, 'Sample.Name']) # replace 'MO' by 'IBS' in the sample.names
-metadata_table$Sample.Name <- gsub("\\.2$", "", metadata_table[, 'Sample.Name']) # remove the '.2' at the end of some of the sample.names (indicating it is the 2nd collection)
-
-colnames(metadata_table) <- c("Run", "individual", "time_point", "host_disease")
-
-metadata_table$author <- "Pozuelo"
-metadata_table$sequencing_tech <- "Illumina MiSeq"
-metadata_table$variable_region <- "V4"
-
-saveRDS(metadata_table, "/Users/scarcy/Desktop/Praktikum/Data/Pozuelo_2015/metadata_final.rds")
-
-
-#________________________________________________________________________________________________________
-# Import OTU table (rows: sample names // columns: sequence variants)
-seqtable.nochim <- readRDS("/Users/scarcy/Desktop/Praktikum/Data/Pozuelo_2015/ASVtable_final.rds")
-dim(seqtable.nochim) # should have 290 samples and 6222 ASV
-rownames(seqtable.nochim) <- gsub("\\.fastq","", rownames(seqtable.nochim)) # remove the .fastq extension in sample names
-
-# Import Taxonomic table (rows: sequence variants // columns: Kingdom, Phylum, Class, ...)
-taxa <- readRDS("/Users/scarcy/Desktop/Praktikum/Data/Pozuelo_2015/taxa_final.rds")
-dim(taxa)
-```
-XXXXX
-
-
-```{r import-for-pdf, echo = FALSE}
-metadata_table <- readRDS('/Users/scarcy/Desktop/Praktikum/Data/Pozuelo_2015/metadata_final.rds')
-physeq <- readRDS("/Users/scarcy/Desktop/Praktikum/Data/OutputPhangorn/physeq_pozuelo.rds")
-physeq.rel <- readRDS("/Users/scarcy/Desktop/Praktikum/Data/Pozuelo_2015/Rproject_DataAnalysis/physeq_relative.rds")
-physeq.clr <- readRDS("/Users/scarcy/Desktop/Praktikum/Data/Pozuelo_2015/Rproject_DataAnalysis/physeq_clr.rds")
-
-# Distance methods
-dist_methods <- unlist(distanceMethodList)
-dist_methods <- dist_methods[-which(dist_methods=="ANY")] # Remove the user-defined distance
-dist_methods <- dist_methods[-c(1,15,18)] #remove unweighted unifrac, mountford, chao (not gonna work on pseudocounts)
-dist_methods <- dist_methods[1:16] #keep only the 16 first methods (remove the beta diversity distances)
-dist_methods <- dist_methods[-2] #dpcoa takes too much time
-dist_methods
-
-# For heatmaps: have group color
-mat_col <- data.frame(group = metadata_table[,"host_disease"],
-                      collection = metadata_table[,"Collection"])
-rownames(mat_col) <- rownames(metadata_table)
-```
-
-
-
-############################
-## CREATE PHYLOSEQ OBJECT ##
-############################
-
-```{r phyloseq-object, eval = FALSE, echo = TRUE}
-#____________________________________________________________________
-# OTU TABLE, TAXA TABLE AND METADATA
-physeq <- phyloseq(otu_table(seqtable.nochim, taxa_are_rows=FALSE), # by default, in otu_table the sequence variants are in rows
-                  sample_data(metadata_table), 
-                  tax_table(taxa))
-
-#____________________________________________________________________
-# PHYLOGENETIC TREE
-
-# Multiple-sequence alignment (know which regions are conserved/different to be able to do the phylogeny)
-seqs <- getSequences(seqtable.nochim) # get the sequence variants (the ASVs)
-names(seqs) <- seqs # This propagates to the tip labels of the tree
-alignment <- AlignSeqs(DNAStringSet(seqs), anchor=NA) # by default, anchor = 0.7 which means that 70% of sequences must share a common region to anchor the alignment space.
-
-# Construct a neighbor-joining tree
-phang.align <- phyDat(as(alignment, "matrix"), type="DNA") # transform the aligned DNA sequences into a phyDat (phangorn) object
-dm <- dist.ml(phang.align) # compute pairwise distance between DNA sequences (with the Jukes-Cantor estimate of the evolutionary distance)
-treeNJ <- NJ(dm) # create a neighbor-joining tree estimation based on the distance matrix
-fit <- pml(treeNJ, data=phang.align) # get the likelihood of the phylogenetic tree given the sequence alignment (then we'll optimize it)
-
-## negative edges length changed to 0!
-
-# Fit a generalized time-reversible with gamma rate variation (GTR+G+I)
-fitGTR <- update(fit, k=4, inv=0.2)
-fitGTR <- optim.pml(fitGTR, model="GTR", optInv=TRUE, optGamma=TRUE, # gamma rate and proportion of variable size get optimized
-                      rearrangement = "stochastic", control = pml.control(trace = 0)) # (trace = 0) don't show output during optimization
-# stochastic tree rearrangement
-
-# Add tree to physeq
-physeq <- merge_phyloseq(physeq, phy_tree(fitGTR$tree))
-```
+Phylogenetic tree was computed with the package `phangorn`, and the script was run on a cluster. Let's check we have correctly generated a phylogenetic tree.
 
 ```{r plot-tree, fig.height = 6, fig.width = 10}
 # Look at the tree
-plot_tree(physeq, color = "host_disease", ladderize="left", sizebase = 2)
+plot_tree(physeq.pozuelo, color = "host_disease", ladderize="left")
 ```
 
 
-```{r phyloseq-object-2, eval = FALSE, echo = TRUE}
-#____________________________________________________________________
-# GIVE SURNAMES TO ASVs
+```{r import-for-html, echo = FALSE}
+#__________________________________________________________________________
+#____________ THIS IS ONLY FOR (quicker) PDF/HTML OUTPUT __________________
+#__________________________________________________________________________
 
-# Give surnames to sequence variants & store the sequence variants in "refseq" in the phyloseq object
-dna <- DNAStringSet(taxa_names(physeq)) # get the sequence variants (ASVs)
-names(dna) <- taxa_names(physeq) # no idea what this does
-physeq <- merge_phyloseq(physeq, dna) # store the dna sequences in the refseq of the phyloseq object
-taxa_names(physeq) <- paste0("OTU", seq(ntaxa(physeq))) # replace the whole dna sequences in the taxa_names by a surname OTU1, OTU2, etc.
-
-# Save physeq object
-saveRDS(physeq, "/Users/scarcy/Desktop/Praktikum/Data/Pozuelo_2015/Rproject_DataAnalysis/physeq.rds")
-saveRDS(physeq, "/Users/scarcy/Desktop/Praktikum/Data/Rproject_COMBINE/physeq_pozuelo.rds")
+# Import phyloseq objects for computing distances
+physeq.rel <- readRDS(file.path(path, "data/analysis-individual/Pozuelo-2015/02_EDA-Pozuelo/physeq_relative.rds"))
+physeq.clr <- readRDS(file.path(path, "data/analysis-individual/Pozuelo-2015/02_EDA-Pozuelo/physeq_clr.rds"))
+physeq.CSN <- readRDS(file.path(path, "data/analysis-individual/Pozuelo-2015/02_EDA-Pozuelo/physeq_CSN.rds"))
+physeq.NZcomp <- readRDS(file.path(path, "data/analysis-individual/Pozuelo-2015/02_EDA-Pozuelo/physeq_NZcomp.rds"))
 ```
 
 
 
-######################################
-## ABSOLUTE AND RELATIVE ABUNDANCES ##
-######################################
-```{r plot-abundances, echo = TRUE, fig.height = 6}
-# Relative abundance for Phylum
-phylum.table <- physeq %>%
+
+################
+## ABUNDANCES ##
+################
+
+### 1. Absolute abundances
+
+```{r plot-absolute-abundance, fig.width=10, fig.height = 5}
+# Plot Phylum
+plot_bar(physeq.pozuelo, fill = "Phylum") + facet_wrap("host_disease", scales="free") +
+  theme(axis.text.x = element_text(size = 8))+
+  labs(x = "Samples", y = "Absolute abundance", title = "Pozuelo dataset (2015)") +
+  ylim(0,80000)
+
+# Plot Class
+plot_bar(physeq.pozuelo, fill = "Class")+ facet_wrap("host_disease", scales="free") +
+  theme(axis.text.x = element_text(size = 8))+
+  labs(x = "Samples", y = "Absolute abundance", title = "Pozuelo dataset (2015)")+
+  ylim(0,80000)
+```
+
+**Sequencing depth** characteristics of the Pozuelo dataset:  
+- minimum of `r min(sample_sums(physeq.pozuelo))` total count per sample  
+- median: `r median(sample_sums(physeq.pozuelo))` total count per sample  
+- maximum of `r max(sample_sums(physeq.pozuelo))` total count per sample  
+
+### 2. Relative abundances
+
+```{r plot-relative-abundances, fig.width=10, fig.height = 5, message=FALSE}
+# Agglomerate to phylum & class levels
+phylum.table <- physeq.pozuelo %>%
   tax_glom(taxrank = "Phylum") %>%                     # agglomerate at phylum level
   transform_sample_counts(function(x) {x/sum(x)} ) %>% # Transform to rel. abundance
   psmelt()                                             # Melt to long format
 
-# Relative abundance for Class
-class.table <- physeq %>%
-  tax_glom(taxrank = "Class") %>%                     # agglomerate at class level
-  transform_sample_counts(function(x) {x/sum(x)} ) %>% # Transform to rel. abundance
-  psmelt()                                             # Melt to long format
+class.table <- physeq.pozuelo %>%
+  tax_glom(taxrank = "Class") %>%
+  transform_sample_counts(function(x) {x/sum(x)} ) %>%
+  psmelt()
 
 
-# Plot Phylum
-plot_bar(physeq, fill = "Phylum") + facet_wrap("host_disease", scales="free") +
-  theme(axis.text.x = element_text(size = 8))+
-  labs(x = "Samples", y = "Total read count", title = "Pozuelo dataset (2015)")+
-  ylim(0, 45000)
-
-ggplot(phylum.table[phylum.table[,'Kingdom'] == 'Bacteria',], aes(x = Sample.Name, y = Abundance, fill = Phylum))+
-  facet_wrap(~ host_disease + Collection, scales = "free") + # scales = "free" removes empty lines
-  geom_bar(stat = "identity") +
-  theme(axis.text.x = element_text(size = 6, angle = -90))+
-  labs(x = "Samples", y = "Relative abundance", title = "1st and 2nd time points")
-
-# Plot Class
-plot_bar(physeq, fill = "Class")+ facet_wrap("host_disease", scales="free") +
-  theme(axis.text.x = element_text(size = 8))+
-  labs(x = "Samples", y = "Total read count", title = "Pozuelo dataset (2015)")+
-  ylim(0, 45000)
-
-ggplot(class.table[class.table[,'Kingdom'] == 'Bacteria',], aes(x = Sample, y = Abundance, fill = Class))+
+# Plot relative abundances
+ggplot(phylum.table, aes(x = reorder(Sample, Sample, function(x) mean(phylum.table[Sample == x & Phylum == 'Firmicutes', 'Abundance'])),
+                         y = Abundance, fill = Phylum))+
   facet_wrap(~ host_disease, scales = "free") + # scales = "free" removes empty lines
   geom_bar(stat = "identity") +
   theme(axis.text.x = element_text(size = 8, angle = -90))+
   labs(x = "Samples", y = "Relative abundance", title = "Pozuelo dataset (2015)")
 
+ggplot(class.table, aes(x = reorder(Sample, Sample, function(x) mean(class.table[Sample == x & Phylum == 'Firmicutes', 'Abundance'])),
+                        y = Abundance, fill = Class))+
+  facet_wrap(~ host_disease, scales = "free") + # scales = "free" removes empty lines
+  geom_bar(stat = "identity") +
+  theme(axis.text.x = element_text(size = 8, angle = -90))+
+  labs(x = "Samples", y = "Relative abundance", title = "Pozuelo dataset (2015)")
+
+
+# Plot relative abundance of paired samples (plot both collection times side-by-side)
+ggplot(phylum.table %>% group_by(host_ID) %>% filter(n_distinct(Run)>1),
+       aes(x=Collection, y=Abundance, fill=Phylum))+
+  facet_wrap(~host_ID, scales="free_x", nrow=1, strip.position="bottom")+
+  geom_bar(stat="identity", width=1)+
+  scale_y_continuous(expand = c(0, 0))+
+  theme(axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(),
+        strip.text = element_text(angle=90),
+        strip.background = element_rect(fill="white"))+
+  labs(x = "Individual", y = "Relative abundance", title = "Relative abundance of phyla at both collection time points (left t0, right t0+1month)")
 ```
 
 
-```{r plot-log-ratio, fig.height = 4, fig.width=7}
-# Extract abundance only Bacteroidota and Firmicutes
-bacter <- phylum.table[phylum.table[,'Phylum'] == 'Bacteroidota', c('Sample', 'Abundance', 'host_disease',
-                                                                    'Collection', 'Phylum')]
-bacter <- bacter[order(bacter$Sample),] # order by sample name
-firmi <- phylum.table[phylum.table[,'Phylum'] == 'Firmicutes', c('Sample', 'Abundance', 'host_disease',
-                                                                 'Collection','Phylum')]
-firmi <- firmi[order(firmi$Sample),] # order by sample name
+
+### 3. Firmicutes/Bacteroidota ratio
+
+```{r plot-log-ratio, fig.height = 5, fig.width=3}
+# Extract abundance of only Bacteroidota and Firmicutes
+bacter <- phylum.table %>%
+  filter(Phylum == "Bacteroidota") %>%
+  select(c('Sample', 'Abundance', 'host_disease', 'host_subtype', 'Phylum', 'Collection', 'host_ID')) %>%
+  arrange(Sample)
+
+firmi <- phylum.table %>%
+  filter(Phylum == "Firmicutes") %>%
+  select(c('Sample', 'Abundance', 'host_disease', 'host_subtype', 'Phylum', 'Collection', 'host_ID')) %>%
+  arrange(Sample)
 
 # Calculate log2 ratio Firmicutes/Bacteroidota
-ratio_FB <- data.table('Sample' = bacter$Sample,
+ratio.FB <- data.frame('Sample' = bacter$Sample,
+                       'host_ID' = bacter$host_ID,
                        'host_disease' = bacter$host_disease,
-                       'Collection' = bacter$Collection,
+                       'host_subtype' = bacter$host_subtype,
                        'Bacteroidota' = bacter$Abundance,
-                       'Firmicutes' = firmi$Abundance)
-ratio_FB[,"Log_ratio_FB"] <- log2(ratio_FB[,"Firmicutes"] / ratio_FB[,"Bacteroidota"])
+                       'Firmicutes' = firmi$Abundance,
+                       'Collection' = bacter$Collection)
+ratio.FB$logRatioFB <- log2(ratio.FB$Firmicutes / ratio.FB$Bacteroidota)
 
 # Plot log2 ratio Firmicutes/Bacteroidota
-par(mar = c(3, 10, 3, 10))
-boxplot(data = ratio_FB, Log_ratio_FB ~ host_disease, ylab = "Log2 Ratio Abundance", xlab = "", main = "Firmicutes to Bacteroidota ratio")
+ggplot(ratio.FB, aes(x = host_disease, y = logRatioFB))+
+  geom_violin(aes(fill=host_disease))+
+  scale_fill_manual(values=scales::alpha(c("blue", "red"), .3))+
+  geom_jitter(width=0.1)+
+  labs(x = "",  y = 'Log2(Firmicutes/Bacteroidota)', title = "Firmicutes:Bacteroidota ratio")+
+  theme_cowplot()+
+  theme(legend.position="none")
 
-boxplot(data = ratio_FB, Log_ratio_FB ~ Collection, ylab = "Log2 Ratio Abundance", xlab = "", main = "Firmicutes to Bacteroidota ratio")
+# Statistical test
+wilcox.test(ratio.FB[ratio.FB$host_disease == "IBS","logRatioFB"],
+            ratio.FB[ratio.FB$host_disease == "Healthy","logRatioFB"]) # p = 0.0001
 
+
+# Plot log2 ratio Firmicutes/Bacteroidota per IBS subtype
+ggplot(ratio.FB, aes(x = host_subtype, y = logRatioFB))+
+  geom_violin(aes(fill=host_disease))+
+  scale_fill_manual(values=scales::alpha(c("blue", "red"), .3))+
+  geom_jitter(width=0.1)+
+  labs(x = "",  y = 'Log2(Firmicutes/Bacteroidota)', title = "")+
+  theme_cowplot() +
+  theme(axis.text.x = element_text(angle=90, vjust=0.5, hjust=1),
+        legend.position="none")
+
+# Statistical test
+wilcox.test(ratio.FB[ratio.FB$host_subtype == "HC","logRatioFB"],
+            ratio.FB[ratio.FB$host_subtype == "IBS-C","logRatioFB"]) # p = 0.01
+wilcox.test(ratio.FB[ratio.FB$host_subtype == "HC","logRatioFB"],
+            ratio.FB[ratio.FB$host_subtype == "IBS-D","logRatioFB"]) # p = 0.0002
+wilcox.test(ratio.FB[ratio.FB$host_subtype == "HC","logRatioFB"],
+            ratio.FB[ratio.FB$host_subtype == "IBS-M","logRatioFB"]) # p = 0.01
+
+
+# Plot paired data
+ggplot(ratio.FB, aes(x = Collection, y = logRatioFB))+
+  geom_violin(aes(fill=host_disease))+
+  scale_fill_manual(values=scales::alpha(c("blue", "red"), .3))+
+  geom_point()+
+  geom_line(aes(group=host_ID), lwd=0.1) +
+  facet_wrap(~host_disease) +
+  labs(x = "Collection time point",  y = 'Log2(Firmicutes/Bacteroidota)', title = "Paired data") +
+  theme_cowplot()+
+  theme(legend.position="none")
 ```
 
-
-```{r statistics, eval = FALSE, echo = FALSE}
-# Total count per sample (mean, min, max)
-min(sample_sums(physeq))
-max(sample_sums(physeq))
-median(sample_sums(physeq))
-
-# Nb of individuals
-table(metadata_table$Sample.Name)
-
-# Look at the nb of Phyla, Classes, etc.
-table(taxa[taxa[,1] == 'Eukaryota',2])
-table(taxa[taxa[,1] == 'Bacteria',5])
-colnames(taxa)
-
-mean(phylum.table[phylum.table[,'Phylum'] == 'Verrucomicrobiota', 'Abundance'])
-mean(phylum.table[phylum.table[,'Phylum'] == 'Firmicutes' & phylum.table[,'host_disease'] == 'Healthy', 'Abundance'])
-
-mean(class.table[class.table[,'Class'] == 'Vampirivibrionia', 'Abundance'])
-```
 
 
 ```{r export-plots-1, eval = FALSE, echo = FALSE}
-jpeg("./Plots/plot_phylum_absAbundance.jpg", width = 4000, height = 2000)
-plot_bar(physeq, fill = "Phylum") + facet_wrap("host_disease", scales="free") +
-  theme(axis.text.x = element_text(size = 30, angle = -90),
+# Save path to plots
+path.plots <- file.path(path, "data/analysis-individual/PLOTS/plots-Pozuelo-EDA")
+
+# Absolute abundance phylum
+jpeg(file.path(path.plots, "absAbundance_phylum.jpg"), width = 4000, height = 2000)
+plot_bar(physeq.pozuelo, fill = "Phylum") + facet_wrap("host_disease", scales="free") +
+  theme(axis.text.x = element_text(size = 10, angle = -90),
         axis.text.y = element_text(size = 30),
         legend.text = element_text(size = 50),
         axis.title = element_text(size = 50),
         title = element_text(size = 70),
         strip.text = element_text(size = 50))+
   labs(x = "Samples", y = "Total read count", title = "Pozuelo dataset (2015)")+
-  ylim(0, 45000)
+  ylim(0, 80000)
 dev.off()
 
-jpeg("./Plots/plot_phylum_relAbundance.jpg", width = 4000, height = 2000)
-ggplot(phylum.table[phylum.table[,'Kingdom'] == 'Bacteria',], aes(x = Sample, y = Abundance, fill = Phylum))+
+# Relative abundances
+jpeg(file.path(path.plots, "relAbundance_phylum.jpg"), width = 4000, height = 2000)
+ggplot(phylum.table, aes(x = reorder(Sample, Sample, function(x) mean(phylum.table[Sample == x & Phylum == 'Firmicutes', 'Abundance'])),
+                         y = Abundance, fill = Phylum))+
   facet_wrap(~ host_disease, scales = "free") + # scales = "free" removes empty lines
   geom_bar(stat = "identity") +
   theme(axis.text.x = element_text(size = 10, angle = -90),
@@ -298,21 +246,25 @@ ggplot(phylum.table[phylum.table[,'Kingdom'] == 'Bacteria',], aes(x = Sample, y 
   labs(x = "Samples", y = "Relative abundance", title = "Pozuelo dataset (2015)")
 dev.off()
 
-jpeg("./Plots/plot_timePoints_relAbundance.jpg", width = 4000, height = 2000)
-ggplot(phylum.table[phylum.table[,'Kingdom'] == 'Bacteria',], aes(x = Sample.Name, y = Abundance, fill = Phylum))+
-  facet_wrap(~ host_disease + Collection, scales = "free") + # scales = "free" removes empty lines
-  geom_bar(stat = "identity") +
-  theme(axis.text.x = element_text(size = 15, angle = -90),
+jpeg(file.path(path.plots, "relAbundance_phylum_collection-times.jpg"), width = 5000, height = 2000)
+ggplot(phylum.table %>% group_by(host_ID) %>% filter(n_distinct(Run)>1),
+       aes(x=Collection, y=Abundance, fill=Phylum))+
+  facet_wrap(~host_ID, scales="free_x", nrow=1, strip.position="bottom")+
+  geom_bar(stat="identity", width=1)+
+  scale_y_continuous(expand = c(0, 0))+
+  theme(axis.text.x = element_blank(),
         axis.text.y = element_text(size = 30),
+        axis.ticks.x = element_blank(),
+        strip.text = element_text(angle=90, size=30),
+        strip.background = element_rect(fill="white"),
         legend.text = element_text(size = 50),
-        axis.title = element_text(size = 50),
-        title = element_text(size = 70),
-        strip.text = element_text(size = 50))+
-  labs(x = "Samples", y = "Relative abundance", title = "Pozuelo dataset (2015): 1st and 2nd time points")
+        title = element_text(size = 70))+
+  labs(x = "Individual", y = "Relative abundance", title = "Both collection time points (left t0, right t0+1month)")
 dev.off()
 
-jpeg("./Plots/plot_class_relAbundance.jpg", width = 4000, height = 2000)
-ggplot(class.table[class.table[,'Kingdom'] == 'Bacteria',], aes(x = Sample, y = Abundance, fill = Class))+
+jpeg(file.path(path.plots, "relAbundance_class.jpg"), width = 5000, height = 2000)
+ggplot(class.table, aes(x = reorder(Sample, Sample, function(x) mean(phylum.table[Sample == x & Phylum == 'Firmicutes', 'Abundance'])),
+                        y = Abundance, fill = Class))+
   facet_wrap(~ host_disease, scales = "free") + # scales = "free" removes empty lines
   geom_bar(stat = "identity") +
   theme(axis.text.x = element_text(size = 10, angle = -90),
@@ -324,18 +276,63 @@ ggplot(class.table[class.table[,'Kingdom'] == 'Bacteria',], aes(x = Sample, y = 
   labs(x = "Samples", y = "Relative abundance", title = "Pozuelo dataset (2015)")
 dev.off()
 
-jpeg("./Plots/Log2Ratio_FirmBact.jpg", width = 1500, height = 2000)
-ggplot(ratio_FB, aes(x = host_disease, y = Log_ratio_FB))+
-  geom_boxplot(outlier.size = 4, lwd = 3)+
-  labs(x = "",  y = 'Log2 Firmicutes/Bacteroidota Abundance Ratio', title = "Pozuelo dataset (2015)")+
-  theme_classic()+
+# Firmicutes:Bacteroidota log ratio
+jpeg(file.path(path.plots, "ratioFB.jpg"), width = 1500, height = 2000)
+ggplot(ratio.FB, aes(x = host_disease, y = logRatioFB))+
+  geom_violin(aes(fill=host_disease))+
+  scale_fill_manual(values=scales::alpha(c("blue", "red"), .3))+
+  geom_jitter(size = 8, width=0.1)+
+  labs(x = "",  y = 'Log2(Firmicutes/Bacteroidota)', title = "Pozuelo dataset (2015)")+
+  theme_cowplot()+
   theme(axis.text = element_text(size = 50),
         legend.text = element_text(size = 50),
         axis.title = element_text(size = 50),
-        title = element_text(size = 70))
+        title = element_text(size = 50),
+        legend.position="none")
+dev.off()
+
+jpeg(file.path(path.plots, "ratioFB_subtype.jpg"), width = 1500, height = 2000)
+ggplot(ratio.FB, aes(x = host_subtype, y = logRatioFB))+
+  geom_violin(aes(fill=host_disease))+
+  scale_fill_manual(values=scales::alpha(c("blue", "red"), .3))+
+  geom_jitter(size=6, width=0.1)+
+  labs(x = "",  y = 'Log2(Firmicutes/Bacteroidota)', title = "")+
+  theme_cowplot() +
+  theme(axis.text = element_text(size = 50),
+        legend.text = element_text(size = 50),
+        axis.title = element_text(size = 50),
+        title = element_text(size = 50),
+        legend.position="none")
+dev.off()
+
+jpeg(file.path(path.plots, "ratioFB_collection-time.jpg"), width = 1500, height = 2000)
+ggplot(ratio.FB, aes(x = Collection, y = logRatioFB))+
+  geom_violin(aes(fill=host_disease))+
+  scale_fill_manual(values=scales::alpha(c("blue", "red"), .3))+
+  geom_point(size=6)+
+  geom_line(aes(group=host_ID), lwd=0.5) +
+  facet_wrap(~host_disease) +
+  labs(x = "Collection time point",  y = 'Log2(Firmicutes/Bacteroidota)', title = "Paired data") +
+  theme_cowplot()+
+  theme(axis.text = element_text(size = 50),
+        legend.text = element_text(size = 50),
+        axis.title = element_text(size = 50),
+        title = element_text(size = 50),
+        legend.position="none")
 dev.off()
 
 ```
+
+
+
+
+
+
+
+XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+
+
+
 
 
 
