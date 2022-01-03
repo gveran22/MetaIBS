@@ -71,47 +71,56 @@ phylumTable <- physeq %>%
 
 # Extract abundance of Bacteroidota, Firmicutes and Actinobacteriota
 relevant.covariates <- c('Sample', 'Abundance', 'Phylum', 'host_disease', 'host_subtype', 'sample_type', 'Collection',
-                         'author', 'sequencing_tech', 'bowel_movement_quality','bowel_movement_frequency', 'Bristol')
+                         'author', 'sequencing_tech', 'bowel_movement_quality','bowel_movement_frequency', 'Bristol',
+                         'host_age', 'host_bmi')
 
 bacter <- phylumTable %>%
   filter(Phylum == "Bacteroidota") %>%
-  select(relevant.covariates) %>%
+  select(all_of(relevant.covariates)) %>%
   rename(Bacteroidota = Abundance) %>%
   select(-Phylum)
 
 firmi <- phylumTable %>%
   filter(Phylum == "Firmicutes") %>%
-  select(relevant.covariates) %>%
+  select(all_of(relevant.covariates)) %>%
   rename(Firmicutes = Abundance) %>%
   select(-Phylum)
 
 actino <- phylumTable %>%
   filter(Phylum == "Actinobacteriota") %>%
-  select(relevant.covariates) %>%
+  select(all_of(relevant.covariates)) %>%
   rename(Actinobacteriota = Abundance) %>%
   select(-Phylum)
 
 proteo <- phylumTable %>%
   filter(Phylum == "Proteobacteria") %>%
-  select(relevant.covariates) %>%
+  select(all_of(relevant.covariates)) %>%
   rename(Proteobacteria = Abundance) %>%
   select(-Phylum)
 
 
 # Check if there are any count 0 (would prevent from calculating ratio)
-table(bacter$Bacteroidota == 0) # 18
+table(bacter$Bacteroidota == 0) # 17
 table(firmi$Firmicutes == 0) # 3
-table(actino$Actinobacteriota == 0) # 150
-table(proteo$Proteobacteria == 0) # 116
-min(bacter[bacter$Bacteroidota > 0, "Bacteroidota"]) # 3
-min(firmi[firmi$Firmicutes > 0, "Firmicutes"]) # 40
+table(actino$Actinobacteriota == 0) # 148
+table(proteo$Proteobacteria == 0) # 148
+min(bacter[bacter$Bacteroidota > 0, "Bacteroidota"]) # 4
+min(firmi[firmi$Firmicutes > 0, "Firmicutes"]) # 105
 min(actino[actino$Actinobacteriota > 0, "Actinobacteriota"]) # 2
 min(proteo[proteo$Proteobacteria > 0, "Proteobacteria"]) # 2
 
 
+# Sanity check (should all have 2,576 samples)
+# nrow(bacter)
+# nrow(firmi)
+# nrow(actino)
+# nrow(proteo)
+
+
 # COMPUTE LOG RATIOS
 common.columns <- c("Sample", "host_disease", "host_subtype", "sample_type", "Collection",
-                    "author", "sequencing_tech", "bowel_movement_quality", "bowel_movement_frequency", "Bristol")
+                    "author", "sequencing_tech", "bowel_movement_quality", "bowel_movement_frequency", "Bristol",
+                    "host_age", "host_bmi")
 
 ratio.df <- left_join(x=bacter, y=firmi, by=common.columns) %>%
   left_join(actino, by=common.columns) %>%
@@ -177,6 +186,8 @@ seqtech.order <- c("454 pyrosequencing", "Illumina single-end", "Illumina paired
 ratio.df$sequencing_tech <- factor(ratio.df$sequencing_tech, levels=seqtech.order)
 
 
+
+
 ##########################################
 # PLOT FIRMICUTES/BACTEROIDOTA LOG RATIO #
 ##########################################
@@ -200,7 +211,7 @@ ggsave("~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/06_FirmBactActin
 # Plot Firm/Bact ratio PER DATASET, HEALTHY/IBS, with BOXPLOTS
 ggplot(ratio.df %>% filter(Collection=="1st"),
        aes(x = author_disease, y = LogRatio_FirmBact,
-       color=factor(author, levels = author.order)))+
+           color=factor(author, levels = author.order)))+
   geom_boxplot(outlier.shape = NA, width = 0.4, lwd=1)+
   geom_jitter(width = 0.1, size = 0.3)+
   theme_classic()+
@@ -296,7 +307,7 @@ ggsave("~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/06_FirmBactActin
 
 # AGP bowel_movement_quality
 ggplot(ratio.df %>% filter(author == "AGP" & host_subtype!="HC-unknown" & host_subtype!="IBS-unspecified") %>%
-                    mutate(bowel_movement_quality=factor(bowel_movement_quality, levels=c("Normal", "Constipated", "Diarrhea"))),
+         mutate(bowel_movement_quality=factor(bowel_movement_quality, levels=c("Normal", "Constipated", "Diarrhea"))),
        aes(x = bowel_movement_quality, y = LogRatio_FirmBact))+
   #geom_violin(alpha = 0.5)+
   geom_boxplot(aes(group=bowel_movement_quality), lwd = 1, width=0.3, outlier.shape=NA, fill = "white")+
@@ -313,7 +324,7 @@ ggsave("~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/06_FirmBactActin
 # AGP bowel_movement_frequency
 freq.order <- c("Less than one", "One", "Two", "Three", "Four", "Five or more")
 ggplot(ratio.df %>% filter(author == "AGP" & bowel_movement_frequency %in% freq.order) %>%
-                    mutate(bowel_movement_frequency=factor(bowel_movement_frequency, levels=freq.order)),
+         mutate(bowel_movement_frequency=factor(bowel_movement_frequency, levels=freq.order)),
        aes(x = bowel_movement_frequency, y = LogRatio_FirmBact))+
   #geom_violin(alpha = 0.5)+
   geom_boxplot(aes(group=bowel_movement_frequency), lwd = 1, width=0.3, outlier.shape=NA, fill = "white")+

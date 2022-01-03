@@ -1,0 +1,215 @@
+##########################
+# Purpose: Plotting Firmicutes/Bacteroidota log ratio
+# Date: December 2021
+# Author: Salomé Carcy
+##########################
+
+
+##########
+# IMPORT #
+##########
+
+# Libraries
+library(phyloseq)
+library(ggplot2)
+library(tidyverse)
+library(cowplot)
+
+# Data
+path.phy <- "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/CLUSTER/PhyloTree/input"
+# physeq.ringel <- readRDS(file.path(path.phy, "physeq_ringel.rds"))
+physeq.labus <- readRDS(file.path(path.phy, "physeq_labus.rds"))
+physeq.lopresti <- readRDS(file.path(path.phy, "physeq_lopresti.rds"))
+physeq.pozuelo <- readRDS(file.path(path.phy, "physeq_pozuelo.rds"))
+physeq.zhuang <- readRDS(file.path(path.phy, "physeq_zhuang.rds"))
+physeq.zhu <- readRDS(file.path(path.phy, "physeq_zhu.rds"))
+physeq.hugerth <- readRDS(file.path(path.phy, "physeq_hugerth.rds"))
+physeq.fukui <- readRDS(file.path(path.phy, "physeq_fukui.rds"))
+physeq.mars <- readRDS(file.path(path.phy, "physeq_mars.rds"))
+physeq.liu <- readRDS(file.path(path.phy, "physeq_liu.rds"))
+physeq.agp <- readRDS(file.path(path.phy, "physeq_agp.rds"))
+physeq.nagel <- readRDS(file.path(path.phy, "physeq_nagel.rds"))
+physeq.zeber <- readRDS(file.path(path.phy, "physeq_zeber.rds"))
+
+
+
+
+###################
+# PREPROCESS DATA #
+###################
+
+# Merge phyloseq objects
+physeq <- merge_phyloseq(physeq.labus,
+                         physeq.lopresti,
+                         physeq.pozuelo,
+                         physeq.zhuang,
+                         physeq.zhu,
+                         physeq.hugerth,
+                         physeq.fukui,
+                         physeq.mars,
+                         physeq.liu,
+                         physeq.agp,
+                         physeq.nagel,
+                         physeq.zeber)
+
+# Separate fecal & sigmoid samples
+physeq.fecal <- subset_samples(physeq, sample_type == 'stool') # 2,145 samples
+nsamples(physeq.fecal)
+physeq.sigmoid <- subset_samples(physeq, sample_type == 'sigmoid') # 431 samples
+nsamples(physeq.sigmoid)
+
+# Agglomerate to phylum level and melt to long format
+phylumTable <- physeq %>%
+  tax_glom(taxrank = "Phylum") %>%
+  psmelt()
+
+
+
+
+#########################################
+# COMPUTE FIRM, BACT, ACTINO LOG RATIOS #
+#########################################
+
+# Extract abundance of Bacteroidota, Firmicutes and Actinobacteriota
+relevant.covariates <- c('Sample', 'Abundance', 'Phylum', 'host_disease', 'host_subtype', 'sample_type', 'Collection',
+                         'author', 'sequencing_tech', 'bowel_movement_quality','bowel_movement_frequency', 'Bristol',
+                         'host_age', 'host_bmi')
+
+bacter <- phylumTable %>%
+  filter(Phylum == "Bacteroidota") %>%
+  select(all_of(relevant.covariates)) %>%
+  rename(Bacteroidota = Abundance) %>%
+  select(-Phylum)
+
+firmi <- phylumTable %>%
+  filter(Phylum == "Firmicutes") %>%
+  select(all_of(relevant.covariates)) %>%
+  rename(Firmicutes = Abundance) %>%
+  select(-Phylum)
+
+actino <- phylumTable %>%
+  filter(Phylum == "Actinobacteriota") %>%
+  select(all_of(relevant.covariates)) %>%
+  rename(Actinobacteriota = Abundance) %>%
+  select(-Phylum)
+
+proteo <- phylumTable %>%
+  filter(Phylum == "Proteobacteria") %>%
+  select(all_of(relevant.covariates)) %>%
+  rename(Proteobacteria = Abundance) %>%
+  select(-Phylum)
+
+
+# Check if there are any count 0 (would prevent from calculating ratio)
+table(bacter$Bacteroidota == 0) # 17
+table(firmi$Firmicutes == 0) # 3
+table(actino$Actinobacteriota == 0) # 148
+table(proteo$Proteobacteria == 0) # 148
+min(bacter[bacter$Bacteroidota > 0, "Bacteroidota"]) # 4
+min(firmi[firmi$Firmicutes > 0, "Firmicutes"]) # 105
+min(actino[actino$Actinobacteriota > 0, "Actinobacteriota"]) # 2
+min(proteo[proteo$Proteobacteria > 0, "Proteobacteria"]) # 2
+
+
+# Sanity check (should all have 2,576 samples)
+# nrow(bacter)
+# nrow(firmi)
+# nrow(actino)
+# nrow(proteo)
+
+
+# COMPUTE LOG RATIOS
+common.columns <- c("Sample", "host_disease", "host_subtype", "sample_type", "Collection",
+                    "author", "sequencing_tech", "bowel_movement_quality", "bowel_movement_frequency", "Bristol",
+                    "host_age", "host_bmi")
+
+ratio.df <- left_join(x=bacter, y=firmi, by=common.columns) %>%
+  left_join(actino, by=common.columns) %>%
+  left_join(proteo, by=common.columns) %>%
+  relocate(Bacteroidota, .before=Firmicutes) %>%
+  # Add 0.5 pseudocounts for the few 0 values
+  mutate(Bacteroidota=replace(Bacteroidota, Bacteroidota==0, 0.5),
+         Firmicutes=replace(Firmicutes, Firmicutes==0, 0.5),
+         Actinobacteriota=replace(Actinobacteriota, Actinobacteriota==0, 0.5),
+         Proteobacteria=replace(Proteobacteria, Proteobacteria==0, 0.5)) %>%
+  # Compute log ratios
+  mutate(LogRatio_FirmBact = log2(Firmicutes/Bacteroidota),
+         LogRatio_FirmAct = log2(Firmicutes/Actinobacteriota),
+         LogRatio_BactAct = log2(Bacteroidota/Actinobacteriota),
+         LogRatio_FirmProt = log2(Firmicutes/Proteobacteria),
+         LogRatio_BactProt = log2(Bacteroidota/Proteobacteria),
+         LogRatio_ActProt = log2(Actinobacteriota/Proteobacteria)) %>%
+  # Add column author_disease
+  mutate(author_disease=paste0(author, sep="_", host_disease)) %>%
+  # Add IBS subtype to AGP
+  mutate(host_subtype=replace(host_subtype,
+                              author=="AGP" & host_disease=="IBS" & bowel_movement_quality=="Constipated",
+                              "IBS-C")) %>%
+  mutate(host_subtype=replace(host_subtype,
+                              author=="AGP" & host_disease=="IBS" & bowel_movement_quality=="Diarrhea",
+                              "IBS-D")) %>%
+  mutate(host_subtype=replace(host_subtype,
+                              author=="AGP" & host_disease=="Healthy" & bowel_movement_quality!="Normal",
+                              "HC-unknown"))
+
+# sanity check
+# ratio.df %>%
+#   filter(author=="AGP") %>%
+#   group_by(host_subtype, bowel_movement_quality) %>%
+#   count()
+
+
+# Set dataset order for plots
+author.order <- c('Labus', 'LoPresti', # 454 pyrosequencing
+                  'AGP', 'Liu', 'Pozuelo', # Illumina single end
+                  'Fukui', 'Hugerth', 'Mars', 'Zhu', 'Zhuang', # Illumina paired end
+                  'Nagel', 'Zeber-Lubecka') # Ion Torrent
+ratio.df$author <- factor(ratio.df$author, levels=author.order)
+
+seqtech.order <- c("454 pyrosequencing", "Illumina single-end", "Illumina paired-end", "Ion Torrent")
+ratio.df$sequencing_tech <- factor(ratio.df$sequencing_tech, levels=seqtech.order)
+
+
+
+
+####################################################
+# PLOT FIRMICUTES/BACTEROIDOTA LOG RATIO FOR PAPER #
+####################################################
+
+# Plot Firm/Bact ratio for fecal samples
+ggplot(ratio.df %>% filter(Collection=="1st" & sample_type=="stool"),
+       aes(x = author, y = LogRatio_FirmBact, fill=host_disease))+
+  # facet_wrap(~author, nrow=1, strip.position="bottom")+
+  geom_boxplot(position=position_dodge(width=0.75), outlier.shape = NA, width = 0.4, lwd=0.5, alpha=0.2)+
+  geom_point(position=position_jitterdodge(dodge.width=0.75, jitter.width=0.1), aes(color=host_disease), size=0.2)+
+  scale_color_manual(values=c("#3182bd", "#de2d26"), guide="none")+
+  scale_fill_manual(values=c("#3182bd", "#de2d26"))+
+  theme_cowplot()+
+  # scale_x_discrete(breaks=author_disease.order, labels= rep(c("Healthy", "IBS"), times = 12))+
+  theme(axis.text.x = element_text(angle = 45, color="black", hjust=1))+
+  labs(x = '', y = "Log2(Firmicutes/Bacteroidota)", fill="", title="All fecal samples")
+ggsave("~/Projects/IBS_Meta-analysis_16S/data/plots_paper/firm_bact_01.jpg", width=10, height=5)
+
+
+# Plot Firm/Bact ratio for fecal samples
+ggplot(ratio.df %>% filter(Collection=="1st" & sample_type=="sigmoid"),
+       aes(x = author, y = LogRatio_FirmBact, fill=host_disease))+
+  # facet_wrap(~author, nrow=1, strip.position="bottom")+
+  geom_boxplot(position=position_dodge(width=0.75), outlier.shape = NA, width = 0.4, lwd=0.5, alpha=0.2)+
+  geom_point(position=position_jitterdodge(dodge.width=0.75, jitter.width=0.1), aes(color=host_disease), size=0.2)+
+  scale_color_manual(values=c("#3182bd", "#de2d26"), guide="none")+
+  scale_fill_manual(values=c("#3182bd", "#de2d26"))+
+  theme_cowplot()+
+  # scale_x_discrete(breaks=author_disease.order, labels= rep(c("Healthy", "IBS"), times = 12))+
+  theme(axis.text.x = element_text(angle = 45, color="black", hjust=1))+
+  labs(x = '', y = "Log2(Firmicutes/Bacteroidota)", fill="", title="All sigmoid samples")
+ggsave("~/Projects/IBS_Meta-analysis_16S/data/plots_paper/firm_bact_02.jpg", width=5, height=5)
+
+
+
+
+
+
+
+
+
