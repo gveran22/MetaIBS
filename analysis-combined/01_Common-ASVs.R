@@ -14,6 +14,7 @@ library(tidyverse)
 library(phyloseq)
 library(reshape2)
 library(ggupset)
+library(cowplot)
 
 # Data
 path.phy <- "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/CLUSTER/PhyloTree/input"
@@ -98,14 +99,13 @@ common.asv <- asv.df %>%
   summarize(Datasets = list(unique(author))) %>%
   filter(lengths(Datasets)>1)
 
-jpeg("~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/01_Merge-Datasets/commonASV_merge-phyloseq-funct.jpg", width=2000, height=2200, res=400)
-library(cowplot)
+# jpeg("~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/01_Merge-Datasets/commonASV_merge-phyloseq-funct.jpg", width=2000, height=2200, res=400)
 ggplot(common.asv, aes(x=Datasets))+
   geom_bar(fill="#737373") +
   scale_x_upset()+
   theme_cowplot()+
   labs(y="# common ASVs")
-dev.off()
+# dev.off()
 
 
 
