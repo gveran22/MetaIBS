@@ -23,6 +23,8 @@ knitr::opts_chunk$set(fig.width = 15, fig.height = 5, warning=FALSE, message=FAL
 ```{r library-import}
 library(phyloseq) # for phyloseq object
 library(ggplot2)
+library(ggsignif)
+library(RColorBrewer)
 library(cowplot)
 library(plyr)
 library(dplyr)
@@ -40,6 +42,7 @@ library(pheatmap) # for heatmap
 ```{r import-data}
 # Set path
 path <- "~/Projects/IBS_Meta-analysis_16S"
+path.plots <- file.path(path, "data/analysis-individual/PLOTS/plots-Zhuang-EDA")
 
 # Import phyloseq object
 physeq.zhuang <- readRDS(file.path(path, "phyloseq-objects/physeq_zhuang.rds"))
@@ -69,6 +72,17 @@ physeq.NZcomp <- readRDS(file.path(path, "data/analysis-individual/Zhuang-2018/0
 ```
 
 
+
+
+##################
+## DEMOGRAPHICS ##
+##################
+
+This dataset doesn't have any covariates publicly available.
+
+
+
+
 ################
 ## ABUNDANCES ##
 ################
@@ -77,12 +91,13 @@ physeq.NZcomp <- readRDS(file.path(path, "data/analysis-individual/Zhuang-2018/0
 
 ```{r plot-absolute-abundance, fig.width=10, fig.height = 5}
 # Plot Phylum
-plot_bar(physeq.zhuang, fill = "Phylum") + facet_wrap("host_disease", scales="free") +
+plot_bar(physeq.zhuang, fill = "Phylum") + facet_wrap("host_disease", scales="free_x") +
   theme(axis.text.x = element_text(size = 8))+
   labs(x = "Samples", y = "Absolute abundance", title = "Zhuang dataset (2018)")
+# ggsave(file.path(path.plots, "absAbundance_phylum.jpg"), width=13, height=5)
 
 # Plot Class
-plot_bar(physeq.zhuang, fill = "Class")+ facet_wrap("host_disease", scales="free") +
+plot_bar(physeq.zhuang, fill = "Class")+ facet_wrap("host_disease", scales="free_x") +
   theme(axis.text.x = element_text(size = 8))+
   labs(x = "Samples", y = "Absolute abundance", title = "Zhuang dataset (2018)")
 ```
@@ -109,18 +124,21 @@ class.table <- physeq.zhuang %>%
 
 
 # Plot relative abundances
-ggplot(phylum.table, aes(x = Sample, y = Abundance, fill = Phylum))+
+ggplot(phylum.table, aes(x = reorder(Sample, Sample, function(x) mean(phylum.table[Sample == x & Phylum == 'Firmicutes', 'Abundance'])),
+                         y = Abundance, fill = Phylum))+
   facet_wrap(~ host_disease, scales = "free") + # scales = "free" removes empty lines
-  geom_bar(stat = "identity") +
-  theme(axis.text.x = element_text(size = 8, angle = -90))+
+  geom_bar(stat = "identity", width=0.95) +
+  theme(axis.text.x = element_text(size = 6, angle = -90))+
   labs(x = "Samples", y = "Relative abundance", title = "Zhuang dataset (2018)")
+# ggsave(file.path(path.plots, "relAbundance_phylum.jpg"), width=10, height=5)
 
-ggplot(class.table, aes(x = Sample, y = Abundance, fill = Class))+
+ggplot(class.table, aes(x = reorder(Sample, Sample, function(x) mean(phylum.table[Sample == x & Phylum == 'Firmicutes', 'Abundance'])),
+                        y = Abundance, fill = Class))+
   facet_wrap(~ host_disease, scales = "free") + # scales = "free" removes empty lines
-  geom_bar(stat = "identity") +
-  theme(axis.text.x = element_text(size = 8, angle = -90))+
+  geom_bar(stat = "identity", width=0.95) +
+  theme(axis.text.x = element_text(size = 6, angle = -90))+
   labs(x = "Samples", y = "Relative abundance", title = "Zhuang dataset (2018)")
-
+# ggsave(file.path(path.plots, "relAbundance_class.jpg"), width=10, height=5)
 ```
 
 
@@ -147,69 +165,20 @@ ratio.FB$logRatioFB <- log2(ratio.FB$Firmicutes / ratio.FB$Bacteroidota)
 
 # Plot log2 ratio Firmicutes/Bacteroidota
 ggplot(ratio.FB, aes(x = host_disease, y = logRatioFB))+
-  geom_boxplot(outlier.shape = NA)+
+  geom_violin(aes(fill=host_disease))+
+  scale_fill_manual(values=scales::alpha(c("blue", "red"), .3))+
   geom_jitter(width=0.1)+
+  geom_signif(comparisons = list(c("Healthy", "IBS")), map_signif_level = TRUE, test="wilcox.test") +
   labs(x = "",  y = 'Log2(Firmicutes/Bacteroidota)', title = "Firmicutes:Bacteroidota ratio")+
-  theme_cowplot()
+  theme_cowplot()+
+  theme(legend.position="none")
+# ggsave(file.path(path.plots, "ratioFB.jpg"), width=4, height=6)
+
+# Statistical test
+wilcox.test(ratio.FB[ratio.FB$host_disease == "IBS","logRatioFB"],
+            ratio.FB[ratio.FB$host_disease == "Healthy","logRatioFB"]) # p = 0.59
 ```
 
-
-```{r export-plots-1, eval = FALSE, echo = FALSE}
-# Save path to plots
-path.plots <- file.path(path, "data/analysis-individual/PLOTS/plots-Zhuang-EDA")
-
-# Absolute abundance phylum
-jpeg(file.path(path.plots, "absAbundance_phylum.jpg"), width = 4000, height = 2000)
-plot_bar(physeq.zhuang, fill = "Phylum") + facet_wrap("host_disease", scales="free") +
-  theme(axis.text.x = element_text(size = 30, angle = -90),
-        axis.text.y = element_text(size = 30),
-        legend.text = element_text(size = 50),
-        axis.title = element_text(size = 50),
-        title = element_text(size = 70),
-        strip.text = element_text(size = 50))+
-  labs(x = "Samples", y = "Total read count", title = "Zhuang dataset (2018)")
-dev.off()
-
-# Relative abundances
-jpeg(file.path(path.plots, "relAbundance_phylum.jpg"), width = 4000, height = 2000)
-ggplot(phylum.table, aes(x = Sample, y = Abundance, fill = Phylum))+
-  facet_wrap(~ host_disease, scales = "free") + # scales = "free" removes empty lines
-  geom_bar(stat = "identity") +
-  theme(axis.text.x = element_text(size = 30, angle = -90),
-        axis.text.y = element_text(size = 30),
-        legend.text = element_text(size = 50),
-        axis.title = element_text(size = 50),
-        title = element_text(size = 70),
-        strip.text = element_text(size = 50))+
-  labs(x = "Samples", y = "Relative abundance", title = "Zhuang dataset (2018)")
-dev.off()
-
-jpeg(file.path(path.plots, "relAbundance_class.jpg"), width = 4000, height = 2000)
-ggplot(class.table, aes(x = Sample, y = Abundance, fill = Class))+
-  facet_wrap(~ host_disease, scales = "free") + # scales = "free" removes empty lines
-  geom_bar(stat = "identity") +
-  theme(axis.text.x = element_text(size = 30, angle = -90),
-        axis.text.y = element_text(size = 30),
-        legend.text = element_text(size = 50),
-        axis.title = element_text(size = 50),
-        title = element_text(size = 70),
-        strip.text = element_text(size = 50))+
-  labs(x = "Samples", y = "Relative abundance", title = "Zhuang dataset (2018)")
-dev.off()
-
-# Firmicutes:Bacteroidota log ratio
-jpeg(file.path(path.plots, "ratioFB.jpg"), width = 1500, height = 2000)
-ggplot(ratio.FB, aes(x = host_disease, y = logRatioFB))+
-  geom_boxplot(outlier.size = 4, lwd = 3)+
-  geom_jitter(size = 8, width=0.1)+
-  labs(x = "",  y = 'Log2(Firmicutes/Bacteroidota)', title = "Zhuang dataset (2018)")+
-  theme_classic()+
-  theme(axis.text = element_text(size = 50),
-        legend.text = element_text(size = 50),
-        axis.title = element_text(size = 50),
-        title = element_text(size = 50))
-dev.off()
-```
 
 
 
@@ -278,6 +247,8 @@ saveRDS(physeq.clr, file.path(path, "data/analysis-individual/Zhuang-2018/02_EDA
 ```
 
 
+
+
 #######################
 ## COMPUTE DISTANCES ##
 #######################
@@ -286,15 +257,15 @@ saveRDS(physeq.clr, file.path(path, "data/analysis-individual/Zhuang-2018/02_EDA
 
 First, let's look at these four distances of interest.
 
-```{r dist-functions, fig.width = 15, fig.height = 4}
+```{r dist-functions}
 #____________________________________________________________________________________
 # Measure distances
 getDistances <- function(){
   set.seed(123) # for unifrac, need to set a seed
-  glom.UniF <- UniFrac(physeq.rel, weighted=TRUE, normalized=TRUE) # weighted unifrac
-  glom.ait <- phyloseq::distance(physeq.clr, method = 'euclidean') # aitchison
-  glom.bray <- phyloseq::distance(physeq.CSN, method = "bray") # bray-curtis
-  glom.can <- phyloseq::distance(physeq.NZcomp, method = "canberra") # canberra
+  glom.UniF <- UniFrac(physeq.rel, weighted=TRUE, normalized=TRUE)    # weighted unifrac
+  glom.ait  <- phyloseq::distance(physeq.clr, method = 'euclidean')   # aitchison
+  glom.bray <- phyloseq::distance(physeq.CSN, method = "bray")        # bray-curtis
+  glom.can  <- phyloseq::distance(physeq.NZcomp, method = "canberra") # canberra
   dist.list <- list("UniF" = glom.UniF, "Ait" = glom.ait, "Canb" = glom.can, "Bray" = glom.bray)
   
   return(dist.list)
@@ -343,7 +314,7 @@ plotDistances2D <- function(dlist, ordination="MDS"){
 
 Now let's plot!
 
-```{r dist-run}
+```{r dist-run, fig.width = 15, fig.height = 4}
 # Get the distances & the plot data
 dist.zhuang <- getDistances()
 plot.df <- plotDistances2D(dist.zhuang)
@@ -355,7 +326,6 @@ ggplot(plot.df, aes(Axis.1, Axis.2, color=host_disease))+
   theme_bw()+
   theme(strip.text.x = element_text(size=20))+
   labs(color="Disease")
-
 # ggsave(file.path(path.plots, "distances4_MDS.jpg"), height = 4, width = 15)
 ```
 
@@ -453,6 +423,8 @@ heatmp.zhuang <- plotHeatmaps(dlist = dist.zhuang, fontsize = 8)
 ################################
 
 
+### Figure 1A - Hierarchical clustering analysis
+
 First, let's reproduce figure 1A. They performed a hierarchical clustering with UPGMA on the bray-curtis distance.
 
 ```{r reproduce-fig1A, fig.width = 10, fig.height = 5}
@@ -489,13 +461,15 @@ dend.average <- dendrapply(dend.average, color_leaf)
 par(mar=c(3,2,3,7), xpd=TRUE)
 plot(dend.average , main="Hierarchical clustering: UPGMA", horiz = T)
 legend(x = 35,
-     legend = c("Healthy" , "IBS"), 
+     legend = c("Healthy" , "IBS-D"), 
      col = c("blue", "red"), 
      pch = c(20,20), bty = "n",  pt.cex = 1.5, cex = 1, 
      text.col = "black", horiz = FALSE, inset = c(0, 0.1))
 
 ```
 
+
+### Figure 1B - PCoA of fecal microbiota communities
 
 Now let's try to reproduce figure 1B. It's a PCoA of microbiome composition based on UniFrac.
 
@@ -504,13 +478,41 @@ Now let's try to reproduce figure 1B. It's a PCoA of microbiome composition base
 # FIGURE 1B
 set.seed(123)
 fig.1B <- ordinate(physeq.rel, "PCoA", "unifrac", weighted=TRUE)
-plot_ordination(physeq.rel, fig.1B, color="host_disease", shape = "host_disease")+
+plot_ordination(physeq.rel, fig.1B, color="host_subtype", shape = "host_subtype")+
   geom_point(size=5, alpha=0.5) +
-  scale_color_manual(values = c('blue', 'red'))+ scale_shape_manual(values = c(17,16))+
+  scale_color_manual(values = c('blue', 'red'), name="") + scale_shape_manual(values = c(17,16), name="")+
   theme_classic()+
   ggtitle("PCoA on weighted-UniFrac distance")
 
 ```
 
+
+### Figure 2A - Relative abundance at phyla level
+
+```{r reproduce-fig2A, fig.width = 6, fig.height = 5}
+phy.order <- c("Bacteroidota", "Firmicutes", "Proteobacteria", "Fusobacteriota", "Actinobacteriota", "Verrucomicrobiota", "Synergistota", "Cyanobacteria", "Desulfobacterota")
+
+df <- phylum.table %>%
+  # get relative count of each phylum in each sample
+  group_by(Phylum, Sample) %>%
+  summarise(abund=sum(Abundance)*100,
+            host_disease=host_disease) %>%
+  ungroup() %>%
+  # get mean count of each phylum in healthy vs IBS
+  group_by(Phylum, host_disease) %>%
+  summarise(proportion=mean(abund)) %>%
+  ungroup() %>%
+  mutate(Phylum=factor(Phylum, levels=rev(phy.order)))
+
+
+ggplot(df, aes(x = Phylum,
+                 y = proportion, fill = host_disease))+
+  geom_bar(stat="identity", position="dodge2") +
+  scale_fill_manual(values=c("#31a354", "#de2d26"), name="")+
+  theme_cowplot()+
+  coord_flip()+
+  labs(x = "", y = "Proportion (%)", title = "Fig2A")
+
+```
 
 
