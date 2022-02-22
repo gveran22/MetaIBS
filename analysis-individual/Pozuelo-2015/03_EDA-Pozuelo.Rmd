@@ -134,6 +134,7 @@ plot_bar(physeq.pozuelo, fill = "Class")+ facet_wrap("host_disease", scales="fre
 - median: `r median(sample_sums(physeq.pozuelo))` total count per sample  
 - maximum of `r max(sample_sums(physeq.pozuelo))` total count per sample  
 
+
 ### 2. Relative abundances
 
 ```{r plot-relative-abundances, fig.width=10, fig.height = 5, message=FALSE}
@@ -160,7 +161,7 @@ ggplot(phylum.table, aes(x = reorder(Sample, Sample, function(x) mean(phylum.tab
 
 ggplot(class.table, aes(x = reorder(Sample, Sample, function(x) mean(class.table[Sample == x & Phylum == 'Firmicutes', 'Abundance'])),
                         y = Abundance, fill = Class))+
-  facet_wrap(~ host_disease, scales = "free_x") + # scales = "free" removes empty lines
+  facet_wrap(~ host_disease, scales = "free_x") +
   geom_bar(stat = "identity", width=1) +
   theme(axis.text.x = element_blank())+
   labs(x = "Samples", y = "Relative abundance", title = "Pozuelo dataset (2015)")
@@ -621,7 +622,7 @@ heatmp.pozuelo <- plotHeatmaps(dlist = dist.pozuelo, fontsize = 8)
 ## REPRODUCE PLOTS FROM PAPER ##
 ################################
 
-To calculate between-sample diversity, weighted and unweighted Unifrac metrics were applied to build phylogenetic distance matrices, which were then used to construct hierarchical cluster trees using unweighted pair group method with arithmetic mean (UPGMA) and PCoA representations. Finally, distance-based redundancy analyses were performed using the eigenvalues obtained in the PCoA.
+From the methods section of the Pozuelo et al. paper: "To calculate between-sample diversity, weighted and unweighted Unifrac metrics were applied to build phylogenetic distance matrices, which were then used to construct hierarchical cluster trees using unweighted pair group method with arithmetic mean (UPGMA) and PCoA representations. Finally, distance-based redundancy analyses were performed using the eigenvalues obtained in the PCoA."
 
 ### Figure 1 - Redundancy analysis on unweighted UniFrac data
 
