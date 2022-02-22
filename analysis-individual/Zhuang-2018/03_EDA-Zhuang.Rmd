@@ -91,13 +91,13 @@ This dataset doesn't have any covariates publicly available.
 
 ```{r plot-absolute-abundance, fig.width=10, fig.height = 5}
 # Plot Phylum
-plot_bar(physeq.zhuang, fill = "Phylum") + facet_wrap("host_disease", scales="free_x") +
+plot_bar(physeq.zhuang, fill = "Phylum") + facet_wrap("host_subtype", scales="free_x") +
   theme(axis.text.x = element_text(size = 8))+
   labs(x = "Samples", y = "Absolute abundance", title = "Zhuang dataset (2018)")
 # ggsave(file.path(path.plots, "absAbundance_phylum.jpg"), width=13, height=5)
 
 # Plot Class
-plot_bar(physeq.zhuang, fill = "Class")+ facet_wrap("host_disease", scales="free_x") +
+plot_bar(physeq.zhuang, fill = "Class")+ facet_wrap("host_subtype", scales="free_x") +
   theme(axis.text.x = element_text(size = 8))+
   labs(x = "Samples", y = "Absolute abundance", title = "Zhuang dataset (2018)")
 ```
@@ -126,7 +126,7 @@ class.table <- physeq.zhuang %>%
 # Plot relative abundances
 ggplot(phylum.table, aes(x = reorder(Sample, Sample, function(x) mean(phylum.table[Sample == x & Phylum == 'Firmicutes', 'Abundance'])),
                          y = Abundance, fill = Phylum))+
-  facet_wrap(~ host_disease, scales = "free") + # scales = "free" removes empty lines
+  facet_wrap(~ host_subtype, scales = "free") + # scales = "free" removes empty lines
   geom_bar(stat = "identity", width=0.95) +
   theme(axis.text.x = element_text(size = 6, angle = -90))+
   labs(x = "Samples", y = "Relative abundance", title = "Zhuang dataset (2018)")
@@ -134,7 +134,7 @@ ggplot(phylum.table, aes(x = reorder(Sample, Sample, function(x) mean(phylum.tab
 
 ggplot(class.table, aes(x = reorder(Sample, Sample, function(x) mean(phylum.table[Sample == x & Phylum == 'Firmicutes', 'Abundance'])),
                         y = Abundance, fill = Class))+
-  facet_wrap(~ host_disease, scales = "free") + # scales = "free" removes empty lines
+  facet_wrap(~ host_subtype, scales = "free") + # scales = "free" removes empty lines
   geom_bar(stat = "identity", width=0.95) +
   theme(axis.text.x = element_text(size = 6, angle = -90))+
   labs(x = "Samples", y = "Relative abundance", title = "Zhuang dataset (2018)")
@@ -148,35 +148,35 @@ ggplot(class.table, aes(x = reorder(Sample, Sample, function(x) mean(phylum.tabl
 # Extract abundance of only Bacteroidota and Firmicutes
 bacter <- phylum.table %>%
   filter(Phylum == "Bacteroidota") %>%
-  select(c('Sample', 'Abundance', 'host_disease', 'Phylum')) %>%
+  select(c('Sample', 'Abundance', 'host_subtype', 'Phylum')) %>%
   arrange(Sample)
 
 firmi <- phylum.table %>%
   filter(Phylum == "Firmicutes") %>%
-  select(c('Sample', 'Abundance', 'host_disease', 'Phylum')) %>%
+  select(c('Sample', 'Abundance', 'host_subtype', 'Phylum')) %>%
   arrange(Sample)
 
 # Calculate log2 ratio Firmicutes/Bacteroidota
 ratio.FB <- data.frame('Sample' = bacter$Sample,
-                       'host_disease' = bacter$host_disease,
+                       'host_subtype' = bacter$host_subtype,
                        'Bacteroidota' = bacter$Abundance,
                        'Firmicutes' = firmi$Abundance)
 ratio.FB$logRatioFB <- log2(ratio.FB$Firmicutes / ratio.FB$Bacteroidota)
 
 # Plot log2 ratio Firmicutes/Bacteroidota
-ggplot(ratio.FB, aes(x = host_disease, y = logRatioFB))+
-  geom_violin(aes(fill=host_disease))+
+ggplot(ratio.FB, aes(x = host_subtype, y = logRatioFB))+
+  geom_violin(aes(fill=host_subtype))+
   scale_fill_manual(values=scales::alpha(c("blue", "red"), .3))+
   geom_jitter(width=0.1)+
-  geom_signif(comparisons = list(c("Healthy", "IBS")), map_signif_level = TRUE, test="wilcox.test") +
+  geom_signif(comparisons = list(c("HC", "IBS-D")), map_signif_level = TRUE, test="wilcox.test") +
   labs(x = "",  y = 'Log2(Firmicutes/Bacteroidota)', title = "Firmicutes:Bacteroidota ratio")+
   theme_cowplot()+
   theme(legend.position="none")
 # ggsave(file.path(path.plots, "ratioFB.jpg"), width=4, height=6)
 
 # Statistical test
-wilcox.test(ratio.FB[ratio.FB$host_disease == "IBS","logRatioFB"],
-            ratio.FB[ratio.FB$host_disease == "Healthy","logRatioFB"]) # p = 0.59
+wilcox.test(ratio.FB[ratio.FB$host_subtype == "IBS-D","logRatioFB"],
+            ratio.FB[ratio.FB$host_subtype == "HC","logRatioFB"]) # p = 0.59
 ```
 
 
@@ -320,7 +320,7 @@ dist.zhuang <- getDistances()
 plot.df <- plotDistances2D(dist.zhuang)
 
 # Plot
-ggplot(plot.df, aes(Axis.1, Axis.2, color=host_disease))+
+ggplot(plot.df, aes(Axis.1, Axis.2, color=host_subtype))+
   geom_point(size=6, alpha=0.5)  + scale_color_manual(values = c('blue', 'red'))+
   facet_wrap(distance~., scales='free', nrow=1)+
   theme_bw()+
@@ -351,7 +351,7 @@ plotDistances3D <- function(d, name_dist){
   
   # Plot
   fig.3D <- plot_ly(x=xyz[,1], y=xyz[,2], z=xyz[,3], type="scatter3d", mode="markers",
-                    color=sample_data(physeq.zhuang)$host_disease, colors = c("blue", "red"))%>%
+                    color=sample_data(physeq.zhuang)$host_subtype, colors = c("blue", "red"))%>%
     layout(title = paste('MDS in 3D with', name_dist, 'distance', sep = ' '))
   
   return(fig.3D)
@@ -378,7 +378,7 @@ plotDistances3D(dist.zhuang$Bray, "Bray-Curtis")
 
 ```{r hierarchical-clust, fig.width = 25, fig.width = 7}
 # For heatmaps: have group color
-matcol <- data.frame(group = sample_data(physeq.zhuang)[,"host_disease"])
+matcol <- data.frame(group = sample_data(physeq.zhuang)[,"host_subtype"])
 
 
 # Function to get heatmap from the distances computed
@@ -399,7 +399,7 @@ plotHeatmaps <- function(dlist, fontsize){
                           fontsize_row = fontsize-5,
                           annotation_col = matcol,
                           annotation_row = matcol,
-                          annotation_colors = list(host_disease = c('Healthy' = 'blue', 'IBS' = 'red')),
+                          annotation_colors = list(host_subtype = c('HC' = 'blue', 'IBS-D' = 'red')),
                           cluster_rows = T,
                           cluster_cols = T,
                           clustering_method = 'complete', # hc method
