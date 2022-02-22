@@ -56,7 +56,7 @@ Phylogenetic tree was computed with the package `phangorn`, and the script was r
 
 ```{r plot-tree, fig.height = 6, fig.width = 10}
 # Look at the tree
-plot_tree(physeq.pozuelo, color = "host_disease", ladderize="left")
+plot_tree(physeq.pozuelo, color = "Phylum", ladderize="left")
 ```
 
 
