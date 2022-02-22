@@ -1,10 +1,10 @@
 ---
 title: "Nagel2016_DataAnalysis"
 output:
-  pdf_document: default
   html_document:
     df_print: paged
     toc: true
+  pdf_document: default
 ---
 
 ```{r, include=FALSE}
@@ -443,62 +443,70 @@ heatmp.nagel <- plotHeatmaps(dlist = dist.nagel, fontsize = 8)
 ```
 
 
-XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-
 
 
 ################################
 ## REPRODUCE PLOTS FROM PAPER ##
 ################################
 
-```{r reproduce-plots, eval = TRUE, echo = TRUE, fig.height = 6, fig.width = 10}
-#___________________________________________________________________
-# FIGURE 1A
-set.seed(785)
-UniF.test = UniFrac(physeq, weighted=FALSE, normalized=T) # unweighted Unifrac dist
 
-UniF.PCoA <- ordinate(physeq, "PCoA", distance = UniF.test) # PCoA on unweighted unifrac dist
-plot_ordination(physeq, UniF.PCoA, color="host_disease")
+```{r fig2, fig.width = 15, fig.height = 10}
+#___________________
+# Fig 2A: PCoA on unweighted unifrac distance
+set.seed(123)
+pcoa <- ordinate(physeq.rel, "PCoA", distance="unifrac", weighted=FALSE)
+plt.df <- merge(data.frame(pcoa$vectors), data.frame(sample_data(physeq.rel)), by="row.names")
+a <- ggplot(plt.df, aes(x=Axis.1, y=Axis.2, color=host_subtype, shape=host_subtype))+
+  geom_point(size=4) +
+  scale_color_manual(values = c('#238b45', '#6baed6'), name="", guide="none")+
+  scale_shape_manual(values = c("\u25BA", "\u25B2"), name="", guide="none")+
+  theme_cowplot()
+b <- ggplot(plt.df, aes(x=Axis.3, y=Axis.2, color=host_subtype, shape=host_subtype))+
+  geom_point(size=4) +
+  scale_color_manual(values = c('#238b45', '#6baed6'), name="", guide="none")+
+  scale_shape_manual(values = c("\u25BA", "\u25B2"), name="", guide="none")+
+  theme_cowplot()
+c <- ggplot(plt.df, aes(x=Axis.1, y=Axis.3, color=host_subtype, shape=host_subtype))+
+  geom_point(size=4) +
+  scale_color_manual(values = c('#238b45', '#6baed6'), name="")+
+  scale_shape_manual(values = c("\u25BA", "\u25B2"), name="")+
+  theme_cowplot()
 
-# Plotting the first 3 dimensions of the PCoA
-xyz <- as.matrix(UniF.PCoA$vectors[,1:3])
-test.plot <- plot_ly(x=xyz[,1], y=xyz[,2], z=xyz[,3], type="scatter3d",
-                       mode="markers", color=sample_data(physeq)$host_disease, colors = c("blue", "red"))%>%
-  layout(title = "PCoA in 3D with unweighted Unifrac distance")
-test.plot
+#___________________
+# Fig 2B: PCoA on weighted unifrac distance
+set.seed(123)
+pcoa2 <- ordinate(physeq.rel, "PCoA", distance="unifrac", weighted=TRUE)
+plt.df2 <- merge(data.frame(pcoa2$vectors), data.frame(sample_data(physeq.rel)), by="row.names")
+d <- ggplot(plt.df2, aes(x=Axis.1, y=Axis.2, color=host_subtype, shape=host_subtype))+
+  geom_point(size=4) +
+  scale_color_manual(values = c('#238b45', '#6baed6'), name="", guide="none")+
+  scale_shape_manual(values = c("\u25BA", "\u25B2"), name="", guide="none")+
+  theme_cowplot()
+e <- ggplot(plt.df2, aes(x=Axis.3, y=Axis.2, color=host_subtype, shape=host_subtype))+
+  geom_point(size=4) +
+  scale_color_manual(values = c('#238b45', '#6baed6'), name="", guide="none")+
+  scale_shape_manual(values = c("\u25BA", "\u25B2"), name="", guide="none")+
+  theme_cowplot()
+f <- ggplot(plt.df2, aes(x=Axis.1, y=Axis.3, color=host_subtype, shape=host_subtype))+
+  geom_point(size=4) +
+  scale_color_manual(values = c('#238b45', '#6baed6'), name="")+
+  scale_shape_manual(values = c("\u25BA", "\u25B2"), name="")+
+  theme_cowplot()
 
+#___________________
+# PLOT all like in figure 2
+ggdraw() +
+  # unweighted unifrac (panel A)
+  draw_grob(grob=grid::rectGrob(), x=0.005, y=0.52, width=0.99, height=.45)+
+  draw_plot(a, x = 0, y = .52, width = .3, height = .45) +
+  draw_plot(b, x = 0.33, y = .52, width = .3, height = .45) +
+  draw_plot(c, x = 0.66, y = .52, width = .33, height = .45) +
+  # weighted unifrac (panel B)
+  draw_grob(grob=grid::rectGrob(), x=0.005, y=0.01, width=0.99, height=.45)+
+  draw_plot(d, x = 0, y = 0, width = .3, height = .45) +
+  draw_plot(e, x = 0.33, y = 0, width = .3, height = .45) +
+  draw_plot(f, x = 0.66, y = 0, width = .33, height = .45) +
+  draw_plot_label(label = c("A", "B"), x = 0, y = c(1, .49))
 
-#___________________________________________________________________
-# FIGURE 1B
-
-# Hierarchical clustering using average linkage
-hc.average <- hclust(UniF.test, method = "average")
-dend.average <- as.dendrogram(hc.average)
-color_leaf<<-function(n){
-    if(is.leaf(n)){
-        # take the current attributes
-        a=attributes(n)
-        
-        # deduce the line in the original data, to get the corresponding disease status
-        line=match(attributes(n)$label, rownames(metadata_table))
-        disease=metadata_table[line, "host_disease"];
-            if(disease=="Healthy"){col_disease="blue"};if(disease=="IBS"){col_disease="red"}
-        
-        #Modification of leaf attribute
-        attr(n,"nodePar") <- c(a$nodePar, list(cex=1.5, lab.cex=0.6, pch=20, col=col_disease, lab.font=1, lab.cex=0.1))
-        }
-    return(n)
-}
-dend.average <- dendrapply(dend.average, color_leaf)
-
-#Plot
-par(mar=c(3,2,3,7), xpd=T, cex = 0.8)
-plot(dend.average , main="Hierarchical clustering: average linkage", horiz = T, cex = 0.1)
-legend('topleft',
-     legend = c("Healthy" , "IBS"), 
-     col = c("blue", "red"), 
-     pch = c(20,20), bty = "n",  pt.cex = 1.5, cex = 1, 
-     text.col = "black", horiz = FALSE, inset = c(0, 0.1))
 ```
-
 
