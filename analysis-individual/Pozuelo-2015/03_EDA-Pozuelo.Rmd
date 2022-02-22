@@ -1,10 +1,10 @@
 ---
 title: "Pozuelo2015_DataAnalysis"
 output:
-  pdf_document: default
   html_document:
     df_print: paged
     toc: true
+  pdf_document: default
 ---
 
 
@@ -24,6 +24,8 @@ knitr::opts_chunk$set(fig.width = 15, fig.height = 5, warning=FALSE, message=FAL
 ```{r library-import}
 library(phyloseq) # for phyloseq object
 library(ggplot2)
+library(ggsignif)
+library(RColorBrewer)
 library(cowplot)
 library(plyr)
 library(dplyr)
@@ -40,6 +42,7 @@ library(pheatmap) # for heatmap
 ```{r import-data}
 # Set path
 path <- "~/Projects/IBS_Meta-analysis_16S"
+path.plots <- file.path(path, "data/analysis-individual/PLOTS/plots-Pozuelo-EDA")
 
 # Import phyloseq object
 physeq.pozuelo <- readRDS(file.path(path, "phyloseq-objects/physeq_pozuelo.rds"))
@@ -72,6 +75,39 @@ physeq.NZcomp <- readRDS(file.path(path, "data/analysis-individual/Pozuelo-2015/
 
 
 
+##################
+## DEMOGRAPHICS ##
+##################
+
+This dataset has covariates on collection date. Some individuals had two collection time points. Let's verify the distribution is similar between healthy & IBS groups.
+
+```{r demographics-stats}
+# Number of individuals in each group
+metadata <- data.frame(sample_data(physeq.pozuelo))
+metadata %>%
+  count(host_disease)
+
+# Collection date
+df <- metadata %>%
+  group_by(collection_date, host_disease) %>%
+  summarize(count=n())
+ggplot(df, aes(x = collection_date, y = count)) + 
+  geom_point(aes(color = host_disease), size = 2) +
+  scale_color_manual(values = c("#00AFBB", "#E7B800")) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle=90)) +
+  labs(x="", y="# samples collected")
+
+# Double stool collection
+metadata %>%
+  group_by(Collection, host_disease) %>%
+  summarize(count=n())
+# to note, only 1/3 of healthy individuals provided 2 stool samples, while 2/3 of IBS individuals provided 2 stool samples
+```
+
+
+
+
 ################
 ## ABUNDANCES ##
 ################
@@ -81,13 +117,14 @@ physeq.NZcomp <- readRDS(file.path(path, "data/analysis-individual/Pozuelo-2015/
 ```{r plot-absolute-abundance, fig.width=10, fig.height = 5}
 # Plot Phylum
 plot_bar(physeq.pozuelo, fill = "Phylum") + facet_wrap("host_disease", scales="free") +
-  theme(axis.text.x = element_text(size = 8))+
+  theme(axis.text.x = element_blank())+
   labs(x = "Samples", y = "Absolute abundance", title = "Pozuelo dataset (2015)") +
   ylim(0,80000)
+# ggsave(file.path(path.plots, "absAbundance_phylum.jpg"), width=13, height=5)
 
 # Plot Class
 plot_bar(physeq.pozuelo, fill = "Class")+ facet_wrap("host_disease", scales="free") +
-  theme(axis.text.x = element_text(size = 8))+
+  theme(axis.text.x = element_blank())+
   labs(x = "Samples", y = "Absolute abundance", title = "Pozuelo dataset (2015)")+
   ylim(0,80000)
 ```
@@ -115,19 +152,22 @@ class.table <- physeq.pozuelo %>%
 # Plot relative abundances
 ggplot(phylum.table, aes(x = reorder(Sample, Sample, function(x) mean(phylum.table[Sample == x & Phylum == 'Firmicutes', 'Abundance'])),
                          y = Abundance, fill = Phylum))+
-  facet_wrap(~ host_disease, scales = "free") + # scales = "free" removes empty lines
-  geom_bar(stat = "identity") +
-  theme(axis.text.x = element_text(size = 8, angle = -90))+
+  facet_wrap(~ host_disease, scales = "free_x") + # scales = "free" removes empty lines
+  geom_bar(stat = "identity", width=1) +
+  theme(axis.text.x = element_blank())+
   labs(x = "Samples", y = "Relative abundance", title = "Pozuelo dataset (2015)")
+# ggsave(file.path(path.plots, "relAbundance_phylum.jpg"), width=10, height=5)
 
 ggplot(class.table, aes(x = reorder(Sample, Sample, function(x) mean(class.table[Sample == x & Phylum == 'Firmicutes', 'Abundance'])),
                         y = Abundance, fill = Class))+
-  facet_wrap(~ host_disease, scales = "free") + # scales = "free" removes empty lines
-  geom_bar(stat = "identity") +
-  theme(axis.text.x = element_text(size = 8, angle = -90))+
+  facet_wrap(~ host_disease, scales = "free_x") + # scales = "free" removes empty lines
+  geom_bar(stat = "identity", width=1) +
+  theme(axis.text.x = element_blank())+
   labs(x = "Samples", y = "Relative abundance", title = "Pozuelo dataset (2015)")
+# ggsave(file.path(path.plots, "relAbundance_class.jpg"), width=12, height=5)
+```
 
-
+```{r plot-relative-abundances-2, fig.width=20, fig.height = 5, message=FALSE}
 # Plot relative abundance of paired samples (plot both collection times side-by-side)
 ggplot(phylum.table %>% group_by(host_ID) %>% filter(n_distinct(Run)>1),
        aes(x=Collection, y=Abundance, fill=Phylum))+
@@ -139,7 +179,9 @@ ggplot(phylum.table %>% group_by(host_ID) %>% filter(n_distinct(Run)>1),
         strip.text = element_text(angle=90),
         strip.background = element_rect(fill="white"))+
   labs(x = "Individual", y = "Relative abundance", title = "Relative abundance of phyla at both collection time points (left t0, right t0+1month)")
+# ggsave(file.path(path.plots, "relAbundance_phylum_collection-times.jpg"), width=19, height=7)
 ```
+
 
 
 
@@ -172,9 +214,11 @@ ggplot(ratio.FB, aes(x = host_disease, y = logRatioFB))+
   geom_violin(aes(fill=host_disease))+
   scale_fill_manual(values=scales::alpha(c("blue", "red"), .3))+
   geom_jitter(width=0.1)+
+  geom_signif(comparisons = list(c("Healthy", "IBS")), map_signif_level = TRUE, test="wilcox.test") +
   labs(x = "",  y = 'Log2(Firmicutes/Bacteroidota)', title = "Firmicutes:Bacteroidota ratio")+
   theme_cowplot()+
   theme(legend.position="none")
+# ggsave(file.path(path.plots, "ratioFB.jpg"), width=5, height=7)
 
 # Statistical test
 wilcox.test(ratio.FB[ratio.FB$host_disease == "IBS","logRatioFB"],
@@ -186,10 +230,12 @@ ggplot(ratio.FB, aes(x = host_subtype, y = logRatioFB))+
   geom_violin(aes(fill=host_disease))+
   scale_fill_manual(values=scales::alpha(c("blue", "red"), .3))+
   geom_jitter(width=0.1)+
-  labs(x = "",  y = 'Log2(Firmicutes/Bacteroidota)', title = "")+
+  geom_signif(comparisons = list(c("HC", "IBS-C"), c("HC", "IBS-D"), c("HC", "IBS-M")),
+              map_signif_level = TRUE, test="wilcox.test", step_increase=0.1) +
+  labs(x = "",  y = 'Log2(Firmicutes/Bacteroidota)', title = "All data (both collection time points)")+
   theme_cowplot() +
-  theme(axis.text.x = element_text(angle=90, vjust=0.5, hjust=1),
-        legend.position="none")
+  theme(legend.position="none")
+# ggsave(file.path(path.plots, "ratioFB_subtype.jpg"), width=5, height=7)
 
 # Statistical test
 wilcox.test(ratio.FB[ratio.FB$host_subtype == "HC","logRatioFB"],
@@ -207,131 +253,25 @@ ggplot(ratio.FB, aes(x = Collection, y = logRatioFB))+
   geom_point()+
   geom_line(aes(group=host_ID), lwd=0.1) +
   facet_wrap(~host_disease) +
+  geom_signif(comparisons = list(c("1st", "2nd")),
+              map_signif_level = TRUE, test="wilcox.test") +
   labs(x = "Collection time point",  y = 'Log2(Firmicutes/Bacteroidota)', title = "Paired data") +
   theme_cowplot()+
   theme(legend.position="none")
-```
+# ggsave(file.path(path.plots, "ratioFB_collection-time.jpg"), width=5, height=7)
 
-
-
-```{r export-plots-1, eval = FALSE, echo = FALSE}
-# Save path to plots
-path.plots <- file.path(path, "data/analysis-individual/PLOTS/plots-Pozuelo-EDA")
-
-# Absolute abundance phylum
-jpeg(file.path(path.plots, "absAbundance_phylum.jpg"), width = 4000, height = 2000)
-plot_bar(physeq.pozuelo, fill = "Phylum") + facet_wrap("host_disease", scales="free") +
-  theme(axis.text.x = element_text(size = 10, angle = -90),
-        axis.text.y = element_text(size = 30),
-        legend.text = element_text(size = 50),
-        axis.title = element_text(size = 50),
-        title = element_text(size = 70),
-        strip.text = element_text(size = 50))+
-  labs(x = "Samples", y = "Total read count", title = "Pozuelo dataset (2015)")+
-  ylim(0, 80000)
-dev.off()
-
-# Relative abundances
-jpeg(file.path(path.plots, "relAbundance_phylum.jpg"), width = 4000, height = 2000)
-ggplot(phylum.table, aes(x = reorder(Sample, Sample, function(x) mean(phylum.table[Sample == x & Phylum == 'Firmicutes', 'Abundance'])),
-                         y = Abundance, fill = Phylum))+
-  facet_wrap(~ host_disease, scales = "free") + # scales = "free" removes empty lines
-  geom_bar(stat = "identity") +
-  theme(axis.text.x = element_text(size = 10, angle = -90),
-        axis.text.y = element_text(size = 30),
-        legend.text = element_text(size = 50),
-        axis.title = element_text(size = 50),
-        title = element_text(size = 70),
-        strip.text = element_text(size = 50))+
-  labs(x = "Samples", y = "Relative abundance", title = "Pozuelo dataset (2015)")
-dev.off()
-
-jpeg(file.path(path.plots, "relAbundance_phylum_collection-times.jpg"), width = 5000, height = 2000)
-ggplot(phylum.table %>% group_by(host_ID) %>% filter(n_distinct(Run)>1),
-       aes(x=Collection, y=Abundance, fill=Phylum))+
-  facet_wrap(~host_ID, scales="free_x", nrow=1, strip.position="bottom")+
-  geom_bar(stat="identity", width=1)+
-  scale_y_continuous(expand = c(0, 0))+
-  theme(axis.text.x = element_blank(),
-        axis.text.y = element_text(size = 30),
-        axis.ticks.x = element_blank(),
-        strip.text = element_text(angle=90, size=30),
-        strip.background = element_rect(fill="white"),
-        legend.text = element_text(size = 50),
-        title = element_text(size = 70))+
-  labs(x = "Individual", y = "Relative abundance", title = "Both collection time points (left t0, right t0+1month)")
-dev.off()
-
-jpeg(file.path(path.plots, "relAbundance_class.jpg"), width = 5000, height = 2000)
-ggplot(class.table, aes(x = reorder(Sample, Sample, function(x) mean(phylum.table[Sample == x & Phylum == 'Firmicutes', 'Abundance'])),
-                        y = Abundance, fill = Class))+
-  facet_wrap(~ host_disease, scales = "free") + # scales = "free" removes empty lines
-  geom_bar(stat = "identity") +
-  theme(axis.text.x = element_text(size = 10, angle = -90),
-        axis.text.y = element_text(size = 30),
-        legend.text = element_text(size = 50),
-        axis.title = element_text(size = 50),
-        title = element_text(size = 70),
-        strip.text = element_text(size = 50))+
-  labs(x = "Samples", y = "Relative abundance", title = "Pozuelo dataset (2015)")
-dev.off()
-
-# Firmicutes:Bacteroidota log ratio
-jpeg(file.path(path.plots, "ratioFB.jpg"), width = 1500, height = 2000)
 ggplot(ratio.FB, aes(x = host_disease, y = logRatioFB))+
   geom_violin(aes(fill=host_disease))+
   scale_fill_manual(values=scales::alpha(c("blue", "red"), .3))+
-  geom_jitter(size = 8, width=0.1)+
-  labs(x = "",  y = 'Log2(Firmicutes/Bacteroidota)', title = "Pozuelo dataset (2015)")+
+  geom_jitter(width=0.1)+
+  facet_wrap(~Collection) +
+  geom_signif(comparisons = list(c("Healthy", "IBS")),
+              map_signif_level = TRUE, test="wilcox.test") +
+  labs(x = "",  y = 'Log2(Firmicutes/Bacteroidota)', title = "Collection time point (t0, t0+1mo)") +
   theme_cowplot()+
-  theme(axis.text = element_text(size = 50),
-        legend.text = element_text(size = 50),
-        axis.title = element_text(size = 50),
-        title = element_text(size = 50),
-        legend.position="none")
-dev.off()
-
-jpeg(file.path(path.plots, "ratioFB_subtype.jpg"), width = 1500, height = 2000)
-ggplot(ratio.FB, aes(x = host_subtype, y = logRatioFB))+
-  geom_violin(aes(fill=host_disease))+
-  scale_fill_manual(values=scales::alpha(c("blue", "red"), .3))+
-  geom_jitter(size=6, width=0.1)+
-  labs(x = "",  y = 'Log2(Firmicutes/Bacteroidota)', title = "")+
-  theme_cowplot() +
-  theme(axis.text = element_text(size = 50),
-        legend.text = element_text(size = 50),
-        axis.title = element_text(size = 50),
-        title = element_text(size = 50),
-        legend.position="none")
-dev.off()
-
-jpeg(file.path(path.plots, "ratioFB_collection-time.jpg"), width = 1500, height = 2000)
-ggplot(ratio.FB, aes(x = Collection, y = logRatioFB))+
-  geom_violin(aes(fill=host_disease))+
-  scale_fill_manual(values=scales::alpha(c("blue", "red"), .3))+
-  geom_point(size=6)+
-  geom_line(aes(group=host_ID), lwd=0.5) +
-  facet_wrap(~host_disease) +
-  labs(x = "Collection time point",  y = 'Log2(Firmicutes/Bacteroidota)', title = "Paired data") +
-  theme_cowplot()+
-  theme(axis.text = element_text(size = 50),
-        legend.text = element_text(size = 50),
-        axis.title = element_text(size = 50),
-        title = element_text(size = 50),
-        legend.position="none")
-dev.off()
-
+  theme(legend.position="none")
+# ggsave(file.path(path.plots, "ratioFB_collection-time2.jpg"), width=5, height=7)
 ```
-
-
-
-
-
-
-
-XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-
-
 
 
 
@@ -341,71 +281,66 @@ XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 ####################
 
 ```{r normalize-data, eval = FALSE, echo = TRUE}
-# REMOVE SAMPLES WITH LESS THAN 1000 COUNTS
-physeq_best <-  prune_samples(sample_sums(physeq)>=1000, physeq)
-physeq_best <- subset_taxa(physeq_best, Kingdom == 'Bacteria' | Kingdom == 'Archaea') # remove the 2 NA Kingdoms and Eukaryota
-physeq_best <- subset_taxa(physeq_best, !is.na(Phylum)) # remove the 105 NA Phyla
-physeq_best
+# Sanity check no sample with less than 500 total count
+table(sample_sums(physeq.pozuelo)<500) # all FALSE
 
 #____________________________________________________________________
 # PHYLOSEQ OBJECT WITH NON-ZERO COMPOSITIONS
-physeq.NZcomp <- physeq_best
-otu_table(physeq.NZcomp)[otu_table(physeq.NZcomp) == 0] <- 0.5
+physeq.NZcomp <- physeq.pozuelo
+otu_table(physeq.NZcomp)[otu_table(physeq.NZcomp) == 0] <- 0.5 # pseudocounts
 
-# check the 0 values have been replaced
-otu_table(physeq_best)[1:5,1:5]
-otu_table(physeq.NZcomp)[1:5,1:5]
+# Sanity check that 0 values have been replaced
+# otu_table(physeq.pozuelo)[1:5,1:5]
+# otu_table(physeq.NZcomp)[1:5,1:5]
 
 # transform into compositions
-physeq.NZcomp <- transform_sample_counts(physeq.NZcomp, function(x) x / sum(x) ) # divide each count by the total number of counts (per sample)
-sum(otu_table(physeq.NZcomp) < 0) # see how many negative values are present in the matrix
+physeq.NZcomp <- transform_sample_counts(physeq.NZcomp, function(x) x / sum(x) )
 table(rowSums(otu_table(physeq.NZcomp))) # check if there is any row not summing to 1
 
-# save the physeq.NZcomp object
-saveRDS(physeq.NZcomp, "/Users/scarcy/Desktop/Praktikum/Data/Pozuelo_2015/Rproject_DataAnalysis/physeq_NZcomp.rds")
+# Save object
+saveRDS(physeq.NZcomp, file.path(path, "data/analysis-individual/Pozuelo-2015/02_EDA-Pozuelo/physeq_NZcomp.rds"))
 
 #____________________________________________________________________
 # PHYLOSEQ OBJECT WITH RELATIVE COUNT (BETWEEN 0 AND 1)
-physeq.rel <- physeq_best
-physeq.rel <- transform_sample_counts(physeq.rel, function(x) x / sum(x) ) # divide each count by the total number of counts (per sample)
+physeq.rel <- physeq.pozuelo
+physeq.rel <- transform_sample_counts(physeq.rel, function(x) x / sum(x) )
 
 # check the counts are all relative
-otu_table(physeq)[1:5, 1:5]
-otu_table(physeq.rel)[1:5, 1:5]
+# otu_table(physeq.pozuelo)[1:5, 1:5]
+# otu_table(physeq.rel)[1:5, 1:5]
 
 # sanity check
-sum(otu_table(physeq.rel) < 0) # see how many negative values are present in the matrix
-sum(rowSums(otu_table(physeq.rel)) == 1) # check if there is any row not summing to 1
+table(rowSums(otu_table(physeq.rel))) # check if there is any row not summing to 1
 
 # save the physeq.rel object
-saveRDS(physeq.rel, "/Users/scarcy/Desktop/Praktikum/Data/Pozuelo_2015/Rproject_DataAnalysis/physeq_relative.rds")
+saveRDS(physeq.rel, file.path(path, "data/analysis-individual/Pozuelo-2015/02_EDA-Pozuelo/physeq_relative.rds"))
 
 #____________________________________________________________________
 # PHYLOSEQ OBJECT WITH COMMON-SCALE NORMALIZATION
-physeq.CSN <- physeq_best
-min(sample_sums(physeq.CSN)) # sanity check
-physeq.CSN <- transform_sample_counts(physeq.CSN, function(x) (x*min(sample_sums(physeq.CSN))) / sum(x) ) # divide each count by the total number of counts (per sample)
+physeq.CSN <- physeq.pozuelo
+physeq.CSN <- transform_sample_counts(physeq.CSN, function(x) (x*min(sample_sums(physeq.CSN))) / sum(x) )
 
 # sanity check
-sum(otu_table(physeq.CSN) < 0) # see how many negative values are present in the matrix
-table(rowSums(otu_table(physeq.CSN))) # check if there is any row not summing to 1
+table(rowSums(otu_table(physeq.CSN))) # check that all rows are summing to the same total
 
 # save the physeq.CSN object
-saveRDS(physeq.CSN, "/Users/scarcy/Desktop/Praktikum/Data/Pozuelo_2015/Rproject_DataAnalysis/physeq_CSN.rds")
+saveRDS(physeq.CSN, file.path(path, "data/analysis-individual/Pozuelo-2015/02_EDA-Pozuelo/physeq_CSN.rds"))
 
 
 #____________________________________________________________________
 # PHYLOSEQ OBJECT WITH CENTERED LOG RATIO COUNT
-physeq.clr <- physeq_best
-physeq.clr <- transform(physeq.clr, "clr") # the function adds pseudocounts itself
+physeq.clr <- physeq.pozuelo
+physeq.clr <- microbiome::transform(physeq.pozuelo, "clr") # the function adds pseudocounts itself
 
 # Compare the otu tables in the original phyloseq object and the new one after CLR transformation
-otu_table(physeq_best)[1:5, 1:5] # should contain absolute counts
+otu_table(physeq.pozuelo)[1:5, 1:5] # should contain absolute counts
 otu_table(physeq.clr)[1:5, 1:5] # should all be relative
 
 # save the physeq.rel object
-saveRDS(physeq.clr, "/Users/scarcy/Desktop/Praktikum/Data/Pozuelo_2015/Rproject_DataAnalysis/physeq_clr.rds")
+saveRDS(physeq.clr, file.path(path, "data/analysis-individual/Pozuelo-2015/02_EDA-Pozuelo/physeq_clr.rds"))
 ```
+
+
 
 
 
@@ -413,22 +348,40 @@ saveRDS(physeq.clr, "/Users/scarcy/Desktop/Praktikum/Data/Pozuelo_2015/Rproject_
 ## COMPUTE DISTANCES ##
 #######################
 
-```{r dist-thesis, fig.width = 15, fig.height = 4}
+### 1. UniFrac, Aitchison, Bray-Curtis and Canberra
+
+First, let's look at these four distances of interest.
+
+```{r dist-functions, fig.width = 15, fig.height = 4}
 #____________________________________________________________________________________
 # Measure distances
-Distances <- function(){
+getDistances <- function(relPhyseq=physeq.rel, clrPhyseq=physeq.clr, csnPhyseq=physeq.CSN, nzcompPhyseq=physeq.NZcomp){
+  # sanity check
+  cat("nb samples relPhyseq:", nsamples(relPhyseq), "\n")
+  cat("nb samples clrPhyseq:", nsamples(clrPhyseq), "\n")
+  cat("nb samples csnPhyseq:", nsamples(csnPhyseq), "\n")
+  cat("nb samples nzcompPhyseq:", nsamples(nzcompPhyseq), "\n")
+  
+  # Compute distances
+  print("Unifrac...")
   set.seed(123) # for unifrac, need to set a seed
-  glom.UniF <-  UniFrac(physeq.rel, weighted=TRUE, normalized=TRUE) # weighted unifrac
-  glom.ait <- distance(physeq.clr, method = 'euclidean') # aitchison
-  glom.bray <- distance(physeq.CSN, method = "bray") # bray-curtis
-  glom.can <- distance(physeq.NZcomp, method = "canberra") # canberra
+  glom.UniF <- UniFrac(relPhyseq, weighted=TRUE, normalized=TRUE) # weighted unifrac
+  print("Aitchison...")
+  glom.ait <- phyloseq::distance(clrPhyseq, method = 'euclidean') # aitchison
+  print("Bray des bois...")
+  glom.bray <- phyloseq::distance(csnPhyseq, method = "bray") # bray-curtis
+  print("Canberra <3...")
+  glom.can <- phyloseq::distance(nzcompPhyseq, method = "canberra") # canberra
+  
   dist.list <- list("UniF" = glom.UniF, "Ait" = glom.ait, "Canb" = glom.can, "Bray" = glom.bray)
   
   return(dist.list)
 }
-#subset_samples(physeq.clr, sample_names(physeq.clr) != 'SRR5245605')
 
-DistancesPlot <- function(d){
+
+#____________________________________________________________________________________
+# Plot in 2D the distances
+plotDistances2D <- function(dlist, ordination="MDS", relPhyseq=physeq.rel, clrPhyseq=physeq.clr, csnPhyseq=physeq.CSN, nzcompPhyseq=physeq.NZcomp){
   plist <- NULL
   plist <- vector("list", 4)
   names(plist) <- c("Weighted Unifrac", "Aitchison", "Bray-Curtis", "Canberra")
@@ -436,197 +389,149 @@ DistancesPlot <- function(d){
   print("Unifrac")
   # Weighted UniFrac
   set.seed(123)
-  iMDS.UniF <- ordinate(physeq.rel, "MDS", distance=d$UniF)
-  plist[[1]] <- plot_ordination(physeq.rel, iMDS.UniF, color="host_disease")
+  iMDS.UniF <- ordinate(relPhyseq, ordination, distance=dlist$UniF)
+  plist[[1]] <- plot_ordination(relPhyseq, iMDS.UniF, color="host_disease")
   
   print("Aitchison")
   # Aitchison
   set.seed(123)
-  iMDS.Ait <- ordinate(physeq.clr, "MDS", distance=d$Ait)
-  plist[[2]] <- plot_ordination(physeq.clr, iMDS.Ait, color="host_disease")
+  iMDS.Ait <- ordinate(clrPhyseq, ordination, distance=dlist$Ait)
+  plist[[2]] <- plot_ordination(clrPhyseq, iMDS.Ait, color="host_disease")
   
   print("Bray")
   # Bray-Curtis
   set.seed(123)
-  iMDS.Bray <- ordinate(physeq.CSN, "MDS", distance=d$Bray)
-  plist[[3]] <- plot_ordination(physeq.CSN, iMDS.Bray, color="host_disease")
+  iMDS.Bray <- ordinate(csnPhyseq, ordination, distance=dlist$Bray)
+  plist[[3]] <- plot_ordination(csnPhyseq, iMDS.Bray, color="host_disease")
   
   print("Canberra")
   # Canberra
   set.seed(123)
-  iMDS.Can <- ordinate(physeq.NZcomp, "MDS", distance=d$Can)
-  plist[[4]] <- plot_ordination(physeq.NZcomp, iMDS.Can, color="host_disease")
+  iMDS.Can <- ordinate(nzcompPhyseq, ordination, distance=dlist$Can)
+  plist[[4]] <- plot_ordination(nzcompPhyseq, iMDS.Can, color="host_disease")
   
   # Creating a dataframe to plot everything
-  plot.df = ldply(plist, function(x) x$data)
+  plot.df = plyr::ldply(plist, function(x) x$data)
   names(plot.df)[1] <- "distance"
   
   return(plot.df)
 }
+```
 
-dist.thesis <- Distances()
-plot.df <- DistancesPlot(dist.thesis)
-plot.df$author <- "Pozuelo"
 
-p1 <- ggplot(plot.df[plot.df$Collection == "1st" & plot.df$distance == "Weighted Unifrac",], aes(Axis.1, Axis.2, color=host_disease))+
-  geom_point(size=12, alpha=0.4)  + scale_color_manual(values = c('blue', 'red'))+
-  facet_grid(author~distance, scales='free')+
+Now let's plot!
+
+
+#### a) All samples (both time points)
+```{r dist-run-all, fig.width = 15, fig.height = 14}
+# Get the distances (both collection time points) & the plot data
+dist.pozuelo <- getDistances()
+plot.df <- plotDistances2D(dist.pozuelo)
+
+# Plot
+a <- ggplot(plot.df, aes(Axis.1, Axis.2, color=host_disease))+
+  geom_point(size=4, alpha=0.5)  + scale_color_manual(values = c('blue', 'red'))+
+  facet_wrap(distance~., scales='free', nrow=1)+
   theme_bw()+
-  theme(axis.title = element_blank(),
-        #axis.title.x = element_text(size = 40),
-        axis.text = element_text(size = 30),
-        legend.text = element_text(size = 40),
-        legend.title = element_text(size = 40),
-        strip.background = element_rect(fill = "white", size = 3),
-        panel.border = element_rect(size = 2),
-        #strip.text.x = element_text(size = 50, margin = margin(1,0,1,0, "cm")),
-        strip.text.x = element_blank(),
-        strip.text.y = element_text(size = 70, margin = margin(0,1,0,1, "cm")),
-        #axis.line = element_line(size = 1, arrow = arrow(length = unit(0.1, "inches")))
-        )+
+  theme(strip.text.x = element_text(size=20),
+        axis.title.x = element_blank())+
   labs(color="Disease")
-
-p2 <- ggplot(plot.df[plot.df$Collection == "1st" & plot.df$distance != "Weighted Unifrac",], aes(Axis.1, Axis.2, color=host_disease))+
-  geom_point(size=12, alpha=0.4)  + scale_color_manual(values = c('blue', 'red'))+
-  facet_wrap(~distance, scales='free', nrow = 1)+
-  guides(color = FALSE)+
+b <- ggplot(plot.df, aes(Axis.1, Axis.2, color=Collection))+
+  geom_line(aes(group=host_ID), color="black", lwd=0.1)+
+  geom_point(size=4, alpha=0.5)  + scale_color_manual(values = c('#fdbe85', '#e6550d'))+
+  facet_wrap(distance~., scales='free', nrow=1)+
   theme_bw()+
-  theme(axis.text = element_text(size = 30),
-        axis.title.y = element_text(size = 40),
-        axis.title.x = element_blank(),
-        strip.background = element_rect(fill = "white", size = 1),
-        panel.border = element_rect(size = 2),
-        #strip.text = element_text(size = 50, margin = margin(1,0,1,0, "cm")),
-        strip.text.x = element_blank(),
-        #axis.line = element_line(size = 1, arrow = arrow(length = unit(0.1, "inches")))
-        )
+  theme(strip.text.x = element_blank(),
+        axis.title.x = element_blank())+
+  labs(color="Time point")
+c <- ggplot(plot.df, aes(Axis.1, Axis.2, color=host_subtype))+
+  geom_point(size=4, alpha=0.5)  + scale_color_manual(values = scales::alpha(c("blue", "brown", "red", "orange"), .3))+
+  facet_wrap(distance~., scales='free', nrow=1)+
+  theme_bw()+
+  theme(strip.text.x = element_blank())+
+  labs(color="Subtype")
 
-library(ggplot2)
-library(ggpubr)
+ggpubr::ggarrange(a,b,c, nrow=3)
 
-jpeg("/Users/scarcy/Desktop/Praktikum/Thesis/dist_Pozuelo.jpeg", height = 800, width = 4000, res = 100)
-ggarrange(p2, p1, ncol = 2, widths = c(2,1))
-dev.off()
+# ggsave(file.path(path.plots, "distances4_MDS_all.jpg"), height = 10, width = 15)
 ```
 
 
-```{r}
-# Function that will allow to color the leaves of the tree according to sample type (biopsy vs stool)
-color_leaf<<-function(n){
-    if(is.leaf(n)){
-        # take the current attributes
-        a=attributes(n)
-        
-        # deduce the line in the original data, to get the corresponding sampleType status
-        line=match(attributes(n)$label, plot.df$Run)
-        disease=plot.df[line, "host_disease"];
-            if(disease=="Healthy"){col_disease="blue"};if(disease=="IBS"){col_disease="red"}
-        
-        #Modification of leaf attribute
-        attr(n,"nodePar") <- c(a$nodePar, list(cex=1.5, lab.cex=0.6, pch=30, col=col_disease, lab.font=1, lab.cex=1))
-        }
-    return(n)
-}
-test <- distance(subset_samples(physeq.NZcomp, Collection == "1st"), method = "canberra") # canberra
+#### b) Each time point separately
+```{r dist-run-timePoints, fig.width = 15, fig.height = 10}
+#######
+# 1st time point (n=179)
+dist.pozuelo.1st <- getDistances(relPhyseq = subset_samples(physeq.rel, Collection=="1st"),
+                                 clrPhyseq = subset_samples(physeq.clr, Collection=="1st"),
+                                 csnPhyseq = subset_samples(physeq.CSN, Collection=="1st"),
+                                 nzcompPhyseq = subset_samples(physeq.NZcomp, Collection=="1st"))
+plot.df.1st <- plotDistances2D(dlist = dist.pozuelo.1st, relPhyseq = subset_samples(physeq.rel, Collection=="1st"),
+                                                         clrPhyseq = subset_samples(physeq.clr, Collection=="1st"),
+                                                         csnPhyseq = subset_samples(physeq.CSN, Collection=="1st"),
+                                                         nzcompPhyseq = subset_samples(physeq.NZcomp, Collection=="1st"))
 
+p1 <- ggplot(plot.df.1st, aes(Axis.1, Axis.2, color=host_disease))+
+  geom_point(size=4, alpha=0.5)  + scale_color_manual(values = c('blue', 'red'))+
+  facet_wrap(distance~., scales='free', nrow=1)+
+  theme_bw()+
+  theme(strip.text.x = element_text(size=20),
+        axis.title.x = element_blank())+
+  labs(color="Disease", title="Time 0")
+p2 <- ggplot(plot.df.1st, aes(Axis.1, Axis.2, color=host_subtype))+
+  geom_point(size=4, alpha=0.5)  + scale_color_manual(values = scales::alpha(c("blue", "brown", "red", "orange"), .3))+
+  facet_wrap(distance~., scales='free', nrow=1)+
+  theme_bw()+
+  theme(strip.text.x = element_blank())+
+  labs(color="Subtype")
+
+ggpubr::ggarrange(p1,p2, nrow=2)
+
+# ggsave(file.path(path.plots, "distances4_MDS_1stCollection.jpg"), height = 7, width = 15)
+
+
+#######
+# 2nd time point (n=94)
+dist.pozuelo.2nd <- getDistances(relPhyseq = subset_samples(physeq.rel, Collection=="2nd"),
+                                 clrPhyseq = subset_samples(physeq.clr, Collection=="2nd"),
+                                 csnPhyseq = subset_samples(physeq.CSN, Collection=="2nd"),
+                                 nzcompPhyseq = subset_samples(physeq.NZcomp, Collection=="2nd"))
+plot.df.2nd <- plotDistances2D(dist.pozuelo.2nd, relPhyseq = subset_samples(physeq.rel, Collection=="2nd"),
+                                                 clrPhyseq = subset_samples(physeq.clr, Collection=="2nd"),
+                                                 csnPhyseq = subset_samples(physeq.CSN, Collection=="2nd"),
+                                                 nzcompPhyseq = subset_samples(physeq.NZcomp, Collection=="2nd"))
+
+
+p3 <- ggplot(plot.df.2nd, aes(Axis.1, Axis.2, color=host_disease))+
+  geom_point(size=4, alpha=0.5)  + scale_color_manual(values = c('blue', 'red'))+
+  facet_wrap(distance~., scales='free', nrow=1)+
+  theme_bw()+
+  theme(strip.text.x = element_text(size=20),
+        axis.title.x = element_blank())+
+  labs(color="Disease", title="Time +1month")
+
+p4 <- ggplot(plot.df.2nd, aes(Axis.1, Axis.2, color=host_subtype))+
+  geom_point(size=4, alpha=0.5)  + scale_color_manual(values = scales::alpha(c("blue", "brown", "red", "orange"), .3))+
+  facet_wrap(distance~., scales='free', nrow=1)+
+  theme_bw()+
+  theme(strip.text.x = element_blank())+
+  labs(color="Subtype")
+
+ggpubr::ggarrange(p3,p4, nrow=2)
+
+# ggsave(file.path(path.plots, "distances4_MDS_2ndCollection.jpg"), height = 7, width = 15)
 ```
 
-```{r, fig.height = 5, fig.width = 3}
-hc.ward <- hclust(test, method = "ward.D") #clustering 
-dend.ward <- as.dendrogram(hc.ward) # Make into dendograms
-
-dend.ward <- dendrapply(dend.ward, color_leaf) # Apply the color attributes to the dendograms
-
-jpeg("/Users/scarcy/Desktop/Praktikum/Thesis/hclust_pozuelo.jpg", height = 3500, width = 1500, res = 200)
-
-plot(dend.ward , main="Hierarchical clustering on Canberra distance (ward linkage)", horiz = TRUE, leaflab = "none",
-     edgePar = list(lwd = 2))
-axis(side = 1, lwd = 4, cex = 4)
-legend(8, 190, 
-     legend = c("Healthy" , "IBS"), 
-     col = c("blue", "red"), 
-     pch = c(20,20), bty = "n",  pt.cex = 1.5, cex = 1, 
-     text.col = "black", horiz = FALSE, inset = c(0, 0.1))
-dev.off()
-```
 
 
-```{r dist-functions, eval = TRUE, echo = TRUE}
-#____________________________________________________________________________________
-# Measure distances
-Distances <- function(physeq_obj){
-  set.seed(123) # for unifrac, need to set a seed
-  glom.UniF <-  UniFrac(physeq_obj, weighted=TRUE, normalized=TRUE) # weighted unifrac
-  glom.ait <- dist(x = otu_table(physeq.clr), method = 'euc') # aitchison
-  glom.bray <- phyloseq::distance(physeq_obj, method = "bray") # bray-curtis
-  glom.can <- phyloseq::distance(physeq_obj, method = "canberra") # canberra
-  glom.gower <- phyloseq::distance(physeq_obj, method = "gower") # gower
-  glom.bino <- phyloseq::distance(physeq_obj, method = "binomial") # binomial
-  
-  dist.list <- list("UniF" = glom.UniF, "Ait" = glom.ait, "Canb" = glom.can, "Bray" = glom.bray,
-                    "Gower" = glom.gower, "Binomial" = glom.bino)
-  
-  return(dist.list)
-}
 
+### 2. Plot in 3D
 
-#____________________________________________________________________________________
-# Plot 2D ordination
-MDS_2D <- function(physeq_obj, ait_dist){
-  
-  plist <- NULL
-  plist <- vector("list", length(dist_methods)+1) # save each plot to a list
-  names(plist) <- dist_methods # save the name of each method
-  names(plist)[16] <- "aitchison" # save the name of aitchison
-  
-  # Loop through all distance methods
-  for(i in dist_methods){
-    # Calculate distance matrix
-    #print(i)
-    set.seed(123) # in case the distance method needs a rooted tree (weighted unifrac)
-    iDist <- phyloseq::distance(physeq_obj, method=i)
-    # Calculate ordination
-    set.seed(123)
-    iMDS  <- ordinate(physeq_obj, "MDS", distance=iDist)
-    ## Make plot
-    # Don't carry over previous plot (if error, p will be blank)
-    p <- NULL
-    # Create plot, store as temporary variable, p
-    p <- plot_ordination(physeq_obj, iMDS, color="host_disease")
-    # Add title to each plot
-    p <- p + ggtitle(paste("MDS using distance method ", i, sep=""))
-    # Save the graphic to the plot list
-    plist[[i]] = p
-  }
-  
-  # Add aitchison
-  iMDS  <- ordinate(physeq_obj, "MDS", distance=ait_dist)
-  p <- NULL
-  p <- plot_ordination(physeq_obj, iMDS, color="host_disease")
-  p <- p + ggtitle("MDS using distance method Aitchison")
-  plist[[17]] = p
-  
-  # Creating a dataframe to plot everything
-  plot.df = ldply(plist, function(x) x$data)
-  names(plot.df)[1] <- "distance"
-  
-  # Plot
-  p.alldist <-  ggplot(plot.df, aes(Axis.1, Axis.2, color=host_disease, shape = Collection))+
-    geom_point(size=5, alpha=0.5) +
-    scale_color_manual(values = c('blue', 'red'))+
-    scale_shape_manual(values = c(16,17))+
-    facet_wrap(~distance, scales='free')+
-    theme(strip.text = element_text(size = 40),
-          legend.text = element_text(size = 20),
-          axis.text.x = element_text(size = 20),
-          axis.text.y = element_text(size = 20))
+For better visualization, we will also take a glance at reduction to 3D.
 
-  return(p.alldist)
-}
-
+```{r 3D-function, eval = TRUE, echo = TRUE}
 #____________________________________________________________________________________
 # Plot 3D ordination
-MDS_3D <- function(d, name_dist){
+plotDistances3D <- function(d, name_dist){
   
   # Reset parameters
   mds.3D <- NULL
@@ -634,14 +539,13 @@ MDS_3D <- function(d, name_dist){
   fig.3D <- NULL
   
   # Reduce distance matrix to 3 dimensions
-  set.seed(123) # to get the same dimensionality reduction at each run
+  set.seed(123)
   mds.3D <- metaMDS(d, method="MDS", k=3, trace = 0)
-  xyz <- scores(mds.3D, display="sites") # pull out the x y z coordinates
+  xyz <- scores(mds.3D, display="sites") # pull out the (x,y,z) coordinates
   
+  # Plot
   fig.3D <- plot_ly(x=xyz[,1], y=xyz[,2], z=xyz[,3], type="scatter3d", mode="markers",
-                    color=sample_data(physeq.rel)$host_disease, colors = c("blue", "red"))%>%
-    #add_trace(x=xyz[,1], y=xyz[,2], z=xyz[,3],
-    #       type='scatter3d', mode='text', text = rownames(xyz), textfont = list(color = "black")) %>%
+                    color=sample_data(physeq.pozuelo)$host_disease, colors = c("blue", "red"))%>%
     layout(title = paste('MDS in 3D with', name_dist, 'distance', sep = ' '))
   
   return(fig.3D)
@@ -650,41 +554,16 @@ MDS_3D <- function(d, name_dist){
 ```
 
 
-```{r no-glom1, fig.height = 23, fig.width = 30}
-# Get the distances
-no_glom.dist <- Distances(physeq_obj = physeq.rel)
+Now let's plot!
 
-# Get the 2D ordination plots
-no_glom.2D.alldist <- MDS_2D(physeq.rel, no_glom.dist$Ait)
-no_glom.2D.alldist + labs(title = 'All samples') + theme(title = element_text(size = 30))
+```{r 3D-plot, fig.width = 8, fig.height = 5}
+plotDistances3D(dist.pozuelo$UniF, "UniFrac")
+plotDistances3D(dist.pozuelo$Ait, "Aitchison")
+plotDistances3D(dist.pozuelo$Canb, "Canberra")
+plotDistances3D(dist.pozuelo$Bray, "Bray-Curtis")
 ```
 
 
-```{r save-distances, eval = FALSE, echo = FALSE}
-getwd()
-
-write.csv(as.matrix(no_glom.dist$UniF), file = "dist_wunifrac.csv", row.names = TRUE)
-write.csv(as.matrix(no_glom.dist$Ait), file = "dist_aitchison.csv", row.names = TRUE)
-write.csv(as.matrix(no_glom.dist$Canb), file = "dist_canberra.csv", row.names = TRUE)
-
-```
-
-
-
-```{r no-glom2, fig.height = 6, fig.width = 10, eval = FALSE, echo = TRUE}
-# Get 3D MDS plots
-no_glom.3D.UniF <- MDS_3D(no_glom.dist$UniF, 'weighted Unifrac')
-no_glom.3D.Ait <- MDS_3D(no_glom.dist$Ait, 'Aitchison')
-no_glom.3D.Can <- MDS_3D(no_glom.dist$Canb, 'Canberra')
-no_glom.3D.Gower <- MDS_3D(no_glom.dist$Gower, 'Gower')
-no_glom.3D.Binomial <- MDS_3D(no_glom.dist$Binomial, 'Binomial')
-
-no_glom.3D.UniF
-no_glom.3D.Ait
-no_glom.3D.Can
-no_glom.3D.Gower
-no_glom.3D.Binomial
-```
 
 
 
@@ -692,149 +571,123 @@ no_glom.3D.Binomial
 ## HIERARCHICAL CLUSTERING ##
 #############################
 
-```{r hierarchical-clust, fig.width = 10, fig.width = 7}
-Heatmaps <- function(dist_list, fontsize){
-  # Weighted Unifrac
-  heatmp.UniF <- pheatmap(as.matrix(dist_list$UniF), 
-                          clustering_distance_rows = dist_list$UniF,
-                          clustering_distance_cols = dist_list$UniF,
+```{r hierarchical-clust, fig.width = 25, fig.width = 7}
+# For heatmaps: have group color
+matcol <- data.frame(group = sample_data(physeq.pozuelo)[,"host_disease"],
+                     host_subtype = sample_data(physeq.pozuelo)[,"host_subtype"],
+                     Collection = sample_data(physeq.pozuelo)[,"Collection"])
+
+
+# Function to get heatmap from the distances computed
+plotHeatmaps <- function(dlist, fontsize){
+  
+  # Initialize variables
+  i=1
+  plist <- vector("list", 4)
+  names(plist) <- names(dlist)
+  
+  # Loop through distances
+  for(d in dlist){
+    plist[[i]] <- pheatmap(as.matrix(d), 
+                          clustering_distance_rows = d,
+                          clustering_distance_cols = d,
                           fontsize = fontsize,
                           fontsize_col = fontsize-5,
                           fontsize_row = fontsize-5,
-                          annotation_col = mat_col,
-                          annotation_row = mat_col,
-                          annotation_colors = list(group = c('Healthy' = 'blue', 'IBS' = 'red'),
-                                                   collection = c('1st' = '#33FF00', '2nd' = '#9933CC')),
+                          annotation_col = matcol,
+                          annotation_row = matcol,
+                          annotation_colors = list(host_disease = c('Healthy' = 'blue', 'IBS' = 'red'),
+                                                   host_subtype = c('HC'='black', 'IBS-M'='orange', 'IBS-C'='brown', 'IBS-D'='red'),
+                                                   Collection = c("1st" = '#fdbe85', "2nd" = '#e6550d')),
                           cluster_rows = T,
                           cluster_cols = T,
-                          clustering_method = 'complete', #hierarchical method
-                          main = 'Weighted unifrac distance')
-
-  # Aitchison
-  heatmp.Ait <- pheatmap(as.matrix(dist_list$Ait), 
-                         clustering_distance_rows = dist_list$Ait,
-                         clustering_distance_cols = dist_list$Ait,
-                         fontsize = fontsize,
-                         fontsize_col = fontsize-5,
-                         fontsize_row = fontsize-5,
-                         # border_color = NA,
-                         cluster_rows = T,
-                         cluster_cols = T,
-                         clustering_method = "complete", #hierarchical method
-                         annotation_col = mat_col,
-                         annotation_row = mat_col,
-                         annotation_colors = list(group = c('Healthy' = 'blue', 'IBS' = 'red'),
-                                                   collection = c('1st' = '#33FF00', '2nd' = '#9933CC')),
-                         main = "Aitchison distance")
+                          clustering_method = 'complete', # hc method
+                          main = names(dlist)[i]) # have name of distance as title
+    i <- i+1
+  }
   
-    # Canberra
-  heatmp.Can <- pheatmap(as.matrix(dist_list$Can), 
-                         clustering_distance_rows = dist_list$Can,
-                         clustering_distance_cols = dist_list$Can,
-                         fontsize = fontsize,
-                         fontsize_col = fontsize-5,
-                         fontsize_row = fontsize-5,
-                         # border_color = NA,
-                         cluster_rows = T,
-                         cluster_cols = T,
-                         clustering_method = "complete", #hierarchical method
-                         annotation_col = mat_col,
-                         annotation_row = mat_col,
-                         annotation_colors = list(group = c('Healthy' = 'blue', 'IBS' = 'red'),
-                                                  collection = c('1st' = '#33FF00', '2nd' = '#9933CC')),
-                         main = "Canberra distance")
-  
-    # Gower
-  heatmp.Gower <- pheatmap(as.matrix(dist_list$Gower), 
-                         clustering_distance_rows = dist_list$Gower,
-                         clustering_distance_cols = dist_list$Gower,
-                         fontsize = fontsize,
-                         fontsize_col = fontsize-5,
-                         fontsize_row = fontsize-5,
-                         # border_color = NA,
-                         cluster_rows = T,
-                         cluster_cols = T,
-                         clustering_method = "complete", #hierarchical method
-                         annotation_col = mat_col,
-                         annotation_row = mat_col,
-                         annotation_colors = list(group = c('Healthy' = 'blue', 'IBS' = 'red'),
-                                                   collection = c('1st' = '#33FF00', '2nd' = '#9933CC')),
-                         main = "Gower distance")
-  
-  # Binomial
-  heatmp.Binomial <- pheatmap(as.matrix(dist_list$Binomial), 
-                         clustering_distance_rows = dist_list$Binomial,
-                         clustering_distance_cols = dist_list$Binomial,
-                         fontsize = fontsize,
-                         fontsize_col = fontsize-5,
-                         fontsize_row = fontsize-5,
-                         # border_color = NA,
-                         cluster_rows = T,
-                         cluster_cols = T,
-                         clustering_method = "complete", #hierarchical method
-                         annotation_col = mat_col,
-                         annotation_row = mat_col,
-                         annotation_colors = list(group = c('Healthy' = 'blue', 'IBS' = 'red'),
-                                                   collection = c('1st' = '#33FF00', '2nd' = '#9933CC')),
-                         main = "Binomial distance")
-  
-  
-  return(list("UniF" = heatmp.UniF, "Ait" = heatmp.Ait, "Can" = heatmp.Can, "Gower" = heatmp.Gower, "Bin" = heatmp.Binomial))
+  return(plist)
 }
 
 
 # Get the heatmaps
-no_glom.heatmaps <- Heatmaps(dist_list = no_glom.dist, fontsize = 8)
+heatmp.pozuelo <- plotHeatmaps(dlist = dist.pozuelo, fontsize = 8)
 ```
 
 
-
-```{r export-plots-2, eval = FALSE, echo = FALSE}
-# MDS 2D all distances
-jpeg("./Plots/plot_allDistances_MDS.jpg", width = 3000, height = 2000, res=90)
-no_glom.2D.alldist +
-  theme(axis.text.x = element_text(size = 20),
-        legend.text = element_text(size = 50),
-        axis.title = element_text(size = 50),
-        title = element_text(size = 50),
-        strip.text = element_text(size = 50))+
-  labs(title = "Pozuelo dataset (2015)")
-dev.off()
-
-# Heatmaps
-jpeg("./Plots/plot_heatmap_aitchison.jpg", width = 2800, height = 2000, res = 300)
-no_glom.heatmaps$Ait
-dev.off()
-
-jpeg("./Plots/plot_heatmap_UniF.jpg", width = 2800, height = 2000, res = 300)
-no_glom.heatmaps$UniF
-dev.off()
-
-jpeg("./Plots/plot_heatmap_canberra.jpg", width = 2800, height = 2000, res = 300)
-no_glom.heatmaps$Can
-dev.off()
-
-jpeg("./Plots/plot_heatmap_binomial.jpg", width = 2800, height = 2000, res = 300)
-no_glom.heatmaps$Bin
-dev.off()
-
-jpeg("./Plots/plot_heatmap_gower.jpg", width = 2800, height = 2000, res = 300)
-no_glom.heatmaps$Gower
-dev.off()
-
-```
 
 
 ################################
 ## REPRODUCE PLOTS FROM PAPER ##
 ################################
 
-```{r reproduce-plots, fig.height = 3, fig.width=4}
+To calculate between-sample diversity, weighted and unweighted Unifrac metrics were applied to build phylogenetic distance matrices, which were then used to construct hierarchical cluster trees using unweighted pair group method with arithmetic mean (UPGMA) and PCoA representations. Finally, distance-based redundancy analyses were performed using the eigenvalues obtained in the PCoA.
+
+### Figure 1 - Redundancy analysis on unweighted UniFrac data
+
+```{r fig1, fig.width=10, fig.height = 4}
+# Run PCoA
+set.seed(123)
+pcoa <- ordinate(subset_samples(physeq.rel, Collection=="1st"), "PCoA", distance="unifrac", weighted=FALSE)
+# Get PCoA eigenvectors
+pcoa.eig <- as.data.frame(pcoa$vectors)
+
+# A - Run on healthy/IBS
+# Run distance-based RDA (dbRDA), which is an RDA on PCoA eigenvectors
+df <- data.frame(sample_data(subset_samples(physeq.rel, Collection=="1st"))[, c("host_disease", "host_subtype")])
+dbRDA <- rda(pcoa.eig ~ host_disease, data=df)
+# Plot dbRDA with host_disease
+plt.df <- merge(data.frame(plot(dbRDA)$sites), df, by="row.names")
+a <- ggplot(plt.df, aes(x=RDA1, y=PC1, color=host_disease))+
+  geom_point()+
+  scale_color_manual(values=c("#08519c", "#ef3b2c"), name="")+
+  theme_cowplot()+
+  labs(x="dbRDA1", y="dbRDA2")
+
+# B - Run on IBS subtypes
+dbRDA.2 <- rda(pcoa.eig ~ host_subtype, data=df)
+plt.df.2 <- merge(data.frame(plot(dbRDA.2)$sites), df, by="row.names")
+b <- ggplot(plt.df.2, aes(x=RDA1, y=RDA2, color=host_subtype))+
+  geom_point()+
+  scale_color_manual(values=c("#08519c", "#fd8d3c", "#fee391", "#ef3b2c"), name="")+
+  theme_cowplot()+
+  labs(x="dbRDA1", y="dbRDA2")
+
+# Put both figures together
+ggdraw() +
+  draw_plot(a, x = 0, y = 0, width = .5, height = 1) +
+  draw_plot(b, x = 0.5, y = 0, width = .5, height = 1) +
+  draw_plot_label(label = c("A", "B"), size = ,
+                  x = c(0, 0.5), y = c(1, 1))
+```
+
+
+
+### Figure 2 - Higher relative abundance of Bacteroidetes
+
+```{r fig2, fig.width=10, fig.height = 6}
+ggplot(phylum.table %>% filter(Phylum %in% c("Firmicutes", "Bacteroidota"), Collection=="1st"),
+       aes(x = reorder(host_ID, host_ID, function(x) -mean(phylum.table[host_ID == x & Phylum == 'Firmicutes', 'Abundance'])),
+           y = Abundance, color = Phylum))+
+  facet_wrap(~ host_disease, scales = "free_x", nrow=2) + # scales = "free" removes empty lines
+  geom_line(aes(group=Phylum), lwd=1)+
+  scale_color_manual(values=c("#de2d26", "#2b8cbe"))+
+  theme_cowplot()+
+  theme(axis.text.x = element_text(size=4, angle=90))+
+  labs(x = "Samples", y = "Relative abundance", title = "Figure 2")
+
+
+```
+
+
+### Figure 3 - Higher relative abundance of two bacterial families
+
+```{r fig3, fig.height = 3, fig.width=4}
 #_____________________________________
 # FIGURE 3
 
 #Families
-family.table <- physeq %>%
+family.table <- physeq.pozuelo %>%
   tax_glom(taxrank = "Family") %>%                     # agglomerate at family level
   transform_sample_counts(function(x) {x/sum(x)} ) %>% # Transform to rel. abundance
   psmelt()                                             # Melt to long format
@@ -845,7 +698,7 @@ ggplot(family.table[family.table[,"Family"] == "Erysipelotrichaceae",],
   geom_jitter(width = 0.1)+
   labs(x = "",  y = 'Relative Abundance', title = 'Erysipelotrichaceae family')+
   theme_classic()+
-  ylim(0,0.02)
+  ylim(0,0.05)
 
 ggplot(family.table[family.table[,"Family"] == "Ruminococcaceae",],
        aes(x = host_disease, y = Abundance))+
@@ -857,5 +710,41 @@ ggplot(family.table[family.table[,"Family"] == "Ruminococcaceae",],
 ```
 
 
+### Figure 4 - Dysbiosis at the family and genus level in IBS subtypes
+
+```{r fig4, fig.height = 5, fig.width=4}
+#_____________________________________
+# FIGURE 4A & 4C
+# on figure 4A, we can't plot the "unknown Clostridiales"
+# on figure 4C, we didn't detect Verrucomicrobiaceae in the Pozuelo dataset
+# we will plot the Methanobacteriaceae, Erysipelotrichaceae, Christensenellaceae and Ruminococcaceae by IBS subtype like in panels 4A and 4C
+colors <- c("#756bb1", "#31a354", "#de2d26","#3182bd")
+names(colors) <- c("Methanobacteriaceae", "Erysipelotrichaceae", "Christensenellaceae", "Ruminococcaceae")
+
+ggplot(family.table %>%
+         filter(Collection=="1st") %>%
+         filter(Family %in% c("Methanobacteriaceae", "Erysipelotrichaceae", "Christensenellaceae", "Ruminococcaceae")),
+       aes(x = host_subtype,
+           y = Abundance, fill = Family))+
+  geom_bar(stat = "identity") +
+  scale_fill_manual(values=colors)+
+  theme_cowplot()+
+  theme(axis.text.x=element_text(angle=90))+
+  labs(x = "", y = "Relative abundance (?)", title = "Fig4A & 4C")
+
+
+#_____________________________________
+# FIGURE 4B
+ggplot(family.table %>%
+         filter(Family == "Erysipelotrichaceae") %>%
+         filter(host_subtype %in% c("HC", "IBS-M")) %>%
+         filter(Collection == "1st"),
+       aes(x = host_subtype, y = Abundance))+
+  geom_boxplot()+
+  geom_jitter(width = 0.1)+
+  labs(x = "",  y = 'Relative Abundance', title = 'Erysipelotrichaceae family (fig4B)')+
+  theme_cowplot()+
+  ylim(0,0.03)
+```
 
 
