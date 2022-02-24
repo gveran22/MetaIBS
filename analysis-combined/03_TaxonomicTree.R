@@ -234,68 +234,68 @@ names(colors) <- c("Actinobacteriota", "Bacteroidota", "Firmicutes", "Proteobact
 ## ***********************
 ## 1 - ALL SAMPLES
 
-# Agglomerate to Genus level
-physeq.glom <- tax_glom(physeq.all, "Genus")
-# saveRDS(physeq.glom, "~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/03_TaxonomicTree/physeq_all_glomGenus.rds")
-# physeq.glom <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/03_TaxonomicTree/physeq_all_glomGenus.rds")
-
-# Get the treedata object, and info on nb of ASV per genus, average count of each genus per sample.
-tree.all <- phyloseq_to_treedata(physeq=physeq.glom)
-asvDF.all <- nb_ASV_per_genus(physeq=physeq.all)
-countDF.all <- count_per_genus(physeq=physeq.all)
-datasetDF.all <- dataset_per_genus(physeq=physeq.glom)
-sampleType.df <- physeq.glom %>%
-  # melt to long format
-  psmelt() %>%
-  # keep only ASVs with a count != 0 in this specific sample
-  filter(Abundance != 0) %>%
-  # get a column with Life::Kingdom::Phylum::Class::Order::Family::Genus
-  mutate(leaf = paste("Life", Kingdom, Phylum, Class, Order, Family, Genus, sep = "::")) %>%
-  # get the number of datasets with non-0 count for each genus, and also the sample_type
-  group_by(leaf, Genus) %>%
-  summarize(spltype = paste(sort(unique(sample_type)), collapse=","))
-sampleType.df <- data.frame(spltype=df$spltype,
-                            row.names = df$leaf)
-
-
-p1 <- ggtree(tree.all, layout="circular", aes(color=group), lwd=0.4)+
-  # geom_tiplab(aes(label=new_label), size=2, color="black")+
-  # geom_nodepoint(size=0.1, color="black")+
-  scale_color_manual(values=colors)+
-  labs(color="Phylum")
-
-p2 <- gheatmap(p1, asvDF.all, offset=0.5, width=.08, colnames=FALSE)+
-  scale_fill_gradient2(low = muted("red"),
-                       mid = "white",
-                       high = "#2b8cbe",
-                       trans="log",
-                       breaks=c(1,10,100,1000),
-                       name="Number of ASVs")
-
-p3 <- gheatmap(p2+new_scale_fill(),
-               countDF.all, offset=1.1, width=.08, colnames = FALSE)+
-  scale_fill_gradient(low = "white",
-                      high = muted("red"),
-                      trans="log",
-                      breaks=c(1e-5,1e-3,1e-1,10),
-                      labels = parse(text=c("10^-5","10^-3","10^-1", "10")),
-                      name="Mean relative abundance (%)")+
-  labs(title="All samples")
-
-p4 <- gheatmap(p3+new_scale_fill(),
-         datasetDF.all, offset=1.7, width=.08, colnames = FALSE)+
-  scale_fill_gradient(low = "#ffffe5",
-                      high = "#ec7014",
-                      breaks = c(1,5,10),
-                      name="Number of datasets")+
-  labs(title="All samples")
-
-jpeg("~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/03_TaxonomicTree/taxTree_all.jpg", width=6000, height=4000, res=400)
-gheatmap(p4+new_scale_fill(),
-         sampleType.df, offset=2.3, width=.08, colnames = FALSE)+
-  scale_fill_manual(values=c("#f0f0f0","#636363","#bdbdbd"), name="Sample type")+
-  labs(title="All samples")
-dev.off()
+# # Agglomerate to Genus level
+# physeq.glom <- tax_glom(physeq.all, "Genus")
+# # saveRDS(physeq.glom, "~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/03_TaxonomicTree/physeq_all_glomGenus.rds")
+# # physeq.glom <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/03_TaxonomicTree/physeq_all_glomGenus.rds")
+# 
+# # Get the treedata object, and info on nb of ASV per genus, average count of each genus per sample.
+# tree.all <- phyloseq_to_treedata(physeq=physeq.glom)
+# asvDF.all <- nb_ASV_per_genus(physeq=physeq.all)
+# countDF.all <- count_per_genus(physeq=physeq.all)
+# datasetDF.all <- dataset_per_genus(physeq=physeq.glom)
+# sampleType.df <- physeq.glom %>%
+#   # melt to long format
+#   psmelt() %>%
+#   # keep only ASVs with a count != 0 in this specific sample
+#   filter(Abundance != 0) %>%
+#   # get a column with Life::Kingdom::Phylum::Class::Order::Family::Genus
+#   mutate(leaf = paste("Life", Kingdom, Phylum, Class, Order, Family, Genus, sep = "::")) %>%
+#   # get the number of datasets with non-0 count for each genus, and also the sample_type
+#   group_by(leaf, Genus) %>%
+#   summarize(spltype = paste(sort(unique(sample_type)), collapse=","))
+# sampleType.df <- data.frame(spltype=df$spltype,
+#                             row.names = df$leaf)
+# 
+# 
+# p1 <- ggtree(tree.all, layout="circular", aes(color=group), lwd=0.4)+
+#   # geom_tiplab(aes(label=new_label), size=2, color="black")+
+#   # geom_nodepoint(size=0.1, color="black")+
+#   scale_color_manual(values=colors)+
+#   labs(color="Phylum")
+# 
+# p2 <- gheatmap(p1, asvDF.all, offset=0.5, width=.08, colnames=FALSE)+
+#   scale_fill_gradient2(low = muted("red"),
+#                        mid = "white",
+#                        high = "#2b8cbe",
+#                        trans="log",
+#                        breaks=c(1,10,100,1000),
+#                        name="Number of ASVs")
+# 
+# p3 <- gheatmap(p2+new_scale_fill(),
+#                countDF.all, offset=1.1, width=.08, colnames = FALSE)+
+#   scale_fill_gradient(low = "white",
+#                       high = muted("red"),
+#                       trans="log",
+#                       breaks=c(1e-5,1e-3,1e-1,10),
+#                       labels = parse(text=c("10^-5","10^-3","10^-1", "10")),
+#                       name="Mean relative abundance (%)")+
+#   labs(title="All samples")
+# 
+# p4 <- gheatmap(p3+new_scale_fill(),
+#          datasetDF.all, offset=1.7, width=.08, colnames = FALSE)+
+#   scale_fill_gradient(low = "#ffffe5",
+#                       high = "#ec7014",
+#                       breaks = c(1,5,10),
+#                       name="Number of datasets")+
+#   labs(title="All samples")
+# 
+# jpeg("~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/03_TaxonomicTree/taxTree_all.jpg", width=6000, height=4000, res=400)
+# gheatmap(p4+new_scale_fill(),
+#          sampleType.df, offset=2.3, width=.08, colnames = FALSE)+
+#   scale_fill_manual(values=c("#f0f0f0","#636363","#bdbdbd"), name="Sample type")+
+#   labs(title="All samples")
+# dev.off()
 
 
 
@@ -323,18 +323,18 @@ p2_fecal <- gheatmap(p1_fecal, asvDF.fecal, offset=0.5, width=.08, colnames=FALS
                        high = "#2b8cbe",
                        trans="log",
                        breaks=c(1,10,100,1000),
+                       limits=c(1,4200),
                        name="Number of ASVs")
 
-p3_fecal <- gheatmap(p2_fecal+new_scale_fill(),
-         countDF.fecal, offset=1.1, width=.08, colnames = FALSE)+
+p3_fecal <- gheatmap(p2_fecal+new_scale_fill(), countDF.fecal, offset=1.1, width=.08, colnames = FALSE)+
   scale_fill_gradient(low = "white",
                       high = muted("red"),
                       trans="log",
                       breaks=c(1e-5,1e-3,1e-1,10),
+                      limits=c(1e-6, 25),
                       name="Average count per sample (%)")+
   labs(title="Fecal samples")
 
-jpeg("~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/03_TaxonomicTree/taxTree_fecal.jpg", width=6000, height=3000, res=400)
 gheatmap(p3_fecal+new_scale_fill(),
          datasetDF.fecal, offset=1.7, width=.08, colnames = FALSE)+
   scale_fill_gradient(low = "#ffffe5",
@@ -343,7 +343,7 @@ gheatmap(p3_fecal+new_scale_fill(),
                       breaks = c(1,5,10),
                       name="Number of datasets")+
   labs(title="Fecal samples")
-dev.off()
+ggsave("~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/03_TaxonomicTree/taxTree_fecal.jpg", width=12, height=8)
 
 
 
@@ -371,18 +371,18 @@ p2_sigmoid <- gheatmap(p1_sigmoid, asvDF.sigmoid, offset=0.5, width=.08, colname
                        high = "#2b8cbe",
                        trans="log",
                        breaks=c(1,10,100,1000),
+                       limits=c(1,4200),
                        name="Number of ASVs")
 
-p3_sigmoid <- gheatmap(p2_sigmoid+new_scale_fill(),
-         countDF.sigmoid, offset=1.1, width=.08, colnames = FALSE)+
+p3_sigmoid <- gheatmap(p2_sigmoid+new_scale_fill(), countDF.sigmoid, offset=1.1, width=.08, colnames = FALSE)+
   scale_fill_gradient(low = "white",
                       high = muted("red"),
                       trans="log",
                       breaks=c(1e-5,1e-3,1e-1,10),
+                      limits=c(1e-6, 25),
                       name="Average count per sample (%)")+
   labs(title="Sigmoid samples")
 
-jpeg("~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/03_TaxonomicTree/taxTree_sigmoid.jpg", width=6000, height=3000, res=400)
 gheatmap(p3_sigmoid+new_scale_fill(),
          datasetDF.sigmoid, offset=1.7, width=.08, colnames = FALSE)+
   scale_fill_gradient(low = "#ffffe5",
@@ -391,26 +391,5 @@ gheatmap(p3_sigmoid+new_scale_fill(),
                       breaks = c(1,5,10),
                       name="Number of datasets")+
   labs(title="Sigmoid samples")
-dev.off()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+ggsave("~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/03_TaxonomicTree/taxTree_sigmoid.jpg", width=12, height=8)
 
