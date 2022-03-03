@@ -12,8 +12,8 @@
 # Libraries
 library(phyloseq)
 library(ggplot2)
+library(cowplot)
 library(tidyverse)
-# library(pals)
 library(RColorBrewer)
 
 # Data
@@ -79,7 +79,7 @@ table(phylum.table.main$Phylum) # sanity check
 #############################################
 
 # Set the color theme
-rgb(0,1,0, alpha=0.55) # find code for alpha
+# rgb(0,1,0, alpha=0.55) # find code for alpha
 colors <- paste0(brewer.pal(6, "Dark2"), "80", sep="")
 names(colors) <- c("Actinobacteriota", "Bacteroidota", "Firmicutes", "Proteobacteria", "Verrucomicrobiota", "Other")
 
@@ -91,6 +91,7 @@ ggplot(phylum.table.main %>% filter(sample_type == "stool"),
   geom_bar(stat = "identity", width=1) +
   scale_fill_manual(values=colors, guide=guide_legend(nrow=6))+
   scale_y_continuous(expand = c(0, 0))+ # remove empty space between axis and plot
+  theme_cowplot()+
   theme(axis.text.x = element_blank(),
         axis.ticks.x = element_blank(),
         strip.background = element_rect(fill="white", color="black"),
@@ -105,7 +106,7 @@ ggplot(phylum.table.main %>% filter(sample_type == "stool"),
 
 # Save figure
 ggsave("~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/05_Relative-Abund/phyla_relabund_fecal_02.jpg", width=8, height=5) # high
-ggsave("~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/05_Relative-Abund/phyla_relabund_fecal_03.jpg", width=12, height=3) # large
+ggsave("~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/05_Relative-Abund/phyla_relabund_fecal_03.jpg", width=10, height=5) # large
 
 
 # Plot main phyla by sample (sigmoid samples)
@@ -116,6 +117,7 @@ ggplot(phylum.table.main %>% filter(sample_type == "sigmoid"),
   geom_bar(stat = "identity", width=1) +
   scale_fill_manual(values=colors, guide=guide_legend(nrow=6))+
   scale_y_continuous(expand = c(0, 0))+ # remove empty space between axis and plot
+  theme_cowplot()+
   theme(axis.text.x = element_blank(),
         axis.ticks.x = element_blank(),
         strip.background = element_rect(fill="white", color="black"),
@@ -130,7 +132,7 @@ ggplot(phylum.table.main %>% filter(sample_type == "sigmoid"),
 
 # Save figure
 ggsave("~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/05_Relative-Abund/phyla_relabund_sigmoid_02.jpg", width=8, height=5) # high
-ggsave("~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/05_Relative-Abund/phyla_relabund_sigmoid_03.jpg", width=12, height=3) # large
+ggsave("~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/05_Relative-Abund/phyla_relabund_sigmoid_03.jpg", width=10, height=5) # large
 
 
 
@@ -139,19 +141,54 @@ ggsave("~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/05_Relative-Abun
 # PLOT PHYLA RELATIVE ABUNDANCES PER DISEASE #
 ##############################################
 
-# Plot by host_disease
-phylum.table %>%
+# *********
+# BY HOST_DISEASE
+# *********
+# Get a df with average abundance of each Phylum per sample
+test <- phylum.table.main %>%
+  # keep only stool samples, 1st collection time point
   filter(sample_type == "stool" & Collection=="1st") %>%
+  select(Sample, Abundance, Phylum, host_disease, host_subtype) %>%
+  # for each sample, sum the abundance of all ASVs belonging to the same phylum
+  group_by(Sample, Phylum) %>%
+  mutate(abundance=sum(Abundance)) %>%
+  ungroup() %>%
+  group_by(Sample) %>%
+  summarize(sum(abundance))
+  # get the mean abundance of each phylum per disease status (across samples)
   group_by(host_disease, Phylum) %>%
-  summarize(Mean=mean(Abundance))
+  summarize(Mean=mean(abundance))
+
+  # Plot fecal samples by host_disease
+ggplot(test,
+       aes(x = host_disease, y = Mean, fill = Phylum))+
+  geom_bar(stat = "identity", position='fill') +
+  scale_fill_manual(values=colors, guide=guide_legend(nrow=6))+
+  scale_y_continuous(expand = c(0, 0))+ # remove empty space between axis and plot
+  theme_cowplot()+
+  theme(axis.text.x = element_text(size=10, color="black"),
+        #legend.position = "None",
+        legend.text = element_text(size=12),
+        legend.title = element_text(size=12),
+        legend.key.size = unit(0.2, 'cm'),
+        panel.grid = element_blank(),
+        panel.background=element_blank(),
+        axis.line.x = element_line(size=0.5, color="black"))+
+  labs(x = "", y = "Proportion")
+
+
+test <- phylum.table.main %>%
+  filter(sample_type == "stool" & Collection=="1st") %>%
+  group_by(host_subtype) %>%
+  summarize(number=paste0("n=", n_distinct(Sample)))
 
 ggplot(phylum.table.main %>% filter(sample_type == "stool" & Collection=="1st"),
-       aes(x = host_disease, y = Abundance, fill = Phylum))+
+       aes(x = host_subtype, y = Abundance, fill = Phylum))+
   geom_bar(stat = "identity", position = "fill") +
-  scale_fill_manual(# values=brewer.paired(n=48),
-                    values=paste0(brewer.pal(6, "Set1"), "CC", sep="")
-                    )+
-  scale_y_continuous(expand = c(0, 0))+ # remove empty space between axis and plot
+  geom_text(data=test, aes(x = host_subtype, y=1.03, label=number, fill=NULL))+
+  scale_fill_manual(values=colors, guide=guide_legend(nrow=6))+
+  scale_y_continuous(expand = c(0, 0), limits=c(0,1.1))+ # remove empty space between axis and plot
+  theme_cowplot()+
   theme(axis.text.x = element_text(size=10, color="black"),
         #legend.position = "None",
         legend.text = element_text(size=12),
