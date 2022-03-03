@@ -2103,9 +2103,10 @@ sampledf$host_disease[substr(sampledf$host_disease, start = 1, stop = 3) == &quo
 sampledf[sampledf$host_disease == &quot;Healthy&quot;, &quot;host_subtype&quot;] &lt;- &quot;HC&quot;
 sampledf[sampledf$host_disease == &quot;IBS&quot;, &quot;host_subtype&quot;] &lt;- &quot;IBS-D&quot; # only IBS-diarrhea patients in this cohort
 
+sampledf$Collection &lt;- &quot;1st&quot; # only 1 collection time per individual
 sampledf$sample_type &lt;- &quot;stool&quot;
 sampledf$author &lt;- &quot;Zhuang&quot;
-sampledf$sequencing_tech &lt;- &quot;Illumina&quot;
+sampledf$sequencing_tech &lt;- &quot;Illumina paired-end&quot;
 sampledf$variable_region &lt;- &quot;V3-V4&quot;
 
 #_________________________
@@ -2118,7 +2119,9 @@ physeq &lt;- phyloseq(otu_table(seqtable.nochim, taxa_are_rows=FALSE), # by defa
 physeq &lt;- subset_taxa(physeq, Kingdom != &quot;Eukaryota&quot;)
 physeq &lt;- subset_taxa(physeq, !is.na(Phylum))
 # Remove samples with less than 500 reads
-physeq &lt;- prune_samples(sample_sums(physeq)&gt;=500, physeq)</code></pre>
+physeq &lt;- prune_samples(sample_sums(physeq)&gt;=500, physeq)
+# No sample was deleted, so we don&#39;t need to remove taxa present in low-count samples
+# physeq &lt;- prune_taxa(taxa_sums(physeq)&gt;0, physeq)</code></pre>
 </div>
 <div id="save-to-disk" class="section level3">
 <h3>2. Save to disk</h3>

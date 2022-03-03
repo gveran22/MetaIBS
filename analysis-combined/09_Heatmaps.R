@@ -57,8 +57,10 @@ physeq <- merge_phyloseq(physeq.labus,
                          physeq.zeber)
 
 # Separate fecal & sigmoid samples
-physeq.fecal <- subset_samples(physeq, sample_type == 'stool') # 2,145 samples
+physeq.fecal <- subset_samples(physeq, sample_type == 'stool') # 2,220 samples
+physeq.fecal <- prune_taxa(taxa_sums(physeq.fecal)>0, physeq.fecal) # remove ASVs that are not present anymore
 physeq.sigmoid <- subset_samples(physeq, sample_type == 'sigmoid') # 431 samples
+physeq.sigmoid <- prune_taxa(taxa_sums(physeq.sigmoid)>0, physeq.sigmoid) # remove ASVs that are not present anymore
 cat("Nb of fecal samples:", nsamples(physeq.fecal))
 cat("\nNb of sigmoid samples:", nsamples(physeq.sigmoid))
 
@@ -69,10 +71,9 @@ color.df <- data.frame(disease = sample_data(physeq.fecal)[,'host_disease'],
                        author = sample_data(physeq.fecal)[,'author'])
 color.df[is.na(color.df$host_disease),"host_disease"] <- "NA"
 author.order <- c('Labus', 'LoPresti', 'Ringel', # 454 pyrosequencing
-                  'Fukui', 'Hugerth', 'Zhu', 'Zhuang', # Illumina paired end
                   'AGP', 'Liu', 'Pozuelo', # Illumina single end
+                  'Fukui', 'Hugerth', 'Zhu', 'Zhuang', # Illumina paired end
                   'Nagel', 'Zeber-Lubecka') # Ion Torrent
-# color.df$author <- factor(color.df$author, levels = author.order)
 color.df <- color.df %>%
   mutate(author = factor(color.df$author, levels = author.order)) %>%
   arrange(author, host_disease)
@@ -80,11 +81,11 @@ color.df <- color.df %>%
 sample.order <- rownames(color.df)
 # table(color.df$author) # sanity check
 
-annotationCol <- list(host_disease = c(Healthy = 'blue', IBS = 'red', "NA"='white'),
-                      sequencing_tech = c('454 pyrosequencing' = '#6600FF',
-                                          'Illumina single-end' = '#33CC33',
-                                          'Illumina paired-end' = '#006600',
-                                          'Ion Torrent' = '#FF6633'),
+annotationCol <- list(host_disease = c(Healthy = '#08519c', IBS = '#ef3b2c', "NA"='white'),
+                      sequencing_tech = c('454 pyrosequencing' = '#6a51a3',
+                                          'Illumina single-end' = '#a1d99b',
+                                          'Illumina paired-end' = '#238b45',
+                                          'Ion Torrent' = '#f16913'),
                       author = setNames(brewer.paired(n=12), levels(color.df$author)))
 
 
@@ -96,7 +97,7 @@ annotationCol <- list(host_disease = c(Healthy = 'blue', IBS = 'red', "NA"='whit
 
 # Agglomerate to Phylum level, keeping only ASVs present in at least 2 samples
 phylum.agg <- physeq.fecal %>%
-  tax_glom(taxrank = "Phylum") %>%                     # agglomerate at genus level
+  tax_glom(taxrank = "Phylum") %>%                     # agglomerate at phylum level
   transform_sample_counts(function(x) {x/sum(x)} ) %>% # Transform to rel. abundance
   psmelt()                                             # Melt to long format
 # phylum.agg <- filter_taxa(physeq.fecal, function(x) sum(x > 0) >= 2, TRUE) %>%
@@ -169,30 +170,28 @@ dev.off()
 
 # Agglomerate to Family level
 family.agg <- physeq.fecal %>%
-  tax_glom(taxrank = "Family") %>%                     # agglomerate at genus level
-  transform_sample_counts(function(x) {x/sum(x)} ) %>% # Transform to rel. abundance
-  psmelt()                                             # Melt to long format
+  tax_glom(taxrank = "Family") %>%
+  transform_sample_counts(function(x) {x/sum(x)} ) %>%
+  psmelt()
+# saveRDS(family.agg, "~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/09_Heatmaps/famGlom_fecal.rds")
+# family.agg <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/09_Heatmaps/famGlom_fecal.rds")
+
 
 # Identify families present in at least 3 datasets
 list.family <- family.agg %>%
-  # is each family present in each dataset (T/F)?
-  group_by(Family, author) %>%
-  summarise(fam_present=sum(Abundance)>0) %>%
-  ungroup() %>%
-  # in how many datasets is each family present (n)?
+  filter(Abundance > 0) %>%
   group_by(Family) %>%
-  count(fam_present) %>%
-  filter(fam_present == TRUE) %>%
-  filter(n>2) %>%
+  summarise(nb_datasets = n_distinct(author)) %>%
+  filter(nb_datasets>2) %>%
   ungroup()
 list.family <- list.family$Family
 
 
 # Agglomerate again at family level, but keeping only families present in at least 3 datasets
-family.agg <- subset_taxa(physeq.fecal, Family %in% list.family) %>%
-  tax_glom(taxrank = "Family") %>%
-  transform_sample_counts(function(x) {x/sum(x)} ) %>%
-  psmelt()
+# family.agg <- subset_taxa(physeq.fecal, Family %in% list.family) %>%
+#   tax_glom(taxrank = "Family") %>%
+#   transform_sample_counts(function(x) {x/sum(x)} ) %>%
+#   psmelt()
 
 # Get dataframe family x samples
 familyTable <- acast(family.agg %>% filter(Family %in% list.family),
@@ -201,7 +200,7 @@ familyTable <- acast(family.agg %>% filter(Family %in% list.family),
 # Sanity checks
 dim(familyTable)
 table(is.na(familyTable))
-table(colSums(familyTable))
+table(colSums(familyTable)) # sum per sample
 table(rownames(familyTable))
 table(rowSums(familyTable) == 0)
 
@@ -212,16 +211,16 @@ familyTable[familyTable == 0] <- 10e-7
 # Reorder samples
 familyTable <- familyTable[,sample.order] # reorder samples
 
-jpeg("~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/09_Heatmaps/family_heatmp_ordered.jpg", height = 3000, width = 4000, res = 300)
+jpeg("~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/09_Heatmaps/family_heatmp_test1.jpg", height = 4000, width = 4000, res = 300)
 pheatmap(log10(familyTable),
-         color = colorRampPalette(rev(brewer.pal(n = 7, name = "RdYlBu")))(100),
+         color = colorRampPalette(rev(brewer.pal(n = 7, name = "RdYlBu")))(50),
          show_rownames = T,
          show_colnames = F,
-         fontsize_row = 5,
+         fontsize_row = 6,
          cluster_rows = T,
          cluster_cols = F,
-         #cutree_rows = 2,
-         cutree_cols = 2,
+         # cutree_rows = 2,
+         # cutree_cols = 2,
          clustering_method = 'ward.D',
          annotation_col = color.df,
          annotation_colors = annotationCol,
@@ -229,6 +228,10 @@ pheatmap(log10(familyTable),
 dev.off()
 
 
+# Try heatmap with ggplot?
+# ggplot(family.agg %>% filter(Family %in% list.family),
+#        aes(Sample, Family, fill=Abundance)) + 
+#   geom_tile()
 
 
 

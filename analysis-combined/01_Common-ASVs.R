@@ -14,6 +14,7 @@ library(tidyverse)
 library(phyloseq)
 library(reshape2)
 library(ggupset)
+library(cowplot)
 
 # Data
 path.phy <- "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/CLUSTER/PhyloTree/input"
@@ -66,31 +67,31 @@ sum(ntaxa(physeq.labus)+
       ntaxa(physeq.zhu)+
       ntaxa(physeq.zhuang)+
       ntaxa(physeq.nagel)+
-      ntaxa(physeq.zeber)) # 81,452 before
+      ntaxa(physeq.zeber)) # 81,451 before
 
-ntaxa(physeq.all) # 79,918 after
+ntaxa(physeq.all) # 79,917 after
 
 
 # Put datasets in a list
-datasets <- list("labus"    = physeq.labus,
-                 "lopresti" = physeq.lopresti,
-                 "ringel"   = physeq.ringel,
-                 "agp"      = physeq.agp,
-                 "liu"      = physeq.liu,
-                 "pozuelo"  = physeq.pozuelo,
-                 "fukui"    = physeq.fukui,
-                 "mars"     = physeq.mars,
-                 "hugerth"  = physeq.hugerth,
-                 "zhu"      = physeq.zhu,
-                 "zhuang"   = physeq.zhuang,
-                 "nagel"    = physeq.nagel,
-                 "zeber"    = physeq.zeber)
+datasets <- list("Labus"    = physeq.labus,
+                 "Lopresti" = physeq.lopresti,
+                 "Ringel"   = physeq.ringel,
+                 "AGP"      = physeq.agp,
+                 "Liu"      = physeq.liu,
+                 "Pozuelo"  = physeq.pozuelo,
+                 "Fukui"    = physeq.fukui,
+                 "Mars"     = physeq.mars,
+                 "Hugerth"  = physeq.hugerth,
+                 "Zhu"      = physeq.zhu,
+                 "Zhuang"   = physeq.zhuang,
+                 "Nagel"    = physeq.nagel,
+                 "Zeber"    = physeq.zeber)
 
 
 # Let's get all ASVs in a dataframe and check if we can find common ones
 asv.df <- melt(lapply(datasets, function(x) taxa_names(x)))
 colnames(asv.df) <- c("asv", "author")
-length(unique(asv.df$asv)) # we do find 79,918 unique sequences
+length(unique(asv.df$asv)) # we do find 79,917 unique sequences
 
 # Let's see which datasets share the exact same ASV sequence
 common.asv <- asv.df %>%
@@ -98,11 +99,12 @@ common.asv <- asv.df %>%
   summarize(Datasets = list(unique(author))) %>%
   filter(lengths(Datasets)>1)
 
-# jpeg("~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/01_Merge-Datasets/commonASV_merge-phyloseq-funct.jpg", width=2000, height=2000, res=400)
+# jpeg("~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/01_Merge-Datasets/commonASV_merge-phyloseq-funct.jpg", width=2000, height=2200, res=400)
 ggplot(common.asv, aes(x=Datasets))+
-  geom_bar() +
+  geom_bar(fill="#737373") +
   scale_x_upset()+
-  labs(y="# of common ASVs")
+  theme_cowplot()+
+  labs(y="# common ASVs")
 # dev.off()
 
 

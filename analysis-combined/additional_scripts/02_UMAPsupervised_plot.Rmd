@@ -1,0 +1,677 @@
+---
+title: "UMAP supervised plot"
+output:
+  html_document:
+    df_print: paged
+    toc: true
+---
+
+# LIBRAIRIES
+
+```{r library}
+library(phyloseq)
+library(ggplot2)
+library(ggpubr)
+library(plotly)
+library(pals)
+library(RColorBrewer)
+library(umap)
+library(tidyverse)
+library(gtools)
+```
+
+
+
+
+# DATA
+
+```{r data, echo=TRUE, eval=FALSE}
+path.phy <- "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/CLUSTER/PhyloTree/input"
+
+# Import phyloseq objects
+physeq.ringel <- readRDS(file.path(path.phy, "physeq_ringel.rds"))
+physeq.labus <- readRDS(file.path(path.phy, "physeq_labus.rds"))
+physeq.lopresti <- readRDS(file.path(path.phy, "physeq_lopresti.rds"))
+physeq.pozuelo <- readRDS(file.path(path.phy, "physeq_pozuelo.rds"))
+physeq.zhuang <- readRDS(file.path(path.phy, "physeq_zhuang.rds"))
+physeq.zhu <- readRDS(file.path(path.phy, "physeq_zhu.rds"))
+physeq.hugerth <- readRDS(file.path(path.phy, "physeq_hugerth.rds"))
+physeq.fukui <- readRDS(file.path(path.phy, "physeq_fukui.rds"))
+physeq.mars <- readRDS(file.path(path.phy, "physeq_mars.rds"))
+physeq.liu <- readRDS(file.path(path.phy, "physeq_liu.rds"))
+physeq.agp <- readRDS(file.path(path.phy, "physeq_agp.rds"))
+physeq.nagel <- readRDS(file.path(path.phy, "physeq_nagel.rds"))
+physeq.zeber <- readRDS(file.path(path.phy, "physeq_zeber.rds"))
+
+# Merge phyloseq objects
+physeq <- merge_phyloseq(physeq.ringel,
+                         physeq.labus,
+                         physeq.lopresti,
+                         physeq.pozuelo,
+                         physeq.zhuang,
+                         physeq.zhu,
+                         physeq.hugerth,
+                         physeq.fukui,
+                         physeq.mars,
+                         physeq.liu,
+                         physeq.agp,
+                         physeq.nagel,
+                         physeq.zeber)
+
+# Keep only fecal samples
+physeq.fecal <- subset_samples(physeq, sample_type == 'stool') # 2,220 samples
+```
+
+
+```{r import, echo=FALSE, eval=TRUE}
+ratio.df <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/02_UMAP/phylaRatios.rds")
+# saveRDS(ratio.df, "~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/02_UMAP/phylaRatios.rds")
+
+relAbundance <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/02_UMAP/phyla_relAbundance.rds")
+# saveRDS(relAbundance, "~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/02_UMAP/phyla_relAbundance.rds")
+
+shannon <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/02_UMAP/shannon.rds")
+# saveRDS(shannon, "~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/02_UMAP/shannon.rds")
+```
+
+
+
+
+# GET EXTRA DATA FOR COLORING
+
+## 1 - Log ratios
+
+```{r log-ratios, echo=TRUE, eval=FALSE}
+# Agglomerate to phylum level
+phylumTable <- physeq.fecal %>%
+  tax_glom(taxrank = "Phylum") %>%
+  psmelt()
+
+# Extract abundance of Bacteroidota, Firmicutes and Actinobacteriota
+relevant.covariates <- c('Sample', 'Abundance', 'Phylum', 'host_disease', 'host_subtype', 'sample_type', 'Collection',
+                         'author', 'sequencing_tech')
+
+bacter <- phylumTable %>%
+  filter(Phylum == "Bacteroidota") %>%
+  select(all_of(relevant.covariates)) %>%
+  rename(Bacteroidota = Abundance) %>%
+  select(-Phylum)
+
+firmi <- phylumTable %>%
+  filter(Phylum == "Firmicutes") %>%
+  select(all_of(relevant.covariates)) %>%
+  rename(Firmicutes = Abundance) %>%
+  select(-Phylum)
+
+actino <- phylumTable %>%
+  filter(Phylum == "Actinobacteriota") %>%
+  select(all_of(relevant.covariates)) %>%
+  rename(Actinobacteriota = Abundance) %>%
+  select(-Phylum)
+
+
+# COMPUTE LOG RATIOS
+common.columns <- c("Sample", "host_disease", "host_subtype", "sample_type", "Collection",
+                    "author", "sequencing_tech")
+
+ratio.df <- left_join(x=bacter, y=firmi, by=common.columns) %>%
+  left_join(actino, by=common.columns) %>%
+  # Add 0.5 pseudocounts for the few 0 values
+  mutate(Bacteroidota=replace(Bacteroidota, Bacteroidota==0, 0.5),
+         Firmicutes=replace(Firmicutes, Firmicutes==0, 0.5),
+         Actinobacteriota=replace(Actinobacteriota, Actinobacteriota==0, 0.5)) %>%
+  # Compute log ratios
+  mutate(LogRatio_FirmBact = log2(Firmicutes/Bacteroidota),
+         LogRatio_FirmAct = log2(Firmicutes/Actinobacteriota),
+         LogRatio_BactAct = log2(Bacteroidota/Actinobacteriota)) %>%
+  # cleanup
+  select(-c("Bacteroidota", "Firmicutes", "Actinobacteriota")) %>%
+  rename(samples=Sample)
+```
+
+
+## 2 - Get Phyla relative abundances
+
+```{r rel-abundance, echo=TRUE, eval=FALSE}
+# Agglomerate to phylum level and get relative abundance
+phylumTable.rel <- physeq.fecal %>%
+  tax_glom(taxrank = "Phylum") %>%
+  transform_sample_counts(function(x) {x/sum(x)} ) %>%
+  psmelt()
+
+# Extract relative abundance of major phyla
+bacter.rel <- phylumTable.rel %>%
+  filter(Phylum == "Bacteroidota") %>%
+  select(Sample, Abundance, Phylum) %>%
+  rename(Bacteroidota = Abundance) %>%
+  select(-Phylum)
+
+firmi.rel <- phylumTable.rel %>%
+  filter(Phylum == "Firmicutes") %>%
+  select(Sample, Abundance, Phylum) %>%
+  rename(Firmicutes = Abundance) %>%
+  select(-Phylum)
+
+actino.rel <- phylumTable.rel %>%
+  filter(Phylum == "Actinobacteriota") %>%
+  select(Sample, Abundance, Phylum) %>%
+  rename(Actinobacteriota = Abundance) %>%
+  select(-Phylum)
+
+proteo.rel <- phylumTable.rel %>%
+  filter(Phylum == "Proteobacteria") %>%
+  select(Sample, Abundance, Phylum) %>%
+  rename(Proteobacteria = Abundance) %>%
+  select(-Phylum)
+
+# Join tables
+relAbundance <- left_join(x=bacter.rel, y=firmi.rel, by="Sample") %>%
+  left_join(actino.rel, by="Sample") %>%
+  left_join(proteo.rel, by="Sample") %>%
+  rename(samples=Sample)
+```
+
+
+## 3 - Get diversity index (Shannon)
+
+```{r diversity, echo=TRUE, eval=FALSE}
+# Shannon diversity
+p <- plot_richness(physeq.fecal, x="host_disease", measures="Shannon") +
+  geom_boxplot(fill=NA, width=0.3) +
+  facet_wrap(~author, scales="fixed")
+
+shannon <- p$data %>%
+  select(samples, value) %>%
+  rename(shannon=value)
+```
+
+
+
+
+# DEFINE FUNCTIONS
+
+## Get umap coordinates (downloaded from cluster)
+```{r umap-functions}
+# Order for the authors
+author.order <- c('Labus', 'LoPresti', 'Ringel', # 454 pyrosequencing
+                  'AGP', 'Liu', 'Pozuelo', # Illumina single end
+                  'Fukui', 'Hugerth', 'Zhu', 'Zhuang', # Illumina paired end
+                  'Nagel', 'Zeber-Lubecka') # Ion Torrent
+
+# Function to get the UMAP coordinates (by taxonomic level)
+getUMAP <- function(taxLevel="Genus"){
+  # UMAP computed on the cluster
+  filename <- paste0(paste0("dims_umap", taxLevel, sep=""), ".rds", sep="")
+  dims.umap <- readRDS(file.path(path, filename)) # coordinates umap + covariates
+  
+  dims.umap$author <- factor(dims.umap$author, levels=author.order)
+  colnames(dims.umap)[1] <- "samples"
+  print(dim(dims.umap)) # should be 2220
+  
+  # Merge with ratio.df, relAbundance, shannon index
+  umap.df <- merge(dims.umap, ratio.df, by=c("samples", "host_disease", "host_subtype", "sequencing_tech", "author"))
+  umap.df <- merge(umap.df, relAbundance, by="samples")
+  umap.df <- merge(umap.df, shannon, by="samples")
+  print(dim(umap.df)) # should be 2220
+  
+  return(umap.df)
+}
+```
+
+
+## Functions for plotting
+
+```{r plot-functions}
+#______________________
+# PLOT IN 2D
+plot.covariates <- function(plotDF=umap.df){
+  p1 <- ggplot(plotDF, aes(x = UMAP_1, y = UMAP_2, color = host_disease))+
+    geom_point(size=1, alpha=0.6) +
+    scale_color_manual(values=c("blue", "red", "black"), name="Disease phenotype")+
+    theme(panel.grid = element_blank(),
+          panel.background=element_blank(),
+          legend.key.size = unit(0.25, 'cm'),
+          legend.text = element_text(size=6),
+          legend.title = element_text(size=10),
+          axis.title = element_text(size=5),
+          axis.text = element_text(size=5))
+  
+  p2 <- ggplot(plotDF, aes(x = UMAP_1, y = UMAP_2, color = host_subtype))+
+    geom_point(size=1, alpha=0.6) +
+    scale_color_manual(values=c("#EFF3FF", "#D95F02", "#7570B3", "#E7298A", "#FEEDDE", "grey"), name="Disease subtype")+
+    theme(panel.grid = element_blank(),
+          panel.background=element_blank(),
+          legend.key.size = unit(0.25, 'cm'),
+          legend.text = element_text(size=6),
+          legend.title = element_text(size=10),
+          axis.title = element_text(size=5),
+          axis.text = element_text(size=5))
+  
+  p3 <- ggplot(plotDF, aes(x = UMAP_1, y = UMAP_2, color = sequencing_tech))+
+    geom_point(size=1, alpha=0.6) +
+    scale_color_manual(values=c('#6600FF', '#33CC33', '#006600', '#FF6633'), name="seq_tech")+
+    theme(panel.grid = element_blank(),
+          panel.background=element_blank(),
+          legend.key.size = unit(0.25, 'cm'),
+          legend.text = element_text(size=6),
+          legend.title = element_text(size=10),
+          axis.title = element_text(size=5),
+          axis.text = element_text(size=5))
+  
+  p4 <- ggplot(plotDF, aes(x = UMAP_1, y = UMAP_2, color = author))+
+    geom_point(size=1, alpha=0.6) +
+    scale_color_manual(values=brewer.paired(n=13), name="Dataset")+
+    theme(panel.grid = element_blank(),
+          panel.background=element_blank(),
+          legend.key.size = unit(0.25, 'cm'),
+          legend.text = element_text(size=6),
+          legend.title = element_text(size=10),
+          axis.title = element_text(size=5),
+          axis.text = element_text(size=5))
+  
+  show(ggpubr::ggarrange(p1, p2, p3, p4, nrow=2, ncol=2))
+}
+
+#______________________
+# PLOT IN 3D
+plot3D <- function(plotDF=umap.df, coloring="host_disease", colorPal=c("blue", "red", "black"), taxLevel="Genus"){
+  # 3D
+  plotly::plot_ly() %>%
+    add_trace(data=plotDF,
+              x=~UMAP_1, y=~UMAP_2, z=~UMAP_3,
+              color=~plotDF[,coloring],
+              colors=colorPal,
+              type="scatter3d",
+              mode="markers",
+              marker=list(size=5)) %>%
+    layout(title=coloring)
+}
+
+
+#______________________
+# PLOT PHYLA LOG RATIOS
+plot.logRatio <- function(plotDF=umap.df){
+  
+  p1 <- ggplot(plotDF, aes(x = UMAP_1, y = UMAP_2, color = LogRatio_FirmBact))+
+    geom_point(size=1) +
+    scale_color_gradient2(midpoint=mean(plotDF$LogRatio_FirmBact), low="blue", mid="white", high="red")+
+    theme(panel.grid = element_blank(),
+          panel.background=element_blank(),
+          legend.key.size = unit(0.25, 'cm'),
+          legend.text = element_text(size=6),
+          legend.title = element_text(size=8),
+          axis.title = element_text(size=5),
+          axis.text = element_text(size=5))+
+    labs(color="Firmicutes/Bacteroidota")
+  
+  p2 <- ggplot(plotDF, aes(x = UMAP_1, y = UMAP_2, color = LogRatio_FirmAct))+
+    geom_point(size=1) +
+    scale_color_gradient2(midpoint=mean(plotDF$LogRatio_FirmAct), low="blue", mid="white", high="red")+
+    theme(panel.grid = element_blank(),
+          panel.background=element_blank(),
+          legend.key.size = unit(0.25, 'cm'),
+          legend.text = element_text(size=6),
+          legend.title = element_text(size=8),
+          axis.title = element_text(size=5),
+          axis.text = element_text(size=5))+
+    labs(color="Firmicutes/Actinobacteria")
+  
+  p3 <- ggplot(plotDF, aes(x = UMAP_1, y = UMAP_2, color = LogRatio_BactAct))+
+    geom_point(size=1) +
+    scale_color_gradient2(midpoint=mean(plotDF$LogRatio_BactAct), low="blue", mid="white", high="red")+
+    theme(panel.grid = element_blank(),
+          panel.background=element_blank(),
+          legend.key.size = unit(0.25, 'cm'),
+          legend.text = element_text(size=6),
+          legend.title = element_text(size=8),
+          axis.title = element_text(size=5),
+          axis.text = element_text(size=5))+
+    labs(color="Bacteroidota/Actinobacteria")
+  
+  show(ggpubr::ggarrange(p1, p2, p3, nrow=2, ncol=2))
+}
+
+#______________________
+# PLOT PHYLA REL ABUNDANCE
+plot.relAbundance <- function(plotDF=umap.df){
+  
+  p1 <- ggplot(plotDF, aes(x = UMAP_1, y = UMAP_2, color = Firmicutes))+
+    geom_point(size=1) +
+    scale_color_gradient2(midpoint=mean(plotDF$Firmicutes), low="blue", mid="white", high="red")+
+    theme(panel.grid = element_blank(),
+          panel.background=element_blank(),
+          legend.key.size = unit(0.25, 'cm'),
+          legend.text = element_text(size=6),
+          legend.title = element_text(size=10),
+          axis.title = element_text(size=5),
+          axis.text = element_text(size=5))
+  
+  p2 <- ggplot(plotDF, aes(x = UMAP_1, y = UMAP_2, color = Bacteroidota))+
+    geom_point(size=1) +
+    scale_color_gradient2(midpoint=mean(plotDF$Bacteroidota), low="blue", mid="white", high="red")+
+    theme(panel.grid = element_blank(),
+          panel.background=element_blank(),
+          legend.key.size = unit(0.25, 'cm'),
+          legend.text = element_text(size=6),
+          legend.title = element_text(size=10),
+          axis.title = element_text(size=5),
+          axis.text = element_text(size=5))
+  
+  p3 <- ggplot(plotDF, aes(x = UMAP_1, y = UMAP_2, color = Actinobacteriota))+
+    geom_point(size=1) +
+    scale_color_gradient2(midpoint=mean(plotDF$Actinobacteriota), low="blue", mid="white", high="red")+
+    theme(panel.grid = element_blank(),
+          panel.background=element_blank(),
+          legend.key.size = unit(0.25, 'cm'),
+          legend.text = element_text(size=6),
+          legend.title = element_text(size=10),
+          axis.title = element_text(size=5),
+          axis.text = element_text(size=5))
+  
+  p4 <- ggplot(plotDF, aes(x = UMAP_1, y = UMAP_2, color = Proteobacteria))+
+    geom_point(size=1) +
+    scale_color_gradient2(midpoint=mean(plotDF$Proteobacteria), low="blue", mid="white", high="red")+
+    theme(panel.grid = element_blank(),
+          panel.background=element_blank(),
+          legend.key.size = unit(0.25, 'cm'),
+          legend.text = element_text(size=6),
+          legend.title = element_text(size=10),
+          axis.title = element_text(size=5),
+          axis.text = element_text(size=5))
+  
+  show(ggpubr::ggarrange(p1, p2, p3, p4, nrow=2, ncol=2))
+}
+```
+
+
+
+
+# SUPERVISED UMAPs
+
+## 1. DISEASE AS INDICATOR
+
+### a) Family level
+```{r plot-disease-family, include=FALSE, fig.width=9, fig.height=7}
+# GET UMAP DF
+path <- "~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/02_UMAP/supervised_UMAP/n_neighbors_10/data_disease"
+umap.df <- NULL
+umap.df <- getUMAP(taxLevel="Family")
+
+
+# Plot by host_disease, host_subtype, sequencing_tech, author/dataset (in 2D)
+plot.covariates()
+
+# Plot3D
+# plot3D(coloring="host_disease", colorPal=c("blue", "red", "black"), taxLevel="Family")
+# plot3D(coloring="host_subtype", colorPal=c("#EFF3FF", "#D95F02", "#7570B3", "#E7298A", "#FEEDDE", "grey"), taxLevel="Family")
+# plot3D(coloring="sequencing_tech", colorPal=c('#6600FF', '#33CC33', '#006600', '#FF6633'), taxLevel="Family")
+# plot3D(coloring="author", colorPal=brewer.paired(n=13), taxLevel="Family")
+
+
+# Plot by Shannon index (in 2D)
+ggplot(umap.df, aes(x = UMAP_1, y = UMAP_2, color = shannon))+
+    geom_point(size=1) +
+    scale_color_gradient2(midpoint=mean(umap.df$shannon), low="blue", mid="white", high="red")+
+    theme(panel.grid = element_blank(),
+          panel.background=element_blank())
+# plot3D(coloring="shannon", colorPal=rev(brewer.rdbu(50)), taxLevel="Family")
+
+
+# Plot log ratios (in 2D)
+plot.logRatio()
+
+# Plot 3D
+# plot3D(coloring="LogRatio_FirmBact", colorPal=rev(brewer.rdbu(50)), taxLevel="Family")
+# plot3D(coloring="LogRatio_FirmAct", colorPal=rev(brewer.rdbu(50)), taxLevel="Family")
+# plot3D(coloring="LogRatio_BactAct", colorPal=rev(brewer.rdbu(50)), taxLevel="Family")
+
+
+# By Phyla relative abundances (in 2D)
+plot.relAbundance()
+
+# By Phyla relative abundances (in 3D)
+# plot3D(coloring="Firmicutes", colorPal=rev(brewer.rdbu(50)), taxLevel="Family")
+# plot3D(coloring="Bacteroidota", colorPal=rev(brewer.rdbu(50)), taxLevel="Family")
+# plot3D(coloring="Actinobacteriota", colorPal=rev(brewer.rdbu(50)), taxLevel="Family")
+# plot3D(coloring="Proteobacteria", colorPal=rev(brewer.rdbu(50)), taxLevel="Family")
+```
+
+### b) Genus level
+```{r plot-disease-genus, include=FALSE, fig.width=9, fig.height=7}
+# GET UMAP DF
+path <- "~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/02_UMAP/supervised_UMAP/n_neighbors_10/data_disease"
+umap.df <- NULL
+umap.df <- getUMAP(taxLevel="Genus")
+
+
+# Plot by host_disease, host_subtype, sequencing_tech, author/dataset (in 2D)
+plot.covariates()
+
+# Plot3D
+# plot3D(coloring="host_disease", colorPal=c("blue", "red", "black"), taxLevel="Genus")
+plot3D(coloring="host_subtype", colorPal=c("#EFF3FF", "#D95F02", "#7570B3", "#E7298A", "#FEEDDE", "grey"), taxLevel="Genus")
+# plot3D(coloring="sequencing_tech", colorPal=c('#6600FF', '#33CC33', '#006600', '#FF6633'), taxLevel="Genus")
+# plot3D(coloring="author", colorPal=brewer.paired(n=13), taxLevel="Genus")
+
+
+# Plot by Shannon index (in 2D)
+ggplot(umap.df, aes(x = UMAP_1, y = UMAP_2, color = shannon))+
+    geom_point(size=1) +
+    scale_color_gradient2(midpoint=mean(umap.df$shannon), low="blue", mid="white", high="red")+
+    theme(panel.grid = element_blank(),
+          panel.background=element_blank())
+# plot3D(coloring="shannon", colorPal=rev(brewer.rdbu(50)), taxLevel="Genus")
+
+
+# Plot log ratios (in 2D)
+plot.logRatio()
+
+# Plot 3D
+# plot3D(coloring="LogRatio_FirmBact", colorPal=rev(brewer.rdbu(50)), taxLevel="Genus")
+# plot3D(coloring="LogRatio_FirmAct", colorPal=rev(brewer.rdbu(50)), taxLevel="Genus")
+# plot3D(coloring="LogRatio_BactAct", colorPal=rev(brewer.rdbu(50)), taxLevel="Genus")
+
+
+# By Phyla relative abundances (in 2D)
+plot.relAbundance()
+
+# By Phyla relative abundances (in 3D)
+# plot3D(coloring="Firmicutes", colorPal=rev(brewer.rdbu(50)), taxLevel="Genus")
+# plot3D(coloring="Bacteroidota", colorPal=rev(brewer.rdbu(50)), taxLevel="Genus")
+# plot3D(coloring="Actinobacteriota", colorPal=rev(brewer.rdbu(50)), taxLevel="Genus")
+# plot3D(coloring="Proteobacteria", colorPal=rev(brewer.rdbu(50)), taxLevel="Genus")
+```
+
+
+
+## 2. AUTHOR AS INDICATOR
+
+### a) Family level
+```{r plot-author-family, fig.width=9, fig.height=7}
+# GET UMAP DF
+path <- "~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/02_UMAP/supervised_UMAP/n_neighbors_10/data_author"
+umap.df <- NULL
+umap.df <- getUMAP(taxLevel="Family")
+
+
+# Plot by host_disease, host_subtype, sequencing_tech, author/dataset (in 2D)
+plot.covariates()
+
+# Plot3D
+plot3D(coloring="host_disease", colorPal=c("blue", "red", "black"), taxLevel="Family")
+# plot3D(coloring="host_subtype", colorPal=c("#EFF3FF", "#D95F02", "#7570B3", "#E7298A", "#FEEDDE", "grey"), taxLevel="Family")
+# plot3D(coloring="sequencing_tech", colorPal=c('#6600FF', '#33CC33', '#006600', '#FF6633'), taxLevel="Family")
+plot3D(coloring="author", colorPal=brewer.paired(n=13), taxLevel="Family")
+
+
+# Plot by Shannon index (in 2D)
+# ggplot(umap.df, aes(x = UMAP_1, y = UMAP_2, color = shannon))+
+#     geom_point(size=1) +
+#     scale_color_gradient2(midpoint=mean(umap.df$shannon), low="blue", mid="white", high="red")+
+#     theme(panel.grid = element_blank(),
+#           panel.background=element_blank())
+# plot3D(coloring="shannon", colorPal=rev(brewer.rdbu(50)), taxLevel="Family")
+
+
+# Plot log ratios (in 2D)
+# plot.logRatio()
+
+# Plot 3D
+# plot3D(coloring="LogRatio_FirmBact", colorPal=rev(brewer.rdbu(50)), taxLevel="Family")
+# plot3D(coloring="LogRatio_FirmAct", colorPal=rev(brewer.rdbu(50)), taxLevel="Family")
+# plot3D(coloring="LogRatio_BactAct", colorPal=rev(brewer.rdbu(50)), taxLevel="Family")
+
+
+# By Phyla relative abundances (in 2D)
+# plot.relAbundance()
+
+# By Phyla relative abundances (in 3D)
+# plot3D(coloring="Firmicutes", colorPal=rev(brewer.rdbu(50)), taxLevel="Family")
+# plot3D(coloring="Bacteroidota", colorPal=rev(brewer.rdbu(50)), taxLevel="Family")
+# plot3D(coloring="Actinobacteriota", colorPal=rev(brewer.rdbu(50)), taxLevel="Family")
+# plot3D(coloring="Proteobacteria", colorPal=rev(brewer.rdbu(50)), taxLevel="Family")
+```
+
+### b) Genus level
+```{r plot-author-genus, fig.width=9, fig.height=7}
+# GET UMAP DF
+path <- "~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/02_UMAP/supervised_UMAP/n_neighbors_10/data_author"
+umap.df <- NULL
+umap.df <- getUMAP(taxLevel="Genus")
+
+
+# Plot by host_disease, host_subtype, sequencing_tech, author/dataset (in 2D)
+plot.covariates()
+
+# Plot3D
+plot3D(coloring="host_disease", colorPal=c("blue", "red", "black"), taxLevel="Genus")
+# plot3D(coloring="host_subtype", colorPal=c("#EFF3FF", "#D95F02", "#7570B3", "#E7298A", "#FEEDDE", "grey"), taxLevel="Genus")
+# plot3D(coloring="sequencing_tech", colorPal=c('#6600FF', '#33CC33', '#006600', '#FF6633'), taxLevel="Genus")
+plot3D(coloring="author", colorPal=brewer.paired(n=13), taxLevel="Genus")
+
+
+# Plot by Shannon index (in 2D)
+# ggplot(umap.df, aes(x = UMAP_1, y = UMAP_2, color = shannon))+
+#     geom_point(size=1) +
+#     scale_color_gradient2(midpoint=mean(umap.df$shannon), low="blue", mid="white", high="red")+
+#     theme(panel.grid = element_blank(),
+#           panel.background=element_blank())
+# plot3D(coloring="shannon", colorPal=rev(brewer.rdbu(50)), taxLevel="Genus")
+
+
+# Plot log ratios (in 2D)
+# plot.logRatio()
+
+# Plot 3D
+# plot3D(coloring="LogRatio_FirmBact", colorPal=rev(brewer.rdbu(50)), taxLevel="Genus")
+# plot3D(coloring="LogRatio_FirmAct", colorPal=rev(brewer.rdbu(50)), taxLevel="Genus")
+# plot3D(coloring="LogRatio_BactAct", colorPal=rev(brewer.rdbu(50)), taxLevel="Genus")
+
+
+# By Phyla relative abundances (in 2D)
+# plot.relAbundance()
+
+# By Phyla relative abundances (in 3D)
+# plot3D(coloring="Firmicutes", colorPal=rev(brewer.rdbu(50)), taxLevel="Genus")
+# plot3D(coloring="Bacteroidota", colorPal=rev(brewer.rdbu(50)), taxLevel="Genus")
+# plot3D(coloring="Actinobacteriota", colorPal=rev(brewer.rdbu(50)), taxLevel="Genus")
+# plot3D(coloring="Proteobacteria", colorPal=rev(brewer.rdbu(50)), taxLevel="Genus")
+```
+
+
+
+## 3. SEQTECH AS INDICATOR
+
+### a) Family level
+```{r plot-seqtech-family, fig.width=9, fig.height=7}
+# GET UMAP DF
+path <- "~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/02_UMAP/supervised_UMAP/n_neighbors_10/data_seqtech"
+umap.df <- NULL
+umap.df <- getUMAP(taxLevel="Family")
+
+
+# Plot by host_disease, host_subtype, sequencing_tech, author/dataset (in 2D)
+plot.covariates()
+
+# Plot3D
+plot3D(coloring="host_disease", colorPal=c("blue", "red", "black"), taxLevel="Family")
+# plot3D(coloring="host_subtype", colorPal=c("#EFF3FF", "#D95F02", "#7570B3", "#E7298A", "#FEEDDE", "grey"), taxLevel="Family")
+plot3D(coloring="sequencing_tech", colorPal=c('#6600FF', '#33CC33', '#006600', '#FF6633'), taxLevel="Family")
+# plot3D(coloring="author", colorPal=brewer.paired(n=13), taxLevel="Family")
+
+
+# Plot by Shannon index (in 2D)
+# ggplot(umap.df, aes(x = UMAP_1, y = UMAP_2, color = shannon))+
+#     geom_point(size=1) +
+#     scale_color_gradient2(midpoint=mean(umap.df$shannon), low="blue", mid="white", high="red")+
+#     theme(panel.grid = element_blank(),
+#           panel.background=element_blank())
+# plot3D(coloring="shannon", colorPal=rev(brewer.rdbu(50)), taxLevel="Family")
+
+
+# Plot log ratios (in 2D)
+# plot.logRatio()
+
+# Plot 3D
+# plot3D(coloring="LogRatio_FirmBact", colorPal=rev(brewer.rdbu(50)), taxLevel="Family")
+# plot3D(coloring="LogRatio_FirmAct", colorPal=rev(brewer.rdbu(50)), taxLevel="Family")
+# plot3D(coloring="LogRatio_BactAct", colorPal=rev(brewer.rdbu(50)), taxLevel="Family")
+
+
+# By Phyla relative abundances (in 2D)
+# plot.relAbundance()
+
+# By Phyla relative abundances (in 3D)
+# plot3D(coloring="Firmicutes", colorPal=rev(brewer.rdbu(50)), taxLevel="Family")
+# plot3D(coloring="Bacteroidota", colorPal=rev(brewer.rdbu(50)), taxLevel="Family")
+# plot3D(coloring="Actinobacteriota", colorPal=rev(brewer.rdbu(50)), taxLevel="Family")
+# plot3D(coloring="Proteobacteria", colorPal=rev(brewer.rdbu(50)), taxLevel="Family")
+```
+
+### b) Genus level
+```{r plot-seqtech-genus, fig.width=9, fig.height=7}
+# GET UMAP DF
+path <- "~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/02_UMAP/supervised_UMAP/n_neighbors_10/data_seqtech"
+umap.df <- NULL
+umap.df <- getUMAP(taxLevel="Genus")
+
+
+# Plot by host_disease, host_subtype, sequencing_tech, author/dataset (in 2D)
+plot.covariates()
+
+# Plot3D
+plot3D(coloring="host_disease", colorPal=c("blue", "red", "black"), taxLevel="Genus")
+# plot3D(coloring="host_subtype", colorPal=c("#EFF3FF", "#D95F02", "#7570B3", "#E7298A", "#FEEDDE", "grey"), taxLevel="Genus")
+plot3D(coloring="sequencing_tech", colorPal=c('#6600FF', '#33CC33', '#006600', '#FF6633'), taxLevel="Genus")
+# plot3D(coloring="author", colorPal=brewer.paired(n=13), taxLevel="Genus")
+
+
+# Plot by Shannon index (in 2D)
+# ggplot(umap.df, aes(x = UMAP_1, y = UMAP_2, color = shannon))+
+#     geom_point(size=1) +
+#     scale_color_gradient2(midpoint=mean(umap.df$shannon), low="blue", mid="white", high="red")+
+#     theme(panel.grid = element_blank(),
+#           panel.background=element_blank())
+# plot3D(coloring="shannon", colorPal=rev(brewer.rdbu(50)), taxLevel="Genus")
+
+
+# Plot log ratios (in 2D)
+# plot.logRatio()
+
+# Plot 3D
+# plot3D(coloring="LogRatio_FirmBact", colorPal=rev(brewer.rdbu(50)), taxLevel="Genus")
+# plot3D(coloring="LogRatio_FirmAct", colorPal=rev(brewer.rdbu(50)), taxLevel="Genus")
+# plot3D(coloring="LogRatio_BactAct", colorPal=rev(brewer.rdbu(50)), taxLevel="Genus")
+
+
+# By Phyla relative abundances (in 2D)
+# plot.relAbundance()
+
+# By Phyla relative abundances (in 3D)
+# plot3D(coloring="Firmicutes", colorPal=rev(brewer.rdbu(50)), taxLevel="Genus")
+# plot3D(coloring="Bacteroidota", colorPal=rev(brewer.rdbu(50)), taxLevel="Genus")
+# plot3D(coloring="Actinobacteriota", colorPal=rev(brewer.rdbu(50)), taxLevel="Genus")
+# plot3D(coloring="Proteobacteria", colorPal=rev(brewer.rdbu(50)), taxLevel="Genus")
+```
+
+

@@ -1,0 +1,345 @@
+---
+title: "Prediction models IBD/IBS"
+author: "alexa kur"
+date: '7 Mar 2017'
+output: html_document
+---
+  
+# prediction models 
+
+## Load libraries
+```{r load_libraries, error = FALSE,message=FALSE}
+library(pROC)
+library(glmnet)
+library(knitr)
+library(cvAUC)
+library(caret)
+library(ROCR)
+```
+
+##define prediction function
+
+We use Lasso regression to perform model selection. 10-fold cross-validation: within each fold, 90% of the samples used to build the model, the rest 10% is used to estimate AUC.
+
+
+```{r}
+run_CV = function (predictors, response, non_penalized, alpha = 0.5, nfold.ex = 10, nfold.int = 5,s="lambda.min",family="binomial"){
+  result = list()
+  result$models = list()
+  result$folds = list()
+  result$predictions = list()
+  result$roc = list()
+  result$auc = c()
+  result$predictions_zero = list()
+  
+  result$models_zero = list()
+  result$predictions_zero = list()
+  result$roc_zero = list()
+  result$auc_zero = c()
+  
+  samples = 1:nrow(predictors)
+  folds = createFolds(samples, k = nfold.ex)
+  
+  #model training
+  for(i in names(folds)){
+    #print(paste("Fold",i,"started"))
+    result$folds[[i]] = folds[[i]]
+    test.x=as.matrix(predictors[folds[[i]],])
+    test.y=response[folds[[i]]]
+    train.x=as.matrix(predictors[-folds[[i]],])
+    train.y=response[-folds[[i]]]
+    non_penalized.train.x = non_penalized[-folds[[i]],]
+    non_penalized.test.x = non_penalized[folds[[i]],]
+
+    #zero model
+    penalty = rep(0,ncol(non_penalized.train.x))
+    model.zero = glmnet(non_penalized.train.x, train.y,lambda = penalty,alpha = alpha,family = family, type.measure="class")
+    result$models_zero[[i]] = model.zero
+    predict.test.zero = predict(model.zero, type="class", newx=data.matrix(non_penalized.test.x))
+    result$predictions_zero[[i]] = cbind(test.y,predict.test.zero[,1])
+    colnames(result$predictions_zero[[i]]) = c("real","predicted")
+    print(test.y)
+    print(as.numeric(predict.test.zero[,1]))
+    result$roc_zero[[i]] = roc(test.y, as.numeric(predict.test.zero[,1]))
+    result$auc_zero[i] = result$roc_zero[[i]]$auc
+    
+    #work model
+    #print("full model run")
+    train.all.x = cbind(non_penalized.train.x,train.x)
+    test.all.x = cbind(non_penalized.test.x,test.x)
+    penalty = c(rep(0,ncol(non_penalized.train.x)),rep(1,ncol(train.x)))
+    
+    model = cv.glmnet(data.matrix(train.all.x), train.y,
+                      alpha = alpha,penalty.factor = penalty,nfolds = nfold.int,family = family, type.measure="class")
+    result$models[[i]] = model
+    predict.test = predict(model, type="class", newx = data.matrix(test.all.x), s=s)
+    result$predictions[[i]] = cbind(test.y,predict.test)
+    colnames(result$predictions[[i]]) = c("real","predicted")
+    result$roc[[i]] = roc(test.y, as.numeric(predict.test[,1]))
+    result$auc[i] = result$roc[[i]]$auc
+    
+  }
+    #rocr statistics
+  return(result)
+}
+
+
+parse_results = function(pred_object){
+  betas = matrix(nrow = nrow(pred_object$models$Fold01$glmnet.fit$beta),ncol = length(names(pred_object$models)),
+                 dimnames = list(rownames(pred_object$models$Fold01$glmnet.fit$beta),names(pred_object$models)))
+  var_orders = matrix(nrow = nrow(pred_object$models$Fold01$glmnet.fit$beta),ncol = length(names(pred_object$models)),
+                 dimnames = list(rownames(pred_object$models$Fold01$glmnet.fit$beta),names(pred_object$models)))
+  for(i in names(pred_object$models)){
+    n = which(pred_object$models[[i]]$glmnet.fit$lambda == pred_object$models[[i]]$lambda.min)
+    betas[,i] = pred_object$models[[i]]$glmnet.fit$beta[,n]
+    var_orders[,i] = order(abs(betas[,i]),decreasing = F)
+    }
+  return(list(betas = betas,
+              orders = var_orders)
+  )
+}
+```
+
+## Load data
+
+Microbiome features gained from BRAKEN data. Only genera and species are inlcuded in the model. For highly correlated features (R>0.9) only one representative feature is included in the list of predictors. Feauture abundances are log-transformed. 
+
+```{r data-preparation}
+# Import Zhu
+physeq.zhu
+physeq.pozuelo
+
+# Aggregate
+genus.zhu <- physeq.zhu %>%
+    tax_glom(taxrank = "Genus") %>%                     # agglomerate at genus level
+    transform_sample_counts(function(x) {x/sum(x)} ) %>% # Transform to rel. abundance
+    psmelt()                                             # Melt to long format
+
+# Get into matrix
+gmatrix.zhu <- acast(genus.zhu, Sample ~ Genus, sum, value.var = 'Abundance') # transform into matrix
+```
+
+
+```{r data_loading}
+# TAXA
+#taxonomies = read.table("taxonomy.txt",sep="\t")
+all_taxa_log = log(as.matrix(gmatrix.zhu+5e-11)) #149 genera
+all_taxa_log = log(data.frame(otu_table(subset_samples(physeq.pozuelo, Collection=="2nd")))+1) #21,146
+#all_taxa_log = all_taxa_log[,-c(465,466,467,477)]
+#all_taxa_log = all_taxa_log[,grep("g__",colnames(all_taxa_log))] # select only genus
+all_taxa_log = all_taxa_log[,-findCorrelation(cor(all_taxa_log,method = "spearman"),cutoff= 0.9)] #110 genera
+
+# OTHER PREDICTORS
+#basic_predictors = as.matrix(read.table("baseModel_predictors.txt",sep="\t")) # bmi, age, ...
+basic_predictors = as.data.frame(sample_data(physeq.zhu)[,c("host_sex", "host_age")]) # bmi, age, ...
+basic_predictors$host_sex <- as.character(basic_predictors$host_sex)
+
+# DISEASE
+#disease = read.table("disease.txt",as.is = T,sep="\t")[,1]
+disease = as.data.frame(sample_data(physeq.zhu)[,"host_disease"])
+disease = as.integer(factor(disease$host_disease, levels = c("Healthy","IBS")))-1
+
+#both = cbind(all_taxa_log,calprotectin)
+
+#pathCal = cbind(all_pathways_log,calprotectin)
+#taxaPathCal = cbind(all_pathways_log,all_taxa_log,calprotectin)
+
+
+#LLD
+
+#taxonomies_lld = read.table("taxonomy_lld.txt",header=T,row.names=1)
+#taxonomies_lld = taxonomies_lld[,colnames(all_taxa_log)]
+
+#basic_predictors_lld = as.matrix(read.table("base_lld.txt"))
+
+#calprotectin_lld = read.table("calprotectin_lld.txt")[,1]
+
+#disease_lld = read.table("disease_lld.txt",as.is = T)[,1]
+#disease_lld = as.integer(factor(disease_lld,levels = c("S","D")))-1
+```
+
+## Feature selection
+
+### Lasso-based prediction with 10-fold cross-validation
+
+Base model includes age, gender and BMI without penalization.
+Calprotectin model uncludes all covariates mentioned (without penalization) and calprotectin level.
+Microbiome model inlcudes base predictors and microbiome feautures (described in previous block).
+
+In the tables, 20 bacterial features with top effects are presented for two models:
+
+1. Base predictors and microbiome features
+2. Base predictors, calprotectin, microbiome features
+
+```{r disease_type predictions,warning=F}
+set.seed(2)
+cv_t_result = run_CV(as.data.frame(all_taxa_log),disease,basic_predictors)
+
+set.seed(2)
+cv_t_result_scaled = run_CV(scale(all_taxa_log),disease,basic_predictors)
+
+
+pp = parse_results(cv_t_result_scaled)
+
+#set.seed(2)
+#cv_tc_result = run_CV(both,disease,basic_predictors)
+#set.seed(2)
+#cv_p_result = run_CV(all_pathways_log,disease,basic_predictors)
+#set.seed(2)
+#cv_pc_result = run_CV(pathCal,disease,basic_predictors)
+#set.seed(2)
+#cv_tpc_result = run_CV(taxaPathCal,disease,basic_predictors)
+#set.seed(2)
+#cv_calprot_result = run_CV(matrix(calprotectin,ncol = 1),disease,basic_predictors)
+p = parse_results(cv_t_result)
+#pc = parse_results(cv_tc_result)
+kable(rowMeans(p$betas[-c(1:3),])[names(head(sort(abs(rowMeans(p$betas[-c(1:3),])),decreasing = T),n = 20))])
+#kable(rowMeans(pc$betas[-c(1:3),])[names(head(sort(abs(rowMeans(pc$betas[-c(1:3),])),decreasing = T),n = 21))])
+predictor_names = names(head(sort(abs(rowMeans(p$betas[-c(1:3),])),decreasing = T),n = 20))
+
+predictor_names_scaled = names(head(sort(abs(rowMeans(pp$betas[-c(1:3),])),decreasing = T),n = 20))
+
+#predictor_names2 = names(head(sort(abs(rowMeans(pc$betas[-c(1:3),])),decreasing = T),n = 21))
+
+```
+
+### check goodness of fit
+
+Bacterial features added one by one, sorted by effect size mean in 10 folds. 
+
+```{r goodness,warning=F}
+set.seed(3)
+samples = 1:nrow(all_taxa_log)
+folds = createFolds(samples,k = 10)
+result = data.frame(features = predictor_names,aucz = rep(NA,20),aucTrain = NA,aucTest= NA)
+for(j in 1:20){
+  predictors = as.data.frame(all_taxa_log[,predictor_names[1:j]])
+  auc = c()
+  aucz = c()
+  auct = c()
+  for(i in names(folds)){
+    #print(paste("Fold",i,"started"))
+    test.x=as.matrix(predictors[folds[[i]],])
+    test.y=as.factor(disease[folds[[i]]])
+    train.x=as.matrix(predictors[-folds[[i]],])
+    train.y=as.factor(disease[-folds[[i]]])
+    non_penalized.train.x = basic_predictors[-folds[[i]],]
+    non_penalized.test.x = basic_predictors[folds[[i]],]
+    glm1 = glm(train.y ~ .,data = as.data.frame(cbind(non_penalized.train.x,train.x)),family = "binomial")
+    pred = predict(glm1,newdata = as.data.frame(cbind(non_penalized.test.x,test.x)))
+    auc = c(auc,roc(test.y,pred)$auc)
+    predt = predict(glm1,newdata = as.data.frame(cbind(non_penalized.train.x,train.x)))
+    auct = c(auc,roc(train.y,predt)$auc)
+    glm1z = glm(train.y ~ .,data = as.data.frame(non_penalized.train.x),family = "binomial")
+    predz = predict(glm1z,newdata = as.data.frame(non_penalized.test.x))
+    aucz = c(aucz,roc(test.y,predz)$auc)
+  }
+  result$aucz[j] = mean(aucz)
+  result$aucTest[j] = mean(auc)
+  result$aucTrain[j] = mean(auct)
+}
+result_2 = result
+kable(result)
+```
+
+
+### check goodness of fit, with calprotectin
+
+Bacterial features added one by one, sorted by effect size mean in 10 folds.
+
+```{r goodness_calprotectin,warning=F}
+both_predictors = list()
+both_labels = list()
+mb_predictors = list()
+mb_labels = list()
+zero_predictors = list()
+zero_labels = list()
+cal_predictors = list()
+cal_labels = list()
+
+set.seed(3)
+samples = 1:nrow(all_taxa_log)
+folds = createFolds(samples,k = 10)
+result = data.frame(features = predictor_names2,aucz = rep(NA,21),aucTrain = NA,aucTest= NA)
+for(j in 1:21){
+  predictors = as.data.frame(both[,predictor_names2[1:j]])
+  auc = c()
+  aucz = c()
+  auct = c()
+  for(i in names(folds)){
+    #print(paste("Fold",i,"started"))
+    test.x=as.matrix(predictors[folds[[i]],])
+    test.y=as.factor(disease[folds[[i]]])
+    train.x=as.matrix(predictors[-folds[[i]],])
+    train.y=as.factor(disease[-folds[[i]]])
+    non_penalized.train.x = basic_predictors[-folds[[i]],]
+    non_penalized.test.x = basic_predictors[folds[[i]],]
+    glm1 = glm(train.y ~ .,data = as.data.frame(cbind(non_penalized.train.x,train.x)),family = "binomial")
+    pred = predict(glm1,newdata = as.data.frame(cbind(non_penalized.test.x,test.x)))
+    auc = c(auc,roc(test.y,pred)$auc)
+    predt = predict(glm1,newdata = as.data.frame(cbind(non_penalized.train.x,train.x)))
+    auct = c(auc,roc(train.y,predt)$auc)
+    glm1z = glm(train.y ~ .,data = as.data.frame(non_penalized.train.x),family = "binomial")
+    predz = predict(glm1z,newdata = as.data.frame(non_penalized.test.x))
+    aucz = c(aucz,roc(test.y,predz)$auc)
+    if(j == 1){
+      cal_predictors[[i]]=roc(test.y,pred)$original.predictor
+      cal_labels[[i]] = roc(test.y,pred)$original.response
+      zero_predictors[[i]] = roc(test.y,predz)$original.predictor
+      zero_labels[[i]] = roc(test.y,predz)$original.response
+    }
+    if(j ==21){
+      both_predictors[[i]]=roc(test.y,pred)$original.predictor
+      both_labels[[i]] = roc(test.y,pred)$original.response
+    }
+  }
+  result$aucz[j] = mean(aucz)
+  result$aucTest[j] = mean(auc)
+  result$aucTrain[j] = mean(auct)
+}
+kable(result)
+```
+
+### AUC plot
+
+```{r fig.height=5,fig.width=5,warning=F}
+
+# for(i in names(cv_t_result$folds)){
+#   both_predictors[[i]] = cv_tc_result$roc[[i]]$original.predictor
+#   both_labels[[i]] = cv_tc_result$roc[[i]]$original.response
+#   mb_predictors[[i]] = cv_t_result$roc[[i]]$original.predictor
+#   mb_labels[[i]] = cv_t_result$roc[[i]]$original.response
+#   cal_predictors[[i]] = cv_calprot_result$roc[[i]]$original.predictor
+#   cal_labels[[i]] = cv_calprot_result$roc[[i]]$original.response
+#   zero_predictors[[i]] = cv_t_result$roc_zero[[i]]$original.predictor
+#   zero_labels[[i]] = cv_t_result$roc_zero[[i]]$original.response}
+ cvAUC_both = cvAUC(both_predictors,both_labels)
+#cvAUC_mb = cvAUC(mb_predictors,mb_labels)
+cvAUC_cal = cvAUC(cal_predictors,cal_labels)
+cvAUC_zero = cvAUC(zero_predictors,zero_labels)
+
+plot(cvAUC_both$perf,col = "grey82",main = "IBD/IBS prediction")
+legend("bottomright",c("age + sex + calprotectin + top 20 bacterial taxa","age + sex + calprotectin","age + sex"),col = c("red","skyblue4","black"),lty=c(1,1,1),lwd = 2 )
+plot(cvAUC_both$perf,col = "red",lwd =2, add=T,avg = "vertical")
+plot(cvAUC_cal$perf,col = "skyblue4", lwd = 2, add=T,avg = "vertical")
+plot(cvAUC_zero$perf,col = "black", lwd = 2, add=T,avg = "vertical")
+```
+
+### Formal test on comparing AUCs
+```{r,warnings = F}
+table_auc = data.frame(zero_pred = cv_t_result$auc_zero,
+                   calprot = cv_calprot_result$auc,
+                mb=cv_t_result$auc,
+                 mb_calprot = cv_tc_result$auc,
+                path = cv_p_result$auc,
+                 pathCal = cv_pc_result$auc,
+                 taxapathcal = cv_tpc_result$auc)
+wilcox_test_results = foreach(i =2:ncol(table_auc),.combine = rbind)%do%{
+  foreach(j=1:(i-1),.combine = rbind)%do%{
+    w = wilcox.test(table_auc[,i],table_auc[,j],paired = T)
+    data.frame(colnames(table_auc)[i],colnames(table_auc)[j],w$p.value)
+  }
+}
+kable(wilcox_test_results)
+```
+

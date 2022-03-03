@@ -1,0 +1,768 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+# Import libraries
+```{r library}
+library(glmnet)
+library(phyloseq)
+library(ggplot2)
+library(plyr)
+library(dplyr)
+library(reshape2) # acast function
+library(data.table)
+library(gtools) # for combinations
+library(caret)
+```
+
+# Import data
+```{r}
+taxa.agg.Zhu <- readRDS("../PREDICTION/AgglomeratedTaxa_Zhu.rds")
+physeq.zhu <- readRDS("../../OutputPhangorn/physeq_zhu.rds")
+physeq.pozuelo <- readRDS("../../Pozuelo_2015/physeq_pozuelo.rds")
+```
+
+
+# Define functions
+
+## 1.Agglomeration of taxa
+This function agglomerates a phyloseq object at all taxonomic levels, and returns a list containing the melted dataframes for each taxonomic level.
+
+```{r agglomeration, eval = FALSE, echo = TRUE}
+Agglomerate <- function(phyloseq_obj){
+  
+  cat("  -> PHYLUM\n")
+  phylum.agg <- phyloseq_obj %>%
+    tax_glom(taxrank = "Phylum") %>%                     # agglomerate at phylum level
+    transform_sample_counts(function(x) {x/sum(x)} ) %>% # Transform to rel. abundance
+    psmelt()                                             # Melt to long format
+  
+  cat("  -> CLASS\n")
+  class.agg <- phyloseq_obj %>%
+    tax_glom(taxrank = "Class") %>%                     # agglomerate at class level
+    transform_sample_counts(function(x) {x/sum(x)} ) %>% # Transform to rel. abundance
+    psmelt()                                             # Melt to long format
+  
+  cat("  -> ORDER\n")
+  order.agg <- phyloseq_obj %>%
+    tax_glom(taxrank = "Order") %>%                     # agglomerate at order level
+    transform_sample_counts(function(x) {x/sum(x)} ) %>% # Transform to rel. abundance
+    psmelt()                                             # Melt to long format
+  
+  cat("  -> FAMILY\n")
+  family.agg <- phyloseq_obj %>%
+    tax_glom(taxrank = "Family") %>%                     # agglomerate at family level
+    transform_sample_counts(function(x) {x/sum(x)} ) %>% # Transform to rel. abundance
+    psmelt()                                             # Melt to long format
+  
+  cat("  -> GENUS\n")
+  genus.agg <- phyloseq_obj %>%
+    tax_glom(taxrank = "Genus") %>%                     # agglomerate at genus level
+    transform_sample_counts(function(x) {x/sum(x)} ) %>% # Transform to rel. abundance
+    psmelt()                                             # Melt to long format
+  
+  #print("SPECIES")
+  #species.agg <- phyloseq_obj %>%
+  #  tax_glom(taxrank = "Species") %>%                     # agglomerate at species level
+  #  transform_sample_counts(function(x) {x/sum(x)} ) %>% # Transform to rel. abundance
+  #  psmelt()                                             # Melt to long format
+  
+  cat("  ** END AGGLOMERATING ** \n")
+  agg <- list("Phylum" = phylum.agg, "Class" = class.agg, "Order" = order.agg,
+              "Family" = family.agg, "Genus" = genus.agg)
+  
+  return(agg)
+}
+```
+
+
+## 2.Keep most abundant taxa
+The _TaxaAbundanceThreshold_ function will allow to apply a threshold to keep the most abundant taxa. As input, we give the melted dataframe obtained by agglomerating the taxa, and also give a threshold (e.g. taxa must be present in at least 10% of samples). The function returns a matrix with (most abundant) taxa as rows and samples as columns.
+
+```{r remove-low-abundant-taxa}
+GetMatrix <- function(TaxLevel, tax.agg){
+ 
+  if (TaxLevel == "Phylum"){
+    cat("Phylum +\n")
+    taxaTable <- acast(tax.agg, Phylum ~ Sample, value.var = 'Abundance') # transform into matrix
+  } else if (TaxLevel == "Class"){
+    cat("Class +\n")
+    taxaTable <- acast(tax.agg, Class ~ Sample, value.var = 'Abundance') # transform into matrix
+  } else if(TaxLevel == "Order"){
+    cat("Order +\n")
+    taxaTable <- acast(tax.agg, Order ~ Sample, value.var = 'Abundance') # transform into matrix
+  } else if(TaxLevel == "Family"){
+    cat("Family +\n")
+    taxaTable <- acast(tax.agg, Family ~ Sample, value.var = 'Abundance') # transform into matrix
+  } else if(TaxLevel == "Genus"){
+    cat("Genus +\n")
+    taxaTable <- acast(tax.agg, Genus ~ Sample, value.var = 'Abundance') # transform into matrix
+  }
+  
+  return(taxaTable)
+}
+
+
+TaxaAbundanceThreshold <- function(taxa_agg_list, threshold, nbsamples){
+  
+  # Taxonomic Levels
+  cat("  -> Taxonomic levels:", names(taxa_agg_list), "\n")
+  
+  # This list will contain matrix of log-ratios, at every taxonomic level
+  taxaTable.list <- list()
+  
+  sampleThreshold <- (1-(threshold/100))*nbsamples # maximal nb of samples that can contain 0 counts
+  cat("  -> Threshold: taxa will be kept only if they are present in at least", nbsamples-sampleThreshold, "samples. \n")
+  
+  # Iterate, taxonomic level per taxonomic level
+  for (TaxLevel in names(taxa_agg_list)) {
+    cat("\n  + --------------- +\n")
+    cat("  + TAXO LEVEL:")
+    
+    # Initialize variables
+    tax.agg <- NULL
+    taxaTable <- NULL
+    zeroTable <- NULL
+    
+    # Transform agglomerated table into matrix (taxa as rows / samples as columns)
+    tax.agg <- taxa_agg_list[[TaxLevel]] # get the agglomerated table
+    taxaTable <- GetMatrix(TaxLevel = TaxLevel, tax.agg = tax.agg)
+
+    # Subset the matrix (remove low-abundant taxa)
+    cat("  ...Removing taxa present in less than", threshold, "% of the samples... \n")
+    taxaTable <- taxaTable[rowSums(taxaTable == 0) <= sampleThreshold, ]
+    cat("  => Dimensions new matrix (taxa, samples):", dim(taxaTable), "\n")
+    
+    # Look at number of zero counts
+    cat("  Number of 0 counts:", table(taxaTable == 0)[2], "versus non-0 counts:", table(taxaTable == 0)[1], "\n")
+    cat("  ...Replacing 0 counts by half the lowest count... \n")
+    taxaTable[taxaTable == 0] <- 1e-5 # add pseudocounts, otherwise can't compute ratios by dividing by 0
+    
+    # Add to list
+    taxaTable.list[[TaxLevel]] <- taxaTable
+  }
+  
+  cat("  ** END GETTING TAXA MATRIX ** \n")
+  
+  return(taxaTable.list)
+}
+```
+
+
+## 3.Log-ratios between phyla
+This function takes as input a matrix of relative abundances of taxa across samples (taxa as rows and samples as columns) and returns the log-ratios between all taxa (samples in rows and log-ratios in columns), performing all combinations.
+
+```{r log-ratios}
+#________________________
+# LOG-RATIOS
+
+LogRatios <- function(abundanceTable){
+  
+  # Get combinations between all taxa
+  comb <- combinations(nrow(abundanceTable), 2, rownames(abundanceTable), repeats.allowed = FALSE)
+  comb <- as.data.frame(comb)
+  comb[,3] <- paste0(comb[,1], "/", comb[,2])
+  #cat("First 5 combinations:\n")
+  comb[1:5,]
+  
+  cat("  -> Number of log-ratios combinations:", nrow(comb), "\n")
+
+  # Compute the ratios
+  ratios <- as.data.frame(abundanceTable)
+  test <- ratios[1:2,1:2] # for later sanity check
+  
+  ratios[ comb[,3] ,] <- mapply(function(x, y) log2(x/y), # compute the log ratio
+                                abundanceTable[ as.character(comb[,1]) ,], # between first column
+                                abundanceTable[ as.character(comb[,2]) ,]) # and second column of all combinations
+
+  ratios <- ratios[-c(1:nrow(abundanceTable)),] # remove first x rows that are not ratios (it is simply the phyla)
+  #cat("Sanity check: log-ratio is", log2(test[1,1]/test[2,1]),
+  #    "and the corresponding value in the log-ratio table is", ratios[1,1], "\n")
+  #cat("Sanity check2: log-ratio is", log2(test[1,2]/test[2,2]),
+  #    "and the corresponding value in the log-ratio table is", ratios[1,2], "\n") # sanity check
+  
+  ratios <- t(ratios) # Get the observations (samples) in rows, and predictors (ratios) in columns
+  cat("  -> There are", dim(ratios)[1], "samples and", dim(ratios)[2], "predictors (log-ratios) \n")
+
+  # Show the ratios table
+  #cat("Head of the log-ratios table:")
+  as.data.frame(head(ratios[, 1:5]))
+  
+  return(ratios)
+}
+```
+
+
+## 4.Normalize features
+We need to have all features (log-ratios of bacterial taxa) on the same scale. This function performs a mean centering so that each feature has a mean = 0, and normalizes the L2 norm of each feature to 1.
+
+```{r normalize-features, fig.height = 5, fig.width = 5}
+Normalizing <- function(df){
+  #_____________________________________________
+  # MEAN-CENTER
+  cat("  + --------------------- \n")
+  cat("  + Mean-centering \n")
+  df <- scale(df, center = TRUE, scale = FALSE)
+  
+  #_____________________________________________
+  # SCALE TO SAME L2 NORM
+  cat("  + --------------------- \n")
+  cat("  + Scaling all predictors to L2 norm = 1 \n")
+  # remove columns filled with 0 (null predictors)
+  df <- df[, !apply(df == 0, 2, all)]
+  # divide each count by the L2 norm of the column (the whole predictor vector)
+  df <- df / matrix(sqrt(colSums(df**2)), nrow=nrow(df), ncol=ncol(df), byrow=TRUE)
+  
+  #_____________________________________________
+  # SANITY CHECK
+  # Calculate L2 norm of all predictors
+  cat("  + --------------------- \n")
+  cat("  + SANITY CHECK: L2 norm of all features \n")
+  print(table(apply(df, 2, function(x) sqrt(sum(x**2)))))
+  
+  cat("** END NORMALIZING ** \n")
+  
+  return (df)
+}
+```
+
+
+## 5.Get phenotype and features table
+From the input phyloseq object, we will obtain a normalized features table, and a vector containing the disease phenotype.
+
+```{r phenotype-features}
+PhenoFeat <- function(physeq, abund_threshold, taxlevel){
+  #__________________
+  # AGGLOMERATE TAXA
+  cat("1-Agglomerating taxa...\n")
+  taxa.agg <- Agglomerate(phyloseq_obj = physeq)
+  
+  #__________________
+  # GET MATRICES
+  cat("\n\n2-Get taxa x samples matrix...\n")
+  taxaTable.list <- TaxaAbundanceThreshold(taxa_agg_list=taxa.agg, threshold=abund_threshold, nbsamples=nsamples(physeq))
+  
+  #__________________
+  # GET LOG-RATIOS BETWEEN TAXA
+  cat("\n\n3-Transforming to taxa log-ratios....\n")
+  taxa.ratios <- LogRatios(taxaTable.list[[taxlevel]])
+  
+  #__________________
+  # NORMALIZE LOG-RATIOS
+  cat("\n\n4-Normalizing features...\n")
+  logratioDF <- Normalizing(df=taxa.ratios)
+  
+  #__________________
+  # DISEASE PHENOTYPE
+  phenotype <- sample_data(physeq)$host_disease
+  names(phenotype) <- rownames(sample_data(physeq))
+  
+  return(list("Features"=as.matrix(logratioDF),
+              "Phenotype"=phenotype))
+}
+
+```
+
+
+## 6. Model
+
+```{r model}
+#________________________
+# generic cross-validation function to generate splits
+crossvalidation <- function(entity, nFold=5, random=T) {
+  #-----------------------------------------------------------------------------------------------------------
+  #DESC:    This function performs a "nFold" crossvalidation on a given input called "entity". 
+  #         It is testing the created list "cv" and throws ERROR?s, if those are not passed(see
+  #         ERROR-section below).
+  #IN:      entity        => vector, which should be crossvalidated
+  #         nFold         => numeric value in charge of which type of "nFold" crossvalidation will 
+  #                          be applied to "entity"
+  #         random        => this parameter decides if a seed will be set or not 
+  #OUT:     Returns the list "cv", which contains as many lists as the size of "nFold". 
+  #         Each element in "cv" is called "fold_XXX".
+  #         Each of these "fold_XXX" contains three sets: "test", "xTrain" and "train"   
+  #-----------------------------------------------------------------------------------------------------------
+  
+  # set seed to fixed value if not randomly selected
+  if(!random){
+    set.seed(754)
+  }
+  
+  #creating a shuffled vector from the values of "entity"
+  vec <- entity[sample(length(entity))]
+  
+  #defining the size of each set
+  size <- floor(length(vec)/nFold)
+  binSize <- rep(size, nFold)
+  modulo <- length(vec) %% size
+  print(modulo)
+  if (modulo > 0) {
+    binSize[1:modulo] <- binSize[1:modulo] +1
+  }
+  
+  #setting the start indicies and the end indicies for the sets
+  binEndIdx <- cumsum(binSize)
+  binStardIdx <- c(1, binEndIdx[1:(nFold-1)]+1)
+  
+  #iterating over all the values of "vec" and putting them into a set
+  #creating the list "cv" with the sublists and sets in them
+  cv <- list()
+  for (i in 1:nFold){
+    
+    testIdx <- binStardIdx[i]:binEndIdx[i]
+    test <- vec[testIdx]
+    
+    xTrainIdx <- binStardIdx[(i %% nFold) + 1]:binEndIdx[(i %% nFold) + 1]
+    xTrain <- vec[xTrainIdx]
+    
+    train <- vec[setdiff(1:length(vec), union(testIdx, xTrainIdx))]
+    
+    cv[[paste("fold_", i, sep="")]] <- list(test=test, xTrain=xTrain, train=train)
+  }
+  return(cv) 
+}
+
+#________________________
+# cross-validation function for linear regression lambda parameter 
+runCV <- function(feat, drug, method="elasticNet", plotPath="", mixPara=NA) {
+  #-----------------------------------------------------------------------------------------------------------
+  #DESC:    This function performs a 5 fold crossvalidation of a linear regression.
+  #IN:      feat          => matrix containing molecular features (cell line times features)
+  #         drug          => vector with drug response (names are cell line IDs)
+  #         method        => either ridge, elasticNet or lasso
+  #         plotPath      => optional path for cross-validation plot
+  #OUT:     Returns the cross-validated lambda value
+  #-----------------------------------------------------------------------------------------------------------
+  if (method == "ridge")
+    mixPara = 0
+  if (method == "lasso")
+    mixPara = 1
+  if (method == "elasticNet" & is.na(mixPara))
+    mixPara = 0.5
+  
+  cv <- crossvalidation(entity=names(drug), nFold=10)
+  Rp <- list()
+  lambda <- list()
+  pred <- c()
+  for (i in 1:length(cv)) {
+    cat("+ --- +\n")
+    cat("Cross-validation n°", i)
+    #cat("\n", cv[[i]]$xTrain)
+    # 1) train model
+    fit <- glmnet(feat[cv[[i]]$train,], 
+                  drug[cv[[i]]$train], alpha=mixPara,
+                  family = "binomial", type.measure="class")
+    lambda[[i]] <- fit$lambda
+    # 2) predict on validation set
+    xTrain_pred <- predict(fit,
+                           type="class",
+                           newx=feat[cv[[i]]$xTrain,])
+    # 3) calculate performance on validation set
+    #Rp[[i]] <- apply(xTrain_pred, 2, function(x) if (sd(x)>0) {cor(x, drug[cv[[i]]$xTrain])} else{NA}) #####
+    #print(drug[cv[[i]]$xTrain])
+    #print(xTrain_pred)
+    Rp[[i]] <- apply(xTrain_pred, 2, function(x) roc(as.numeric(drug[cv[[i]]$xTrain]), as.numeric(x))$auc) #####
+    #x <- xTrain_pred == drug[cv[[i]]$xTrain]
+    #print(x)
+    #cat("\n", which.min(x == TRUE))
+    #print(mean(xTrain_pred == drug[cv[[i]]$xTrain]))
+    # 4) prediction on independent test set
+    pred <- c(pred, predict(fit, feat[cv[[i]]$test,],
+                            type="class")[,which.max(Rp[[i]])])
+  }
+  
+  nMax <- max(unlist(lapply(Rp, length)))
+  Rp <- lapply(Rp, function(x) c(x, rep(NA, nMax-length(x))))
+  Rp <- matrix(unlist(Rp), nrow=length(Rp), byrow=T, dimnames = list(NULL,names(Rp[[1]])))
+  
+  # 5) choose representative L1-Norm 
+  Rp_mean <- apply(Rp, 2, mean)
+  sIDX_overall <- which.max(Rp_mean)
+  
+  # optional: plot of cross-validation
+  if (plotPath != "")
+    pdf(plotPath, height=10)
+  layout(matrix(1:2, 2, 1))
+  l <- lambda[[which.max(unlist(lapply(lambda, length)))]]
+  Rp_error <- apply(Rp, 2, var)
+  plot(log(l), Rp_mean, 
+       main=paste(method, "10-fold cross-validation"),
+       xlab="ln(lambda)",
+       ylab="mean Pearson correlation", frame=F,
+       ylim=range(c(Rp_mean-Rp_error, Rp_mean+Rp_error), na.rm=T))
+  arrows(log(l), Rp_mean-Rp_error, 
+         log(l), Rp_mean+Rp_error, 
+         code=3,angle=90,length=0.1,col="lightgrey");
+  abline(v=log(fit$l)[sIDX_overall], col="red")
+  axis(3, log(fit$l)[sIDX_overall], names(sIDX_overall), col="red")
+  
+  plot(drug[names(pred)], pred, frame=F, col="#0000FF55", pch=16, 
+       main="compare prediction on independent test set",
+       xlab="observed drug response", ylab="predicted drug response",
+       sub=paste("Pearson correlation =", formatC(cor(drug[names(pred)], pred, use="complete.obs"), digits=2)))
+  if (plotPath != "")
+    dev.off()
+  
+  return(list(s=names(sIDX_overall),
+              pred=pred[names(drug)],
+              method=method))
+}
+
+#________________________
+# retrain and visualize the used features
+reTrainModel <- function(feat, drug, cvBuild, plotPath="") {
+  if (cvBuild$method == "ridge")
+    mixPara = 0
+  if (cvBuild$method == "lasso")
+    mixPara = 1
+  if (cvBuild$method == "elasticNet")
+    mixPara = 0.5
+  
+  cell <- intersect(names(drug), rownames(feat))
+  fit <- glmnet(feat[cell,], 
+                drug[cell], alpha=mixPara,
+                family = "binomial", type.measure = "class")
+  
+  beta <- fit$beta[,cvBuild$s]
+  beta <- sort(beta[beta!=0])
+  
+  # optional: plot of cross-validation
+  if (plotPath != "")
+    pdf(plotPath, height=10)
+  layout(matrix(1:2, 2, 1))
+  plot(fit, xvar='lambda', col="grey",
+       xlim=c(min(log(fit$lambda))-1, max(log(fit$lambda))))
+  labels <- fit$beta[,ncol(fit$beta)]
+  text(min(log(fit$lambda))-0.5, labels, names(labels), cex=0.5)
+  abline(v=log(fit$lambda[as.numeric(gsub("s", "", cvBuild$s)) + 1]), lwd=2, col="red")
+  
+  barplot(beta, las=T, col=c("red", "blue")[as.factor(beta>0)], 
+          border=F, ylab="weight", las=2, cex.names=0.7)
+  if (plotPath != "")
+    dev.off()
+  
+  return(beta)
+}
+
+#________________________
+# check if models can be better than random
+checkRandom <- function(feat, drug, method, plotPath="", n=10) {
+  
+  Rm <- c()
+  Rr <- c()
+  for (i in 1:n) {
+    print(paste(" <- ", i))
+    Rm <- c(Rm, cor(drug, runCV(feat, drug, method)$pred))
+    Rr <- c(Rr, cor(drug, runCV(feat, sample(drug), method)$pred)) # random
+  }
+  
+  # calculate bayes factor
+  probLead <- sum(Rm > Rr)
+  probLead <- probLead / length(Rm)
+  bayesFact <- probLead / (1-probLead)
+  
+  # plot histogram
+  dev.off()
+  if (plotPath != "")
+    pdf(plotPath)
+  
+  hist(Rm, xlim=range(Rm, Rr), col="#0000FF55", 
+       xlab="Pearson correlation", main="Compare random with predicted model",
+       sub=paste("t-test p-val =", formatC(t.test(Rm, Rr)$p.value, digits=2), 
+                 "/ bayes factor =", formatC(bayesFact, digits=2)))
+  hist(Rr, add=T, col="#FF000055")
+  legend("top", c("random", "model"), pch = 15, col=c("#FF000055", "#0000FF55"), cex=0.7)
+  
+  if (plotPath != "")
+    dev.off()
+  
+  return(bayesFact)
+}
+
+#________________________
+# zoom in on features with largest weight
+plotWeights <- function(feat, drug, weights, plotPath="", n=5) {
+  if (length(weights) < n)
+    n <- length(weights)
+  
+  # optional: plot of cross-validation
+  if (plotPath != "")
+    pdf(plotPath, height=8)
+  
+  # mutual exclusivity plot
+  if (n > 1) {
+    layout(matrix(c(1,1,2,3,2,3), 2, 3, byrow=F))
+    
+    f <- feat[,names(sort(abs(weights), decreasing=T)[1:n])]
+    f <- f[names(drug),]
+    f <- t(f[,sort(colSums(f), index.return=T, decreasing=F)$ix])
+    for (i in rev(1:nrow(f))) {
+      f <- f[,sort(f[i,], index.return=T, decreasing=F)$ix]
+    }
+    image(t(f[,colSums(f)>0]), col=c("lightgrey", "black"), 
+          xaxt='n', yaxt='n', frame=F)
+    axis(2, seq(0,1,1/(n-1)), rownames(f), las=2, cex.axis=0.6)
+    
+    # weight plot 
+    barplot(sort(abs(weights), 
+                 decreasing=T)[1:n], las=2,
+            col=c("blue", "red")[factor(sign(weights)>0)][sort(abs(weights), 
+                                                               index.return=T,
+                                                               decreasing=T)$ix][1:5],
+            border=F, ylab="|weight|", cex.names=0.7)
+    legend("topright", c("neg. weight", "pos. weight"), pch = 15, col=c("red", "blue"))
+    
+    # boxplots
+    encoding <- apply(f, 2, function(x) paste(x, collapse=""))
+    labels <- c()
+    response <- list()
+    for(i in unique(encoding)) {
+      response[[i]] <- drug[colnames(f)[apply(f, 2, 
+                                              function(x) all(x == as.numeric(unlist(strsplit(i, "")))))]]
+      labels <- c(labels, paste(rownames(f)[as.logical(as.numeric(unlist(strsplit(i, ""))))], collapse=" &\n"))
+    }
+    labels[labels==""] <- "wild type"
+    names(response) <- labels
+    
+    response <- response[unlist(lapply(response, length)) > 2]
+    response <- response[sort(unlist(lapply(response, median)), index.return=T)$ix]
+    
+    library(beeswarm)
+    boxplot(response, cex.axis=0.7, las=2, frame=F,
+            ylim=range(unlist(response)), outline=F,
+            ylab="drug response")
+    beeswarm(response, pch = 21, col = "grey", bg = "#00000050",
+             corral = "random", add=T)
+  } else {
+    library(beeswarm)
+    f <- feat[,names(weights)]
+    f[f == 0] <- "wild type"
+    f[f == 1] <- names(weights)
+    boxplot(drug[names(f)]~f, cex.axis=0.7, las=2, frame=F,
+            ylim=range(drug), outline=F,
+            ylab="drug response")
+    beeswarm(drug[names(f)]~f, pch = 21, col = "grey", bg = "#00000050",
+             corral = "random", add=T)
+  }
+  
+  if (plotPath != "")
+    dev.off()
+}
+```
+
+
+
+# Data
+
+```{r}
+list(test_feat,test_drug) <- PhenoFeat(physeq=physeq.zhu, abund_threshold=10, taxlevel="Phylum")
+
+test_feat <- test$Features
+test_drug <- test$Phenotype
+```
+
+```{r zhu}
+physeq.zhu <- readRDS("../../OutputPhangorn/physeq_zhu.rds")
+
+all.zhu <- PhenoFeat(physeq=physeq.zhu, abund_threshold=10, taxlevel="Order")
+
+
+zhu.feat <- all.zhu$Features
+zhu.drug <- all.zhu$Phenotype
+
+names(disease) <- rownames(sample_data(physeq.zhu))
+disease
+
+# Ridge regression
+cvRidge <- runCV(zhu.feat, zhu.drug, "ridge", "./Zhu_ridge_cv.pdf")
+cvRidge <- runCV(all_taxa_log, disease, "ridge", "./Zhu_ridge_cv.pdf")
+wRidge <- reTrainModel(zhu.feat, zhu.drug, cvRidge, "./Zhu_ridge_plot_weights.pdf")
+#plotWeights(zhu.feat, zhu.drug, wRidge, "./Zhu_ridge_plot_weights_zoomIn.pdf")
+
+# Elastic Net regression
+cvEN <- runCV(zhu.feat, zhu.drug, "elasticNet", "./Zhu_elasnet_cv.pdf")
+wEN <- reTrainModel(zhu.feat, zhu.drug, cvEN, "./Zhu_elasnet_plot_weights.pdf")
+#plotWeights(zhu.feat, zhu.drug, wEN, "./Zhu_elasnet_plot_weights_zoomIn.pdf")
+
+# Lasso regression examples:
+cvLasso <- runCV(zhu.feat, zhu.drug, "lasso", "./Zhu_lasso_cv.pdf")
+wLasso <- reTrainModel(zhu.feat, zhu.drug, cvLasso, "./Zhu_lasso_plot_weights.pdf")
+#plotWeights(zhu.feat, zhu.drug, wLasso, "./Zhu_lasso_plot_weights_zoomIn.pdf")
+```
+
+```{r labus}
+physeq.labus <- readRDS("../../OutputPhangorn/physeq_labus.rds")
+
+all.labus <- PhenoFeat(physeq=physeq.labus, abund_threshold=10, taxlevel="Order")
+labus.feat <- all.labus$Features
+labus.drug <- all.labus$Phenotype
+
+
+# Ridge regression
+cvRidge <- runCV(labus.feat, labus.drug, "ridge", "./labus_ridge_cv.pdf")
+wRidge <- reTrainModel(labus.feat, labus.drug, cvRidge, "./labus_ridge_plot_weights.pdf")
+#plotWeights(labus.feat, labus.drug, wRidge, "./labus_ridge_plot_weights_zoomIn.pdf")
+
+# Elastic Net regression
+cvEN <- runCV(labus.feat, labus.drug, "elasticNet", "./labus_elasnet_cv.pdf")
+wEN <- reTrainModel(labus.feat, labus.drug, cvEN, "./labus_elasnet_plot_weights.pdf")
+#plotWeights(labus.feat, labus.drug, wEN, "./labus_elasnet_plot_weights_zoomIn.pdf")
+
+# Lasso regression examples:
+cvLasso <- runCV(labus.feat, labus.drug, "lasso", "./labus_lasso_cv.pdf")
+wLasso <- reTrainModel(labus.feat, labus.drug, cvLasso, "./labus_lasso_plot_weights.pdf")
+#plotWeights(labus.feat, labus.drug, wLasso, "./labus_lasso_plot_weights_zoomIn.pdf")
+```
+
+```{r lopresti}
+physeq.lopresti <- readRDS("../../OutputPhangorn/physeq_lopresti.rds")
+
+all.lopresti <- PhenoFeat(physeq=subset_samples(physeq.lopresti, sample_type=="stool"),
+                          abund_threshold=10, taxlevel="Order")
+lopresti.feat <- all.lopresti$Features
+lopresti.drug <- all.lopresti$Phenotype
+
+
+# Ridge regression
+cvRidge <- runCV(lopresti.feat, lopresti.drug, "ridge", "./lopresti_ridge_cv.pdf")
+wRidge <- reTrainModel(lopresti.feat, lopresti.drug, cvRidge, "./lopresti_ridge_plot_weights.pdf")
+#plotWeights(lopresti.feat, lopresti.drug, wRidge, "./lopresti_ridge_plot_weights_zoomIn.pdf")
+
+# Elastic Net regression
+cvEN <- runCV(lopresti.feat, lopresti.drug, "elasticNet", "./lopresti_elasnet_cv.pdf")
+wEN <- reTrainModel(lopresti.feat, lopresti.drug, cvEN, "./lopresti_elasnet_plot_weights.pdf")
+#plotWeights(lopresti.feat, lopresti.drug, wEN, "./lopresti_elasnet_plot_weights_zoomIn.pdf")
+
+# Lasso regression examples:
+cvLasso <- runCV(lopresti.feat, lopresti.drug, "lasso", "./lopresti_lasso_cv.pdf")
+wLasso <- reTrainModel(lopresti.feat, lopresti.drug, cvLasso, "./lopresti_lasso_plot_weights.pdf")
+#plotWeights(lopresti.feat, lopresti.drug, wLasso, "./lopresti_lasso_plot_weights_zoomIn.pdf")
+```
+
+```{r pozuelo}
+physeq.pozuelo <- readRDS("../../OutputPhangorn/physeq_pozuelo.rds")
+
+all.pozuelo <- PhenoFeat(physeq=physeq.pozuelo, abund_threshold=10, taxlevel="Family")
+pozuelo.feat <- all.pozuelo$Features
+pozuelo.drug <- all.pozuelo$Phenotype
+
+
+# Ridge regression
+cvRidge <- runCV(pozuelo.feat, pozuelo.drug, "ridge", "./pozuelo_ridge_cv.pdf")
+wRidge <- reTrainModel(pozuelo.feat, pozuelo.drug, cvRidge, "./pozuelo_ridge_plot_weights.pdf")
+#plotWeights(pozuelo.feat, pozuelo.drug, wRidge, "./pozuelo_ridge_plot_weights_zoomIn.pdf")
+
+# Elastic Net regression
+cvEN <- runCV(pozuelo.feat, pozuelo.drug, "elasticNet", "./pozuelo_elasnet_cv.pdf")
+wEN <- reTrainModel(pozuelo.feat, pozuelo.drug, cvEN, "./pozuelo_elasnet_plot_weights.pdf")
+#plotWeights(pozuelo.feat, pozuelo.drug, wEN, "./pozuelo_elasnet_plot_weights_zoomIn.pdf")
+
+# Lasso regression examples:
+cvLasso <- runCV(pozuelo.feat, pozuelo.drug, "lasso", "./pozuelo_lasso_cv.pdf")
+wLasso <- reTrainModel(pozuelo.feat, pozuelo.drug, cvLasso, "./pozuelo_lasso_plot_weights.pdf")
+#plotWeights(pozuelo.feat, pozuelo.drug, wLasso, "./pozuelo_lasso_plot_weights_zoomIn.pdf")
+```
+
+```{r nagel}
+physeq.nagel <- readRDS("../../OutputPhangorn/physeq_nagel.rds")
+
+all.nagel <- PhenoFeat(physeq=physeq.nagel, abund_threshold=10, taxlevel="Order")
+nagel.feat <- all.nagel$Features
+nagel.drug <- all.nagel$Phenotype
+
+
+# Ridge regression
+cvRidge <- runCV(nagel.feat, nagel.drug, "ridge", "./nagel_ridge_cv.pdf")
+wRidge <- reTrainModel(nagel.feat, nagel.drug, cvRidge, "./nagel_ridge_plot_weights.pdf")
+#plotWeights(nagel.feat, nagel.drug, wRidge, "./nagel_ridge_plot_weights_zoomIn.pdf")
+
+# Elastic Net regression
+cvEN <- runCV(nagel.feat, nagel.drug, "elasticNet", "./nagel_elasnet_cv.pdf")
+wEN <- reTrainModel(nagel.feat, nagel.drug, cvEN, "./nagel_elasnet_plot_weights.pdf")
+#plotWeights(nagel.feat, nagel.drug, wEN, "./nagel_elasnet_plot_weights_zoomIn.pdf")
+
+# Lasso regression examples:
+cvLasso <- runCV(nagel.feat, nagel.drug, "lasso", "./nagel_lasso_cv.pdf")
+wLasso <- reTrainModel(nagel.feat, nagel.drug, cvLasso, "./nagel_lasso_plot_weights.pdf")
+#plotWeights(nagel.feat, nagel.drug, wLasso, "./nagel_lasso_plot_weights_zoomIn.pdf")
+```
+
+```{r hugerth}
+physeq.hugerth <- readRDS("physeq_hugerth.rds")
+
+all.hugerth <- PhenoFeat(physeq=physeq.hugerth, abund_threshold=10, taxlevel="Phylum")
+hugerth.feat <- all.hugerth$Features
+hugerth.drug <- all.hugerth$Phenotype
+
+
+# Ridge regression
+cvRidge <- runCV(hugerth.feat, hugerth.drug, "ridge", "./hugerth_ridge_cv.pdf")
+wRidge <- reTrainModel(hugerth.feat, hugerth.drug, cvRidge, "./hugerth_ridge_plot_weights.pdf")
+#plotWeights(hugerth.feat, hugerth.drug, wRidge, "./hugerth_ridge_plot_weights_zoomIn.pdf")
+
+# Elastic Net regression
+cvEN <- runCV(hugerth.feat, hugerth.drug, "elasticNet", "./hugerth_elasnet_cv.pdf")
+wEN <- reTrainModel(hugerth.feat, hugerth.drug, cvEN, "./hugerth_elasnet_plot_weights.pdf")
+#plotWeights(hugerth.feat, hugerth.drug, wEN, "./hugerth_elasnet_plot_weights_zoomIn.pdf")
+
+# Lasso regression examples:
+cvLasso <- runCV(hugerth.feat, hugerth.drug, "lasso", "./hugerth_lasso_cv.pdf")
+wLasso <- reTrainModel(hugerth.feat, hugerth.drug, cvLasso, "./hugerth_lasso_plot_weights.pdf")
+#plotWeights(hugerth.feat, hugerth.drug, wLasso, "./hugerth_lasso_plot_weights_zoomIn.pdf")
+```
+
+
+
+# Try bioconductor pipeline
+
+```{r bioconductor-1}
+qplot(log10(rowSums(otu_table(physeq.zhu))),binwidth=0.1) +
+  xlab("Logged counts-per-sample")
+otu_table(physeq.zhu)[,1:5]
+
+pslog <- transform_sample_counts(physeq.zhu, function(x) log(1 + x))
+
+# Training
+dataMatrix <- data.frame(host_disease = sample_data(pslog)$host_disease, otu_table(pslog))
+trainingSamples <- sample(unique(sample_data(pslog)$Run), size = 25)
+inTrain <- which(sample_data(pslog)$Run %in% trainingSamples)
+training <- dataMatrix[inTrain,]
+testing <- dataMatrix[-inTrain,]
+rfFit <- train(host_disease ~ ., data = training,
+                method = "rf", preProc = "center", proximity = TRUE)
+
+# Testing
+rfClasses <- predict(rfFit, newdata = testing)
+table(rfClasses, testing$host_disease)
+
+# Biplot
+rf_prox <- cmdscale(1 - rfFit$finalModel$proximity) %>%
+  data.frame(sample_data(pslog)[inTrain, ])
+
+ggplot(rf_prox) +
+  geom_point(aes(x = X1, y = X2, col = host_disease),
+             size = 1, alpha = 0.7) +
+  #scale_color_manual(values = c("#A66EB8", "#238DB5", "#748B4F")) +
+  guides(col = guide_legend(override.aes = list(size = 4))) +
+  labs(col = "Disease", x = "Axis1", y = "Axis2")
+
+# Which microbe has most influence on random forest prediction
+as.vector(tax_table(pslog)[which.max(importance(rfFit$finalModel))]) # prints kingdom-phylum-class-order-family-genus-species
+
+impOtu <- as.vector(otu_table(pslog)[,which.max(importance(rfFit$finalModel))])
+maxImpDF <- data.frame(sample_data(pslog), abund = impOtu)
+ggplot(maxImpDF) +   geom_histogram(aes(x = abund)) +
+  facet_grid(host_disease ~ .) +
+  labs(x = "Abundance of discriminative bacteria", y = "Number of samples")
+```
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,1191 @@
+---
+title: "Individual datasets"
+output: html_notebook
+---
+
+
+####################
+# IMPORT LIBRARIES #
+####################
+
+```{r, echo = FALSE}
+library(ShortRead) # manage fastq file
+library(Biostrings) # to manage dna sequences as strings
+library(seqTools) # analyse read length in fastq file
+library(phyloseq) # for phyloseq object
+library(ggplot2) # for plots
+library(ggpubr)
+library(ggrepel)
+library(reshape2)
+library(data.table)
+library(plyr)
+library(dplyr)
+library("doParallel")
+library("foreach")
+library("DECIPHER") # for phylogenetic tree
+library("phangorn")
+library("plotly") # plot 3D
+library("microbiome") # for centered log-ratio
+library("coda") # Aitchison distance
+library("coda.base") # Aitchison distance
+library("vegan") # NMDS
+library(pheatmap) # for heat map
+library(RColorBrewer)
+library(glmnet)
+```
+
+
+####################
+# SEQUENCING DEPTH #
+####################
+
+```{r}
+nb.reads <- as.data.frame(nb.reads)
+sum <- colSums(nb.reads, na.rm = TRUE)
+sum(sum[c(1,3,5,7,9,11,13)]) # total raw sequences
+sum(sum[c(2,4,6,8,10,12,14)])/730 # total processed sequences
+sum[c(2,4,6,8,10,12,14)]
+
+# Get some statistics
+x <- c(nb.reads[1:52, 2], nb.reads[1:163, 4], nb.reads[1:290, 6], nb.reads[1:30, 8], nb.reads[1:76, 10], nb.reads[1:29, 12], nb.reads[1:90, 14])
+x[x>1000]
+mean(x[x>1000])
+sd(x[x>1000])
+
+min(sample_sums(physeq))
+
+```
+
+
+```{r seq-depth, eval = TRUE, echo = TRUE}
+# Get data.frame
+nb.reads <- readRDS("../../nb_reads.rds")
+
+# Melt
+seqdepth <- melt(nb.reads)
+
+#table(seqdepth$variable)
+#table(seqdepth$dataset)
+
+# Add dataset column
+seqdepth[substr(seqdepth$variable, start = 1, stop = 5) == 'Labus','dataset'] <- 'Labus'
+seqdepth[substr(seqdepth$variable, start = 1, stop = 8) == 'LoPresti','dataset'] <- 'Lo Presti'
+seqdepth[substr(seqdepth$variable, start = 1, stop = 7) == 'Pozuelo','dataset'] <- 'Pozuelo'
+seqdepth[substr(seqdepth$variable, start = 1, stop = 3) == 'Zhu','dataset'] <- 'Zhu'
+seqdepth[substr(seqdepth$variable, start = 1, stop = 6) == 'Zhuang','dataset'] <- 'Zhuang'
+seqdepth[substr(seqdepth$variable, start = 1, stop = 6) == 'Ringel','dataset'] <- 'Ringel-Kulka'
+seqdepth[substr(seqdepth$variable, start = 1, stop = 5) == 'Zeber','dataset'] <- 'Zeber-Lubecka'
+seqdepth[substr(seqdepth$variable, start = 1, stop = 5) == 'Nagel','dataset'] <- 'Nagel'
+seqdepth[substr(seqdepth$variable, start = 1, stop = 7) == 'Hugerth','dataset'] <- 'Hugerth'
+
+# For legend (before/after dada2 process)
+seqdepth[grep('before$', seqdepth$variable), 'dada2'] <- 'raw' # raw 16S reads
+seqdepth[grep('after$', seqdepth$variable), 'dada2'] <- 'QC' # quality-controlled 16S reads
+
+# Reorder manually
+seqdepth$variable <- factor(seqdepth$variable , levels=unique(seqdepth$variable))
+variable_order <- c("Ringel_before", "Ringel_after", "Labus_before", "Labus_after", "LoPresti_before", "LoPresti_after",
+                    "Pozuelo_before", "Pozuelo_after", "Zhuang_before", "Zhuang_after", "Zhu_before", "Zhu_after",
+                    "Hugerth_before", "Hugerth_after", "Nagel_before", "Nagel_after","Zeber_before", "Zeber_after")
+seqdepth$variable <- factor(seqdepth$variable, levels=variable_order)
+table(seqdepth$variable)
+
+authors_order <- c('Ringel-Kulka', 'Labus', 'Lo Presti', 'Pozuelo', 'Zhuang', 'Zhu', 'Hugerth', 'Nagel','Zeber-Lubecka')
+
+#test <- arrange(test, sequencing_tech, .by_group = TRUE)
+
+seqdepth$value
+
+# PLOT
+ggplot(seqdepth, aes(x = variable, y = value, color = factor(dataset, levels = authors_order)))+
+  geom_boxplot(outlier.size = 0)+
+  geom_jitter(width = 0.1, size = 0.1)+
+  theme_classic()+
+  scale_y_log10()+
+  scale_color_brewer(palette="Dark2")+
+  scale_color_discrete(name = "Datasets")+
+  theme(axis.text.x = element_text(angle = 45, vjust = 0.5),
+        axis.line = element_line(arrow = arrow(length = unit(0.1, "inches"))))+
+  scale_x_discrete(breaks=variable_order,
+                      labels=rep(c("raw", "QC"), times = 9))+
+  labs(x = '', y = "Number of reads per sample", title = "Sequencing depth before/after processing raw 16S reads (dada2 pipeline)")
+```
+
+```{r export-plot-1, eval = FALSE, echo = FALSE, fig.height = 5, fig.width=7}
+jpeg("../Figures/SeqDepth_05.jpg", height = 1500, width = 3000, res = 200)
+ggplot(seqdepth, aes(x = variable, y = value, color = factor(dataset, levels = authors_order)))+
+  geom_boxplot(outlier.shape = NA, size = 1)+
+  geom_jitter(width = 0.1, size = 1)+
+  theme_classic()+
+  scale_y_log10()+
+  scale_color_brewer(palette="Dark2")+
+  scale_color_discrete(name = "Datasets")+
+  theme(axis.text = element_text(size = 20),
+        axis.text.x = element_text(angle = 45, vjust = 0.5),
+        axis.title = element_text(size = 30),
+        legend.text = element_text(size = 30),
+        legend.title = element_text(size = 30),
+        axis.line = element_line(arrow = arrow(length = unit(0.1, "inches"))))+
+  scale_x_discrete(breaks=variable_order,
+                      labels=rep(c("raw", "QC"), times = 9))+
+  labs(x = '', y = "Number of reads per sample")
+dev.off()
+```
+
+
+
+
+###############
+# IMPORT DATA #
+###############
+
+```{r import-datasets, echo = TRUE, eval = FALSE}
+#________________________________________________________________________OK
+# RINGEL-KULKA 2015
+physeq.ringel <- readRDS("/Users/scarcy/Desktop/Praktikum/Data/Ringel_Kulka_2015/physeq_ringel.rds")
+# Check if there are any eukaryota or NA phyla
+table(tax_table(physeq.ringel)[,1]) # 3,158 bacteria
+table(is.na(tax_table(physeq.ringel)[,2])) # no NA at phylum level
+
+# Check on metadata
+sample_data(physeq.ringel)
+
+
+#________________________________________________________________________OK
+# LABUS 2017
+physeq.labus <- readRDS("/Users/scarcy/Desktop/Praktikum/Data/Labus_2017/physeq_labus.rds")
+# Check if there are any eukaryota or NA phyla
+table(tax_table(physeq.labus)[,1]) # 735 bacteria
+table(is.na(tax_table(physeq.labus)[,2])) # check there are no NA phyla
+
+# Check on metadata
+sample_data(physeq.labus)
+sample_data(physeq.labus)$host_subtype <- as.character(sample_data(physeq.labus)$host_subtype)
+sample_data(physeq.labus)$host_sex <- as.character(sample_data(physeq.labus)$host_sex)
+
+# Re-order samples (have Healthy samples then IBS samples)
+ordersamples_labus <- rownames(sample_data(physeq.labus)[order(sample_data(physeq.labus)$host_disease),]) # get the order
+otu_table(physeq.labus) <- otu_table(physeq.labus)[ordersamples_labus, ] # re-order samples in the phyloseq object
+sample_data(physeq.labus) # sanity check
+
+
+#________________________________________________________________________OK
+# LOPRESTI 2019
+physeq.lopresti <- readRDS("/Users/scarcy/Desktop/Praktikum/Data/LoPresti_2019/physeq_lopresti.rds")
+# Check if there are any eukaryota or NA phyla
+table(tax_table(physeq.lopresti)[,1]) # 1295 bacteria
+table(is.na(tax_table(physeq.lopresti)[,2])) # check any NA at phylum level
+
+# Check on metadata
+sample_data(physeq.lopresti)
+sample_data(physeq.lopresti)$host_sex <- as.character(sample_data(physeq.lopresti)$host_sex)
+colnames(sample_data(physeq.lopresti))[6] <- "host_subtype"
+
+# Re-order samples (have Healthy samples then IBS samples)
+ordersamples_lopresti <- rownames(sample_data(physeq.lopresti)[order(sample_data(physeq.lopresti)$host_disease),]) # get the order
+otu_table(physeq.lopresti) <- otu_table(physeq.lopresti)[ordersamples_lopresti, ] # re-order samples in the phyloseq object
+sample_data(physeq.lopresti) # sanity check
+
+
+#________________________________________________________________________OK
+# POZUELO 2015
+physeq.pozuelo <- readRDS("/Users/scarcy/Desktop/Praktikum/Data/Pozuelo_2015/physeq_pozuelo.rds")
+# Check if there are any eukaryota or NA phyla
+table(tax_table(physeq.pozuelo)[,1]) # 21,128 bacteria
+table(is.na(tax_table(physeq.pozuelo)[,2])) # check any NA at phylum level
+
+# Check on metadata
+sample_data(physeq.pozuelo)
+
+# Re-order samples (have Healthy samples then IBS samples)
+ordersamples_pozuelo <- rownames(sample_data(physeq.pozuelo)[order(sample_data(physeq.pozuelo)$host_disease),]) # get the order
+otu_table(physeq.pozuelo) <- otu_table(physeq.pozuelo)[ordersamples_pozuelo, ] # re-order samples in the phyloseq object
+sample_data(physeq.pozuelo)
+
+
+#________________________________________________________________________OK
+# ZHUANG 2015
+physeq.zhuang <- readRDS("/Users/scarcy/Desktop/Praktikum/Data/Zhuang_2018/physeq_zhuang.rds")
+# Check if there are any eukaryota or NA phyla
+table(tax_table(physeq.zhuang)[,1]) # 705 bacteria
+table(is.na(tax_table(physeq.zhuang)[,2])) # no NA at phylum level
+
+# Check on metadata
+sample_data(physeq.zhuang)
+# Re-order samples (have Healthy samples then IBS samples)
+ordersamples_zhuang <- rownames(sample_data(physeq.zhuang)[order(sample_data(physeq.zhuang)$host_disease),]) # get the order
+otu_table(physeq.zhuang) <- otu_table(physeq.zhuang)[ordersamples_zhuang, ] # re-order samples in the phyloseq object
+sample_data(physeq.zhuang)
+
+
+#________________________________________________________________________OK
+# ZHU 2019
+physeq.zhu <- readRDS("/Users/scarcy/Desktop/Praktikum/Data/Zhu_2019/physeq_zhu.rds")
+# Check if there are any eukaryota or NA phyla
+table(tax_table(physeq.zhu)[,1]) # 943 bacteria
+table(is.na(tax_table(physeq.zhu)[,2])) # no NA at phylum level
+
+# Check on metadata & re-roder (have Healthy samples then IBS samples)
+ordersamples_zhu <- rownames(sample_data(physeq.zhu)[order(sample_data(physeq.zhu)$host_disease),]) # get the order 
+otu_table(physeq.zhu) <- otu_table(physeq.zhu)[ordersamples_zhu, ] # re-order samples in the phyloseq object
+sample_data(physeq.zhu)$host_sex <- as.character(sample_data(physeq.zhu)$host_sex)
+sample_data(physeq.zhu)
+
+
+#________________________________________________________________________OK
+# HUGERTH 2020
+physeq.hugerth <- readRDS("/Users/scarcy/Desktop/Praktikum/Data/Hugherth_2020/physeq_hugerth.rds")
+# Check if there are any eukaryota or NA phyla
+table(tax_table(physeq.hugerth)[,1]) # 5,294 bacteria
+table(is.na(tax_table(physeq.hugerth)[,2])) # no NA at phylum level
+
+# Check on metadata
+sample_data(physeq.hugerth)
+
+ordersamples_hugerth <- rownames(sample_data(physeq.hugerth)[order(sample_data(physeq.hugerth)$host_disease),]) # get the order 
+otu_table(physeq.hugerth) <- otu_table(physeq.hugerth)[ordersamples_hugerth, ] # re-order samples in the phyloseq object
+sample_data(physeq.hugerth)
+saveRDS(physeq.hugerth, "../NewPrediction/physeq_hugerth.rds")
+
+
+#________________________________________________________________________OK
+# ZEBER-LUBECKA 2016
+physeq.zeber <- readRDS("/Users/scarcy/Desktop/Praktikum/Data/Zeber-Lubecka_2016/physeq_zeber.rds")
+# Check if there are any eukaryota or NA phyla
+table(tax_table(physeq.zeber)[,1]) # 11,555 bacteria
+table(is.na(tax_table(physeq.zeber)[,2])) # no NA at phylum level
+
+# Check on metadata
+sample_data(physeq.zeber)
+sample_data(physeq.zeber)$host_disease <- as.character(sample_data(physeq.zeber)$host_disease)
+sample_data(physeq.zeber)$individual <- NULL
+# Re-order samples (have Healthy samples then IBS samples)
+ordersamples_zeber <- rownames(sample_data(physeq.zeber)[order(sample_data(physeq.zeber)$host_disease),]) # get the order
+otu_table(physeq.zeber) <- otu_table(physeq.zeber)[ordersamples_zeber, ] # re-order samples in the phyloseq object
+sample_data(physeq.zeber)
+
+#________________________________________________________________________OK
+# NAGEL 2016
+physeq.nagel <- readRDS("/Users/scarcy/Desktop/Praktikum/Data/Nagel_2016/physeq_nagel.rds")
+# Check if there are any eukaryota or NA phyla
+table(tax_table(physeq.nagel)[,1]) # 1,097 bacteria
+table(is.na(tax_table(physeq.nagel)[,2])) # no NA at phylum level
+
+# Check on metadata
+sample_data(physeq.nagel)$host_sex <- as.character(sample_data(physeq.nagel)$host_sex)
+ordersamples_nagel <- rownames(sample_data(physeq.nagel)[order(sample_data(physeq.nagel)$host_disease),]) # get the order 
+otu_table(physeq.nagel) <- otu_table(physeq.nagel)[ordersamples_nagel, ] # re-order samples in the phyloseq object
+sample_data(physeq.nagel)
+```
+
+
+
+##############################
+# PHYLUM RELATIVE ABUNDANCES #
+##############################
+
+## 1. MERGE PHYLOSEQ OBJECTS AND PLOT ALL SAMPLES
+
+Let's plot all fecal samples
+
+```{r}
+# PRE-PROCESS
+physeq <- merge_phyloseq(phyloseq(tax_table(physeq.labus), otu_table(physeq.labus), sample_data(physeq.labus)),
+                         phyloseq(tax_table(physeq.lopresti), otu_table(physeq.lopresti), sample_data(physeq.lopresti)),
+                         phyloseq(tax_table(physeq.pozuelo), otu_table(physeq.pozuelo), sample_data(physeq.pozuelo)),
+                         phyloseq(tax_table(physeq.zhuang), otu_table(physeq.zhuang), sample_data(physeq.zhuang)),
+                         phyloseq(tax_table(physeq.zhu), otu_table(physeq.zhu), sample_data(physeq.zhu)),
+                         phyloseq(tax_table(physeq.hugerth), otu_table(physeq.hugerth), sample_data(physeq.hugerth)),
+                         phyloseq(tax_table(physeq.zeber), otu_table(physeq.zeber), sample_data(physeq.zeber)),
+                         phyloseq(tax_table(physeq.nagel), otu_table(physeq.nagel), sample_data(physeq.nagel)))
+
+# Add missing info in the covariates
+sample_data(physeq)[is.na(sample_data(physeq)$sample_type),"sample_type"] <- "stool"
+sample_data(physeq)
+
+#physeq_best <-  prune_samples(sample_sums(physeq)>=1000, physeq) # REMOVE SAMPLES WITH LESS THAN 1000 TOTAL COUNTS
+#physeq_best # 541 samples (without Ringel)
+
+physeq.fecal <- subset_samples(physeq, sample_type == 'stool') # KEEP ONLY FECAL SAMPLES
+physeq.fecal # 750 samples (without Ringel dataset)
+
+# AGGLOMERATE AT PHYLUM LEVEL
+phylumTable.fecal <- physeq.fecal %>%
+  tax_glom(taxrank = "Phylum") %>%                     # agglomerate at phylum level
+  transform_sample_counts(function(x) {x/sum(x)} ) %>% # Transform to rel. abundance
+  psmelt()                                             # Melt to long format
+
+# UNIVERSAL COLOR VECTOR
+table(phylumTable$Phylum)
+phyla.colors <- c(colorRampPalette(brewer.pal(9, "Set1"))(15))
+names(phyla.colors) <- levels(phylumTable$Phylum)
+print(phyla.colors)
+
+# PLOT
+jpeg("./New_Figures/phyla_relAbundance.jpg", height = 2000, width = 5000, res = 300)
+ggplot(phylumTable.fecal,
+       aes(x = reorder(Sample, Sample, function(x) mean(phylumTable.fecal[Sample == x & Phylum == 'Bacteroidota', 'Abundance'])),
+           y = Abundance, fill = Phylum, width = 0.8))+
+  facet_grid(~host_disease, scales = "free") + # scales = "free" removes empty lines
+  geom_bar(stat = "identity") +
+  scale_fill_manual(values = phyla.colors)+
+  theme_classic()+
+  theme(axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(),
+        axis.line.x = element_blank(),
+        strip.text = element_text(size = 40, margin = margin(0.5,0.5,0.5,0.5, "cm")),
+        axis.title = element_text(size = 30),
+        axis.text.y = element_text(size = 30),
+        legend.text = element_text(size = 25),
+        legend.title = element_text(size = 30))+
+  labs(x = "Samples", y = "Relative abundance")+
+  scale_y_continuous(expand = c(0, 0))
+dev.off()
+```
+
+
+## 2. PLOT RELATIVE ABUNDANCES OF PHYLA IN INDIVIDUAL DATASETS
+
+```{r preprocess-data}
+#_________________________________________
+# LABUS 2017
+# Remove samples with less than 1000 counts
+physeq.labus <-  prune_samples(sample_sums(physeq.labus)>=1000, physeq.labus)
+#physeq.labus.comp <- transform_sample_counts(physeq.labus, function(x) x / sum(x) ) # get counts relative to 1
+
+# Relative abundance for Phylum
+phylumTable.labus <- physeq.labus %>%
+  tax_glom(taxrank = "Phylum") %>%                     # agglomerate at phylum level
+  transform_sample_counts(function(x) {x/sum(x)} ) %>% # Transform to rel. abundance
+  psmelt()                                             # Melt to long format
+
+#_________________________________________
+# LOPRESTI 2019
+# Remove samples with less than 1000 counts
+physeq.lopresti <-  prune_samples(sample_sums(physeq.lopresti)>=1000, physeq.lopresti)
+physeq.lopresti.fecal <- subset_samples(physeq.lopresti, sample_type == 'stool')
+physeq.lopresti.fecal
+physeq.lopresti
+subset_samples(physeq.lopresti, sample_type == "intestinal mucosa")
+
+# Relative abundance for Phylum
+phylumTable.lopresti <- physeq.lopresti %>%
+  tax_glom(taxrank = "Phylum") %>%                     # agglomerate at phylum level
+  transform_sample_counts(function(x) {x/sum(x)} ) %>% # Transform to rel. abundance
+  psmelt()                                             # Melt to long format
+
+phylumTable.lopresti.fecal <- physeq.lopresti.fecal %>%
+  tax_glom(taxrank = "Phylum") %>%                     # agglomerate at phylum level
+  transform_sample_counts(function(x) {x/sum(x)} ) %>% # Transform to rel. abundance
+  psmelt()                                             # Melt to long format
+phylumTable.lopresti.fecal$author <- "Lo Presti"
+
+#_________________________________________
+# POZUELO 2015
+# Remove samples with less than 1000 counts
+physeq.pozuelo <-  prune_samples(sample_sums(physeq.pozuelo)>=1000, physeq.pozuelo)
+
+# Relative abundance for Phylum
+phylumTable.pozuelo <- subset_samples(physeq.pozuelo, Collection == '1st') %>%
+  tax_glom(taxrank = "Phylum") %>%                     # agglomerate at phylum level
+  transform_sample_counts(function(x) {x/sum(x)} ) %>% # Transform to rel. abundance
+  psmelt()                                             # Melt to long format
+
+mean(phylumTable.pozuelo[phylumTable.pozuelo$Kingdom == "Archaea","Abundance"])
+length(table(phylumTable.pozuelo[phylumTable.pozuelo$Kingdom == "Archaea" & phylumTable.pozuelo$Abundance != 0,"Sample"]))
+table(phylumTable.pozuelo[phylumTable.pozuelo$Kingdom == "Archaea","Phylum"])
+
+#_________________________________________
+# ZHUANG 2015
+# Remove samples with less than 1000 counts
+physeq.zhuang <-  prune_samples(sample_sums(physeq.zhuang)>=1000, physeq.zhuang)
+
+# Relative abundance for Phylum
+phylumTable.zhuang <- physeq.zhuang %>%
+  tax_glom(taxrank = "Phylum") %>%                     # agglomerate at phylum level
+  transform_sample_counts(function(x) {x/sum(x)} ) %>% # Transform to rel. abundance
+  psmelt()                                             # Melt to long format
+
+#_________________________________________
+# ZEBER-LUBECKA 2016
+# Remove samples with less than 1000 counts
+physeq.zeber <-  prune_samples(sample_sums(physeq.zeber)>=1000, physeq.zeber)
+
+# Relative abundance for Phylum
+phylumTable.zeber <- physeq.zeber %>%
+  tax_glom(taxrank = "Phylum") %>%                     # agglomerate at phylum level
+  transform_sample_counts(function(x) {x/sum(x)} ) %>% # Transform to rel. abundance
+  psmelt()                                             # Melt to long format
+
+mean(phylumTable.zeber[phylumTable.zeber$Phylum == "Firmicutes","Abundance"])
+mean(phylumTable.zeber[phylumTable.zeber$Phylum == "Bacteroidota","Abundance"])
+mean(phylumTable.zeber[phylumTable.zeber$Phylum == "Proteobacteria","Abundance"])
+
+#_________________________________________
+# ZHU 2019
+# Remove samples with less than 1000 counts
+physeq.zhu <-  prune_samples(sample_sums(physeq.zhu)>=1000, physeq.zhu)
+
+# Relative abundance for Phylum
+phylumTable.zhu <- physeq.zhu %>%
+  tax_glom(taxrank = "Phylum") %>%                     # agglomerate at phylum level
+  transform_sample_counts(function(x) {x/sum(x)} ) %>% # Transform to rel. abundance
+  psmelt()                                             # Melt to long format
+
+#_________________________________________
+# RINGEL-KULKA 2015
+# Remove samples with less than 1000 counts
+physeq.ringel <-  prune_samples(sample_sums(physeq.ringel)>=1000, physeq.ringel)
+
+# Relative abundance for Phylum
+phylumTable.ringel <- physeq.ringel %>%
+  tax_glom(taxrank = "Phylum") %>%                     # agglomerate at phylum level
+  transform_sample_counts(function(x) {x/sum(x)} ) %>% # Transform to rel. abundance
+  psmelt()                                             # Melt to long format
+
+#_________________________________________
+# NAGEL 2016
+# Remove samples with less than 1000 counts
+physeq.nagel <-  prune_samples(sample_sums(physeq.nagel)>=1000, physeq.nagel)
+
+# Relative abundance for Phylum
+phylumTable.nagel <- physeq.nagel %>%
+  tax_glom(taxrank = "Phylum") %>%                     # agglomerate at phylum level
+  transform_sample_counts(function(x) {x/sum(x)} ) %>% # Transform to rel. abundance
+  psmelt()                                             # Melt to long format
+
+#_________________________________________
+# HUGERTH 2020
+# Remove samples with less than 1000 counts
+physeq.hugerth <-  prune_samples(sample_sums(physeq.hugerth)>=1000, physeq.hugerth)
+
+# Relative abundance for Phylum
+phylumTable.hugerth <- subset_samples(physeq.hugerth, sample_type == 'stool') %>%
+  tax_glom(taxrank = "Phylum") %>%                     # agglomerate at phylum level
+  transform_sample_counts(function(x) {x/sum(x)} ) %>% # Transform to rel. abundance
+  psmelt()                                             # Melt to long format
+
+```
+
+Getting the individual relative abundance plots (one per cohort).
+```{r phyla-relAbundances, fig.width = 7}
+# Universal color vector
+table(phylum.table$Phylum)
+phyla <- levels(factor(c(levels(phylumTable.labus$Phylum),
+                levels(phylumTable.lopresti.fecal$Phylum),
+                levels(phylumTable.pozuelo$Phylum),
+                levels(phylumTable.zhuang$Phylum),
+                levels(phylumTable.zhu$Phylum),
+                levels(phylumTable.hugerth$Phylum),
+                levels(phylumTable.zeber$Phylum),
+                levels(phylumTable.nagel$Phylum))))
+phyla.colors <- c(colorRampPalette(brewer.pal(9, "Set1"))(19))
+names(phyla.colors) <- phyla
+print(phyla.colors)
+
+#___________________________________
+# LABUS
+la <- ggplot(phylumTable.labus,
+       aes(x = reorder(Sample, Sample, function(x) mean(phylumTable.labus[Sample == x & Phylum == 'Bacteroidota', 'Abundance'])),
+           y = Abundance, fill = Phylum, width = 0.8))+
+  facet_grid(author~host_disease, scales = "free") + # scales = "free" removes empty lines
+  geom_bar(stat = "identity") +
+  scale_fill_manual(values = phyla.colors)+
+  theme_classic()+
+  theme(axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(),
+        axis.line.x = element_blank(),
+        strip.text = element_text(size = 50, margin = margin(1,1,1,1, "cm")),
+        #axis.title.y = element_text(size = 20),
+        axis.title = element_blank(),
+        axis.text.y = element_text(size = 30),
+        legend.text = element_text(size = 20),
+        legend.title = element_text(size = 20))+
+  labs(x = "", y = "Relative abundance")+
+  scale_y_continuous(expand = c(0, 0))
+
+# LOPRESTI
+lo <- ggplot(phylumTable.lopresti.fecal,
+       aes(x = reorder(Sample, Sample, function(x) mean(phylumTable.lopresti.fecal[Sample == x & Phylum == 'Bacteroidota', 'Abundance'])),
+           y = Abundance, fill = Phylum, width = 0.8))+
+  facet_grid(author~host_disease, scales = "free") + # scales = "free" removes empty lines
+  geom_bar(stat = "identity") +
+  scale_fill_manual(values = phyla.colors)+
+  theme_classic()+
+  theme(axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(),
+        axis.line.x = element_blank(),
+        strip.background.x = element_blank(),
+        strip.text.x = element_blank(),
+        strip.text = element_text(size = 50, margin = margin(0,1,0,1, "cm")),
+        #axis.title.y = element_text(size = 20),
+        axis.title = element_blank(),
+        axis.text.y = element_text(size = 30),
+        legend.text = element_text(size = 20),
+        legend.title = element_text(size = 20))+
+  labs(x = "", y = "Relative abundance")+
+  scale_y_continuous(expand = c(0, 0))
+
+# POZUELO
+po <- ggplot(phylumTable.pozuelo,
+       aes(x = reorder(Sample, Sample, function(x) mean(phylumTable.pozuelo[Sample == x & Phylum == 'Bacteroidota', 'Abundance'])),
+           y = Abundance, fill = Phylum, width = 0.8))+
+  facet_grid(author~host_disease, scales = "free") + # scales = "free" removes empty lines
+  geom_bar(stat = "identity") +
+  scale_fill_manual(values = phyla.colors)+
+  theme_classic()+
+  theme(axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(),
+        axis.line.x = element_blank(),
+        strip.background.x = element_blank(),
+        strip.text.x = element_blank(),
+        strip.text = element_text(size = 50, margin = margin(0,1,0,1, "cm")),
+        #axis.title.y = element_text(size = 20),
+        axis.title = element_blank(),
+        axis.text.y = element_text(size = 30),
+        legend.text = element_text(size = 20),
+        legend.title = element_text(size = 20))+
+  labs(x = "", y = "Relative abundance")+
+  scale_y_continuous(expand = c(0, 0))
+
+# ZHUANG
+zhg <- ggplot(phylumTable.zhuang,
+       aes(x = reorder(Sample, Sample, function(x) mean(phylumTable.zhuang[Sample == x & Phylum == 'Bacteroidota', 'Abundance'])),
+           y = Abundance, fill = Phylum, width = 0.8))+
+  facet_grid(author~host_disease, scales = "free") + # scales = "free" removes empty lines
+  geom_bar(stat = "identity") +
+  scale_fill_manual(values = phyla.colors)+
+  theme_classic()+
+  theme(axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(),
+        axis.line.x = element_blank(),
+        strip.background.x = element_blank(),
+        strip.text.x = element_blank(),
+        strip.text = element_text(size = 50, margin = margin(0,1,0,1, "cm")),
+        #axis.title.y = element_text(size = 20),
+        axis.title = element_blank(),
+        axis.text.y = element_text(size = 30),
+        legend.text = element_text(size = 20),
+        legend.title = element_text(size = 20))+
+  labs(x = "", y = "Relative abundance")+
+  scale_y_continuous(expand = c(0, 0))
+
+# ZHU
+zhu <- ggplot(phylumTable.zhu,
+       aes(x = reorder(Sample, Sample, function(x) -mean(phylumTable.zhu[Sample == x & Phylum == 'Firmicutes', 'Abundance'])),
+           y = Abundance, fill = Phylum, width = 0.8))+
+  facet_grid(author~host_disease, scales = "free") + # scales = "free" removes empty lines
+  geom_bar(stat = "identity") +
+  scale_fill_manual(values = phyla.colors)+
+  theme_classic()+
+  theme(axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(),
+        axis.line.x = element_blank(),
+        strip.background.x = element_blank(),
+        strip.text.x = element_blank(),
+        strip.text = element_text(size = 50, margin = margin(0,1,0,1, "cm")),
+        #axis.title.y = element_text(size = 20),
+        axis.title = element_blank(),
+        axis.text.y = element_text(size = 30),
+        legend.text = element_text(size = 20),
+        legend.title = element_text(size = 20))+
+  labs(x = "", y = "Relative abundance")+
+  scale_y_continuous(expand = c(0, 0))
+
+# ZEBER-LUBECKA
+zeb <- ggplot(phylumTable.zeber,
+       aes(x = reorder(Sample, Sample, function(x) mean(phylumTable.zeber[Sample == x & Phylum == 'Bacteroidota', 'Abundance'])),
+           y = Abundance, fill = Phylum, width = 0.8))+
+  facet_grid(author~host_disease, scales = "free") + # scales = "free" removes empty lines
+  geom_bar(stat = "identity") +
+  scale_fill_manual(values = phyla.colors)+
+  theme_classic()+
+  theme(axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(),
+        axis.line.x = element_blank(),
+        strip.background.x = element_blank(),
+        strip.text.x = element_blank(),
+        strip.text = element_text(size = 50, margin = margin(0,1,0,1, "cm")),
+        axis.title = element_blank(),
+        axis.text.y = element_text(size = 30),
+        #axis.title.y = element_text(size = 20),
+        legend.text = element_text(size = 20),
+        legend.title = element_text(size = 20))+
+  labs(x = "Samples", y = "Relative abundance")+
+  scale_y_continuous(expand = c(0, 0))
+
+
+# NAGEL
+nag <- ggplot(phylumTable.nagel,
+       aes(x = reorder(Sample, Sample, function(x) mean(phylumTable.nagel[Sample == x & Phylum == 'Bacteroidota', 'Abundance'])),
+           y = Abundance, fill = Phylum, width = 0.8))+
+  facet_grid(author~host_disease, scales = "free") + # scales = "free" removes empty lines
+  geom_bar(stat = "identity") +
+  scale_fill_manual(values = phyla.colors)+
+  theme_classic()+
+  theme(axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(),
+        axis.line.x = element_blank(),
+        strip.background.x = element_blank(),
+        strip.text.x = element_blank(),
+        strip.text = element_text(size = 50, margin = margin(0,1,0,1, "cm")),
+        axis.title = element_blank(),
+        axis.text.y = element_text(size = 30),
+        #axis.title.y = element_text(size = 20),
+        legend.text = element_text(size = 20),
+        legend.title = element_text(size = 20))+
+  labs(x = "Samples", y = "Relative abundance")+
+  scale_y_continuous(expand = c(0, 0))
+
+# HUGERTH
+hug <- ggplot(phylumTable.hugerth,
+       aes(x = reorder(Sample, Sample, function(x) mean(phylumTable.hugerth[Sample == x & Phylum == 'Bacteroidota', 'Abundance'])),
+           y = Abundance, fill = Phylum, width = 0.8))+
+  facet_grid(author~host_disease, scales = "free") + # scales = "free" removes empty lines
+  geom_bar(stat = "identity") +
+  scale_fill_manual(values = phyla.colors)+
+  theme_classic()+
+  theme(axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(),
+        axis.line.x = element_blank(),
+        strip.background.x = element_blank(),
+        strip.text.x = element_blank(),
+        strip.text = element_text(size = 50, margin = margin(0,1,0,1, "cm")),
+        axis.title = element_blank(),
+        axis.text.y = element_text(size = 30),
+        #axis.title.y = element_text(size = 20),
+        legend.text = element_text(size = 20),
+        legend.title = element_text(size = 20))+
+  labs(x = "Samples", y = "Relative abundance")+
+  scale_y_continuous(expand = c(0, 0))
+
+```
+
+Combining the individual relative abundance plots into 1 with ggarange.
+```{r relAbundance-combine, fig.width = 10, fig.height = 20}
+jpeg("./New_Figures/phylum_relAbundance.jpg", height = 10000, width = 5000, res = 300)
+ggarrange(la, lo, po, zhg, zhu, hug, zeb, nag, ncol = 1, nrow = 8)
+dev.off()
+
+jpeg("./New_Figures/test.jpg", height = 10000, width = 7000, res = 300)
+ggarrange(testA,
+            ggarrange(testB,
+                      ggarrange(testC, testD, testE, nrow = 3),
+                      ncol = 2),
+          nrow = 2, heights = c(1,2.5))
+dev.off()
+
+
+testB
+```
+
+Plotting Lo Presti mucosal samples and Pozuelo 1st/2nd time points.
+```{r phylum-relAbundance-extra, fig.width = 7}
+# LOPRESTI FECAL VS MUCOSA
+phylumTable.lopresti$sample_type <- as.character(phylumTable.lopresti$sample_type)
+phylumTable.lopresti[phylumTable.lopresti$sample_type == "intestinal mucosa", "sample_type"] <- "sigmoid mucosa"
+phylumTable.lopresti[is.na(phylumTable.lopresti$sample_type), "sample_type"] <- "sigmoid mucosa"
+
+
+jpeg("./Figures/lopresti_sampleType.jpg", height = 2000, width = 2500, res = 120)
+ggplot(phylumTable.lopresti,
+       aes(x = host_disease, y = Abundance, fill = Phylum, width = 0.8))+
+  facet_wrap(~sample_type, scales = "free") + # scales = "free" removes empty lines
+  geom_bar(stat = "identity", position = "fill") +
+  scale_fill_manual(values = phyla.colors)+
+  theme_classic()+
+  theme(axis.text = element_text(size = 40),
+        axis.ticks.x = element_blank(),
+        axis.line.x = element_blank(),
+        legend.text = element_text(size = 20),
+        legend.title = element_text(size = 20),
+        axis.title = element_text(size = 40),
+        strip.text = element_text(size = 50, margin = margin(1,0,1,0, "cm")))+
+  labs(x = "", y = "Relative abundance")+
+  scale_y_continuous(expand = c(0, 0))
+dev.off()
+
+# POZUELO 1st VS 2nd TIME POINTS
+subset_pozuelo <- unique(phylumTable.pozuelo[phylumTable.pozuelo$time_point == "2nd", "individual"])
+
+jpeg("./Figures/pozuelo_timePoints.jpg", height = 2000, width = 10000, res = 500)
+ggplot(phylumTable.pozuelo[phylumTable.pozuelo$individual %in% subset_pozuelo, ],
+       aes(x = Sample,
+           y = Abundance, fill = Phylum))+
+  facet_grid(~individual, scales = "free", switch = "both") + # scales = "free" removes empty lines
+  geom_bar(stat = "identity") +
+  scale_fill_manual(values = phyla.colors)+
+  theme_classic()+
+  theme(axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(),
+        axis.line.x = element_blank(),
+        strip.background = element_rect(colour = "white"),
+        strip.text = element_text(angle = 90))+
+  labs(x = "Individuals", y = "Relative abundance")+
+  scale_y_continuous(expand = c(0, 0))
+dev.off()
+
+jpeg("./Figures/zhu_phyla.jpg", height = 2000, width = 1500, res = 120)
+ggplot(phylumTable.zhu,
+       aes(x = host_disease, y = Abundance, fill = Phylum, width = 0.8))+
+  #facet_wrap(~sample_type, scales = "free") + # scales = "free" removes empty lines
+  geom_bar(stat = "identity", position = "fill") +
+  scale_fill_manual(values = phyla.colors)+
+  theme_classic()+
+  theme(axis.text = element_text(size = 40),
+        axis.ticks.x = element_blank(),
+        axis.line.x = element_blank(),
+        legend.text = element_text(size = 20),
+        legend.title = element_text(size = 20),
+        axis.title = element_text(size = 40),
+        strip.text = element_text(size = 50, margin = margin(1,0,1,0, "cm")))+
+  labs(x = "", y = "Relative abundance")+
+  scale_y_continuous(expand = c(0, 0))
+dev.off()
+```
+
+
+
+#######################
+# FIRM/BACT LOG RATIO #
+#######################
+
+Create a dataframe with Firmicutes, Bacteroidota relative abundances, and their log ratio, in each sample.
+```{r FB-log-ratio}
+# Extract abundance of only Bacteroidota and Firmicutes
+bacter <- phylumTable.fecal[phylumTable.fecal[,'Phylum'] == 'Bacteroidota', c('Sample', 'Abundance', 'Phylum',
+                                                                              'host_disease', 'host_subtype',
+                                                                              'author', 'sequencing_tech')]
+bacter <- bacter[order(bacter$Sample),] # order by sample name
+firmi <- phylumTable.fecal[phylumTable.fecal[,'Phylum'] == 'Firmicutes', c('Sample', 'Abundance','Phylum',
+                                                                             'host_disease', 'host_subtype',
+                                                                             'author', 'sequencing_tech')]
+firmi <- firmi[order(firmi$Sample),] # order by sample name
+
+# Sanity checks
+#table(bacter$Sample == firmi$Sample)
+#table(bacter$author == firmi$author)
+#table(bacter$host_disease == firmi$host_disease)
+
+# Calculate log2 ratio Firmicutes/Bacteroidota
+ratioFB <- data.table('Sample' = bacter$Sample,
+                      'host_disease' = bacter$host_disease,
+                      'host_subtype' = bacter$host_subtype,
+                      'author' = bacter$author,
+                      'sequencing_tech' = bacter$sequencing_tech,
+                      'Bacteroidota' = bacter$Abundance,
+                      'Firmicutes' = firmi$Abundance)
+ratioFB$LogRatioFB <- log2(ratioFB[,"Firmicutes"] / ratioFB[,"Bacteroidota"])
+ratioFB[ratioFB$author == "LoPresti", 'author'] <- "Lo Presti"
+
+#table(ratioFB$author)
+
+# Change IBS and Healthy names
+#ratioFB[ratioFB$author == "Ringel-Kulka" & is.na(ratioFB$host_disease), 'disease'] <- "Ringel"
+ratioFB[ratioFB$author == "Labus" & ratioFB$host_disease == "Healthy", 'disease'] <- "Labus_Healthy"
+ratioFB[ratioFB$author == "Labus" & ratioFB$host_disease == "IBS", 'disease'] <- "Labus_IBS"
+ratioFB[ratioFB$author == "Lo Presti" & ratioFB$host_disease == "Healthy", 'disease'] <- "LoPresti_Healthy"
+ratioFB[ratioFB$author == "Lo Presti" & ratioFB$host_disease == "IBS", 'disease'] <- "LoPresti_IBS"
+ratioFB[ratioFB$author == "Pozuelo" & ratioFB$host_disease == "Healthy", 'disease'] <- "Pozuelo_Healthy"
+ratioFB[ratioFB$author == "Pozuelo" & ratioFB$host_disease == "IBS", 'disease'] <- "Pozuelo_IBS"
+ratioFB[ratioFB$author == "Zhuang" & ratioFB$host_disease == "Healthy", 'disease'] <- "Zhuang_Healthy"
+ratioFB[ratioFB$author == "Zhuang" & ratioFB$host_disease == "IBS", 'disease'] <- "Zhuang_IBS"
+ratioFB[ratioFB$author == "Zhu" & ratioFB$host_disease == "Healthy", 'disease'] <- "Zhu_Healthy"
+ratioFB[ratioFB$author == "Zhu" & ratioFB$host_disease == "IBS", 'disease'] <- "Zhu_IBS"
+ratioFB[ratioFB$author == "Hugerth" & ratioFB$host_disease == "Healthy", 'disease'] <- "Hugerth_Healthy"
+ratioFB[ratioFB$author == "Hugerth" & ratioFB$host_disease == "IBS", 'disease'] <- "Hugerth_IBS"
+ratioFB[ratioFB$author == "Zeber-Lubecka" & ratioFB$host_disease == "Healthy", 'disease'] <- "Zeber_Healthy"
+ratioFB[ratioFB$author == "Zeber-Lubecka" & ratioFB$host_disease == "IBS", 'disease'] <- "Zeber_IBS"
+ratioFB[ratioFB$author == "Nagel" & ratioFB$host_disease == "Healthy", 'disease'] <- "Nagel_Healthy"
+ratioFB[ratioFB$author == "Nagel" & ratioFB$host_disease == "IBS", 'disease'] <- "Nagel_IBS"
+
+# Host_subtype
+ratioFB[ratioFB$author == "Nagel" & ratioFB$host_disease == "Healthy", 'host_subtype'] <- "HC"
+ratioFB[ratioFB$author == "Nagel" & ratioFB$host_disease == "IBS", 'host_subtype'] <- "IBS-D"
+ratioFB[ratioFB$author == "Zhuang" & ratioFB$host_disease == "Healthy", 'host_subtype'] <- "HC"
+ratioFB[ratioFB$author == "Zhuang" & ratioFB$host_disease == "IBS", 'host_subtype'] <- "IBS-D"
+
+#sanity check
+table(ratioFB$disease)
+
+# Reorder manually
+ratioFB$disease <- factor(ratioFB$disease , levels=unique(ratioFB$disease))
+ratioFB_order <- c("Labus_Healthy", "Labus_IBS", "LoPresti_Healthy", "LoPresti_IBS",
+                   "Pozuelo_Healthy", "Pozuelo_IBS", "Zhuang_Healthy", "Zhuang_IBS",
+                   "Zhu_Healthy", "Zhu_IBS", "Hugerth_Healthy", "Hugerth_IBS",
+                   "Zeber_Healthy", "Zeber_IBS", "Nagel_Healthy", "Nagel_IBS")
+ratioFB$disease <- factor(ratioFB$disease, levels=ratioFB_order)
+
+authors_order <- c('Labus', 'Lo Presti', 'Pozuelo', 'Zhuang', 'Zhu','Hugerth', 'Zeber-Lubecka', 'Nagel')
+
+```
+
+
+Plot FB log ratio.
+```{r FB-logRatio-plot}
+# Plot
+jpeg("./New_Figures/FB_logRatio_01.jpg", height = 1500, width = 3000, res = 300)
+ggplot(ratioFB, aes(x = disease, y = LogRatioFB, color = factor(author, levels = authors_order)))+
+  geom_violin(aes(fill = factor(author, levels = authors_order)), trim = FALSE)+
+  geom_boxplot(outlier.size = 0, width = 0.25)+
+  #geom_jitter(width = 0.1, size = 0.1)+
+  theme_classic()+
+  scale_color_brewer(palette="Dark2")+
+  scale_color_discrete(name = "author")+
+  guides(fill = FALSE, color = guide_legend(title="Datasets"))+
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        axis.line = element_line(arrow = arrow(length = unit(0.1, "inches"))))+
+  scale_x_discrete(breaks=ratioFB_order, labels= rep(c("Healthy", "IBS"), times = 8))+
+  labs(x = '', y = "Log2 Firmicutes / Bacteroidota ratio")
+dev.off()
+
+# Plot
+jpeg("./New_Figures/FB_logRatio_02.jpg", height = 1500, width = 3000, res = 300)
+ggplot(ratioFB, aes(x = disease, y = LogRatioFB, color = factor(author, levels = authors_order)))+
+  #geom_violin(aes(fill = factor(author, levels = authors_order)), trim = FALSE)+
+  geom_boxplot(outlier.size = 0, lwd = 1)+
+  geom_jitter(width = 0.1, size = 0.2)+
+  theme_classic()+
+  scale_color_brewer(palette="Dark2")+
+  scale_color_discrete(name = "author")+
+  guides(fill = FALSE, color = guide_legend(title="Datasets"))+
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        axis.line = element_line(arrow = arrow(length = unit(0.1, "inches"))))+
+  scale_x_discrete(breaks=ratioFB_order, labels=rep(c("Healthy", "IBS"), times = 8))+
+  labs(x = '', y = "Log2 Firmicutes / Bacteroidota ratio")
+dev.off()
+
+
+# Host_subtype
+jpeg("./New_Figures/FB_logRatio_05.jpg", height = 1500, width = 2000, res = 300)
+ggplot(ratioFB[ratioFB$host_subtype != "IBS-unspecified",], aes(x = host_subtype, y=LogRatioFB))+
+  geom_boxplot(outlier.shape = NA, lwd = 1)+
+  geom_jitter(aes(color = factor(author, levels = authors_order)), width = 0.1)+
+  theme_classic()+
+  scale_color_brewer(palette="Dark2")+
+  scale_color_discrete(name = "author")+
+  guides(fill = FALSE, color = guide_legend(title="Datasets"))+
+  theme(axis.line = element_line(arrow = arrow(length = unit(0.1, "inches"))))+
+  labs(x = '', y = "Log2 Firmicutes / Bacteroidota ratio")
+dev.off()
+```
+
+Verify whether the FB ratio differs significantly between healthy and IBS.
+```{r statistical-test}
+# Firmicutes increase in Labus, Zhu, Zhuang
+ratioFB <- as.data.frame(ratioFB)
+
+# _________________________
+# VERIFY NORMALITY AND SAME VARIANCES
+
+# Labus
+shapiro.test(ratioFB[ratioFB$author == "Labus" & ratioFB$host_disease == "IBS","Firmicutes"])
+shapiro.test(ratioFB[ratioFB$author == "Labus" & ratioFB$host_disease == "Healthy","Firmicutes"]) # Firmicutes not normal
+shapiro.test(ratioFB[ratioFB$author == "Labus" & ratioFB$host_disease == "IBS","Bacteroidota"])
+shapiro.test(ratioFB[ratioFB$author == "Labus" & ratioFB$host_disease == "Healthy","Bacteroidota"]) # Bacteroidota not normal
+
+# Zhu
+shapiro.test(ratioFB[ratioFB$author == "Zhu" & ratioFB$host_disease == "IBS","Firmicutes"])
+shapiro.test(ratioFB[ratioFB$author == "Zhu" & ratioFB$host_disease == "Healthy","Firmicutes"]) # Firmicutes normal
+shapiro.test(ratioFB[ratioFB$author == "Zhu" & ratioFB$host_disease == "IBS","Bacteroidota"])
+shapiro.test(ratioFB[ratioFB$author == "Zhu" & ratioFB$host_disease == "Healthy","Bacteroidota"]) # Bacteroidota normal
+
+var.test(ratioFB[ratioFB$author == "Zhu" & ratioFB$host_disease == "IBS","Firmicutes"],
+         ratioFB[ratioFB$author == "Zhu" & ratioFB$host_disease == "Healthy","Firmicutes"],
+         alternative = "two.sided") # p = 0.5 same variances
+var.test(ratioFB[ratioFB$author == "Zhu" & ratioFB$host_disease == "IBS","Bacteroidota"],
+         ratioFB[ratioFB$author == "Zhu" & ratioFB$host_disease == "Healthy","Bacteroidota"],
+         alternative = "two.sided") # p = 0.1 same variances
+
+# Zhuang
+shapiro.test(ratioFB[ratioFB$author == "Zhuang" & ratioFB$host_disease == "IBS","Firmicutes"])
+shapiro.test(ratioFB[ratioFB$author == "Zhuang" & ratioFB$host_disease == "Healthy","Firmicutes"]) # Firmicutes not normal
+shapiro.test(ratioFB[ratioFB$author == "Zhuang" & ratioFB$host_disease == "IBS","Bacteroidota"])
+shapiro.test(ratioFB[ratioFB$author == "Zhuang" & ratioFB$host_disease == "Healthy","Bacteroidota"]) # Bacteroidota not normal
+
+# Lo Presti
+shapiro.test(ratioFB[ratioFB$author == "Lo Presti" & ratioFB$host_disease == "IBS","Firmicutes"])
+shapiro.test(ratioFB[ratioFB$author == "Lo Presti" & ratioFB$host_disease == "Healthy","Firmicutes"]) # Firmicutes not normal
+shapiro.test(ratioFB[ratioFB$author == "Lo Presti" & ratioFB$host_disease == "IBS","Bacteroidota"])
+shapiro.test(ratioFB[ratioFB$author == "Lo Presti" & ratioFB$host_disease == "Healthy","Bacteroidota"]) # Bacteroidota not normal
+
+# Pozuelo
+shapiro.test(ratioFB[ratioFB$author == "Pozuelo" & ratioFB$host_disease == "IBS","Firmicutes"])
+shapiro.test(ratioFB[ratioFB$author == "Pozuelo" & ratioFB$host_disease == "Healthy","Firmicutes"]) # Firmicutes not normal
+shapiro.test(ratioFB[ratioFB$author == "Pozuelo" & ratioFB$host_disease == "IBS","Bacteroidota"])
+shapiro.test(ratioFB[ratioFB$author == "Pozuelo" & ratioFB$host_disease == "Healthy","Bacteroidota"]) # Bacteroidota not normal
+
+# Zeber-Lubecka
+shapiro.test(ratioFB[ratioFB$author == "Zeber-Lubecka" & ratioFB$host_disease == "IBS","Firmicutes"])
+shapiro.test(ratioFB[ratioFB$author == "Zeber-Lubecka" & ratioFB$host_disease == "Healthy","Firmicutes"]) # Firmicutes normal
+shapiro.test(ratioFB[ratioFB$author == "Zeber-Lubecka" & ratioFB$host_disease == "IBS","Bacteroidota"])
+shapiro.test(ratioFB[ratioFB$author == "Zeber-Lubecka" & ratioFB$host_disease == "Healthy","Bacteroidota"]) # Bacteroidota normal
+
+var.test(ratioFB[ratioFB$author == "Zeber-Lubecka" & ratioFB$host_disease == "IBS","Firmicutes"],
+         ratioFB[ratioFB$author == "Zeber-Lubecka" & ratioFB$host_disease == "Healthy","Firmicutes"],
+         alternative = "two.sided") # p = 0.5 same variances
+var.test(ratioFB[ratioFB$author == "Zeber-Lubecka" & ratioFB$host_disease == "IBS","Bacteroidota"],
+         ratioFB[ratioFB$author == "Zeber-Lubecka" & ratioFB$host_disease == "Healthy","Bacteroidota"],
+         alternative = "two.sided") # p = 0.8 same variances
+
+# _________________________
+# T-TEST
+
+# Zhu
+t.test(ratioFB[ratioFB$author == "Zhu" & ratioFB$host_disease == "IBS","Firmicutes"],
+         ratioFB[ratioFB$author == "Zhu" & ratioFB$host_disease == "Healthy","Firmicutes"],
+         alternative = "two.sided") # p = 1.65e-4 SIGNIFICANT INCREASE F
+t.test(ratioFB[ratioFB$author == "Zhu" & ratioFB$host_disease == "IBS","Bacteroidota"],
+         ratioFB[ratioFB$author == "Zhu" & ratioFB$host_disease == "Healthy","Bacteroidota"],
+         alternative = "two.sided") # p = 0.01 SIGNIFICANT DECREASE B
+
+# Zeber-Lubecka
+t.test(ratioFB[ratioFB$author == "Zeber-Lubecka" & ratioFB$host_disease == "IBS","Firmicutes"],
+         ratioFB[ratioFB$author == "Zeber-Lubecka" & ratioFB$host_disease == "Healthy","Firmicutes"],
+         alternative = "two.sided") # p = 0.9
+t.test(ratioFB[ratioFB$author == "Zeber-Lubecka" & ratioFB$host_disease == "IBS","Bacteroidota"],
+         ratioFB[ratioFB$author == "Zeber-Lubecka" & ratioFB$host_disease == "Healthy","Bacteroidota"],
+         alternative = "two.sided") # p = 0.8
+
+# _________________________
+# WILCOXON RANK SUM TEST ON LOG-RATIOS
+
+# Labus
+wilcox.test(ratioFB[ratioFB$author == "Labus" & ratioFB$host_disease == "IBS","LogRatioFB"],
+            ratioFB[ratioFB$author == "Labus" & ratioFB$host_disease == "Healthy","LogRatioFB"]) # p = 0.04 DIFFERENCE
+
+# Lo Presti
+wilcox.test(ratioFB[ratioFB$author == "Lo Presti" & ratioFB$host_disease == "IBS","LogRatioFB"],
+            ratioFB[ratioFB$author == "Lo Presti" & ratioFB$host_disease == "Healthy","LogRatioFB"]) # p = 0.74
+
+# Pozuelo
+wilcox.test(ratioFB[ratioFB$author == "Pozuelo" & ratioFB$host_disease == "IBS","LogRatioFB"],
+            ratioFB[ratioFB$author == "Pozuelo" & ratioFB$host_disease == "Healthy","LogRatioFB"]) # p = 0.19
+
+# Zhuang
+wilcox.test(ratioFB[ratioFB$author == "Zhuang" & ratioFB$host_disease == "IBS","LogRatioFB"],
+            ratioFB[ratioFB$author == "Zhuang" & ratioFB$host_disease == "Healthy","LogRatioFB"]) # p = 0.88
+
+# Zhu
+wilcox.test(ratioFB[ratioFB$author == "Zhu" & ratioFB$host_disease == "IBS","LogRatioFB"],
+            ratioFB[ratioFB$author == "Zhu" & ratioFB$host_disease == "Healthy","LogRatioFB"]) # p = 0.2
+
+# Hugerth
+wilcox.test(ratioFB[ratioFB$author == "Hugerth" & ratioFB$host_disease == "IBS","LogRatioFB"],
+            ratioFB[ratioFB$author == "Hugerth" & ratioFB$host_disease == "Healthy","LogRatioFB"]) # p = 0.02 DIFFERENCE
+
+# Zeber-Lubecka
+wilcox.test(ratioFB[ratioFB$author == "Zeber-Lubecka" & ratioFB$host_disease == "IBS","LogRatioFB"],
+            ratioFB[ratioFB$author == "Zeber-Lubecka" & ratioFB$host_disease == "Healthy","LogRatioFB"]) # p = 0.89
+
+# Nagel
+wilcox.test(ratioFB[ratioFB$author == "Nagel" & ratioFB$host_disease == "IBS","LogRatioFB"],
+            ratioFB[ratioFB$author == "Nagel" & ratioFB$host_disease == "Healthy","LogRatioFB"]) # p = 0.41
+
+
+# 454 pyroseq vs Illumina
+wilcox.test(ratioFB[ratioFB$sequencing_tech == "Illumina MiSeq", "LogRatioFB"],
+            ratioFB[ratioFB$sequencing_tech == "454 pyrosequencing", "LogRatioFB"]) # p = 1e-14 DIFFERENCE
+wilcox.test(ratioFB[ratioFB$sequencing_tech == "Illumina MiSeq", "LogRatioFB"],
+            ratioFB[ratioFB$sequencing_tech == "Ion Torrent", "LogRatioFB"]) # p = 0.003 DIFFERENCE
+wilcox.test(ratioFB[ratioFB$sequencing_tech == "454 pyrosequencing", "LogRatioFB"],
+            ratioFB[ratioFB$sequencing_tech == "Ion Torrent", "LogRatioFB"]) # p = 2e-15 DIFFERENCE
+wilcox.test(ratioFB[ratioFB$sequencing_tech == "454 pyrosequencing", "LogRatioFB"],
+            ratioFB[ratioFB$sequencing_tech != "454 pyrosequencing", "LogRatioFB"]) # p < 2e-16 DIFFERENCE
+
+#_______________________
+# HEALTHY vs IBS
+
+# overall
+wilcox.test(ratioFB[ratioFB$host_disease == "IBS", "LogRatioFB"],
+            ratioFB[ratioFB$host_disease == "Healthy", "LogRatioFB"],
+            alternative = "two.sided") # p = 0.32
+
+wilcox.test(ratioFB[ratioFB$host_subtype == "IBS-M", "LogRatioFB"],
+            ratioFB[ratioFB$host_subtype == "HC", "LogRatioFB"],
+            alternative = "two.sided")
+
+median(ratioFB[ratioFB$host_disease == "IBS" & ratioFB$author != "Ringel-Kulka", "LogRatioFB"])
+median(ratioFB[ratioFB$host_disease == "Healthy" & ratioFB$author != "Ringel-Kulka", "LogRatioFB"])
+
+# per seq technology
+wilcox.test(ratioFB_best[ratioFB_best$sequencing_tech == "454 pyrosequencing" & ratioFB_best$host_disease == "IBS", "LogRatioFB"],
+            ratioFB_best[ratioFB_best$sequencing_tech != "454 pyrosequencing" & ratioFB_best$host_disease == "Healthy", "LogRatioFB"],
+            alternative = "two.sided") # p = 0.02
+
+wilcox.test(ratioFB_best[ratioFB_best$sequencing_tech == "Illumina MiSeq" & ratioFB_best$host_disease == "IBS", "LogRatioFB"],
+            ratioFB_best[ratioFB_best$sequencing_tech != "Illumina MiSeq" & ratioFB_best$host_disease == "Healthy", "LogRatioFB"],
+            alternative = "two.sided") # p = 0.01
+
+ratioFB_best <- ratioFB[ratioFB$author != "Ringel-Kulka",]
+dim(ratioFB_best)
+
+median(ratioFB_best[ratioFB_best$host_disease == "IBS" & ratioFB_best$sequencing_tech == "454 pyrosequencing", "LogRatioFB"])
+median(ratioFB_best[ratioFB_best$host_disease == "Healthy" & ratioFB_best$sequencing_tech == "454 pyrosequencing", "LogRatioFB"])
+
+
+median(ratioFB_best[ratioFB_best$host_disease == "IBS" & ratioFB_best$sequencing_tech == "Illumina MiSeq", "LogRatioFB"])
+median(ratioFB_best[ratioFB_best$host_disease == "Healthy" & ratioFB_best$sequencing_tech == "Illumina MiSeq", "LogRatioFB"])
+
+```
+
+
+ Plot FB log ratio per sequencing technology, or per disease phenotype. With density plot or boxplots.
+```{r FB-log-ratio-density, fig.width = 7, fig.height = 4}
+jpeg("./New_Figures/FB_logRatio_seqTech02.jpg", height = 1500, width = 5000, res = 300)
+ggplot(ratioFB, aes(x = LogRatioFB, fill = sequencing_tech))+
+  geom_density(alpha = 0.6)+
+  theme_classic()+
+  guides(fill = guide_legend(title="Sequencing Technology"))+
+  theme(axis.text = element_text(size = 20),
+        axis.title = element_text(size = 30),
+        legend.text = element_text(size = 30),
+        legend.title = element_text(size = 30),
+        axis.line = element_line(size = 1, arrow = arrow(length = unit(0.1, "inches"))))+
+  #scale_color_manual(values = c("blue", "red"))+
+  scale_fill_manual(values = c("#6600FF", "#00CC66", "#FF6633"))+
+  geom_vline(aes(xintercept = 0), linetype = "dashed")+
+  labs(x = "Log2 Firmicutes / Bacteroidota ratio", y = "Density")+
+  scale_y_continuous(expand = c(0, 0))+
+  scale_x_continuous(expand = c(0,0))
+dev.off()
+
+jpeg("./New_Figures/FB_logRatio_disease02.jpg", height = 1500, width = 5000, res = 300)
+ggplot(ratioFB[!is.na(ratioFB$host_disease) & is.finite(ratioFB$LogRatioFB),], aes(x = LogRatioFB, fill = host_disease))+
+  geom_density(alpha = 0.6)+
+  theme_classic()+
+  guides(color = guide_legend(title="Disease"))+
+  theme(axis.text = element_text(size = 20),
+        axis.title = element_text(size = 30),
+        legend.text = element_text(size = 30),
+        legend.title = element_text(size = 30),
+        axis.line = element_line(size = 1, arrow = arrow(length = unit(0.1, "inches"))))+
+  scale_fill_manual(values = c("blue", "red"))+
+  geom_vline(aes(xintercept = 0), linetype = "dashed")+
+  labs(x = "Log2 Firmicutes / Bacteroidota ratio", y = "Density", fill = "Disease")+
+  scale_y_continuous(expand = c(0, 0))+
+  scale_x_continuous(expand = c(0,0))
+dev.off()
+
+
+# PLOT HEALTHY IBS PER SEQ TECHNOLOGY
+jpeg("./New_Figures/FB_logRatio_03.jpg", height = 1500, width = 3000, res = 300)
+ggplot(ratioFB, aes(x = sequencing_tech, y = LogRatioFB, fill = host_disease))+
+  scale_fill_manual(values = c("blue", "red", "#CCCCCC"))+
+  geom_violin(aes(fill = host_disease), trim = FALSE, alpha = 0.5, scale = "area", na.rm = TRUE)+
+  #geom_point(aes(fill = host_disease), trim = FALSE, alpha = 0.5, position = position_dodge(0.9))+
+  #scale_fill_manual(values = c("white", "white", "white"))+
+  geom_boxplot(aes(group=interaction(host_disease,sequencing_tech)), outlier.shape= NA, lwd = 1, width = 0.2, position = position_dodge(0.9), fill = "white")+
+  #stat_summary(fun.data=mean_sdl, mult=1, geom="pointrange", color="red")+
+  theme_classic()+
+  #guides(fill = FALSE, color = guide_legend(title="Datasets"))+
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        axis.text.y = element_text(size = 20),
+        legend.text = element_text(size = 20),
+        legend.title = element_text(size = 20),
+        axis.line = element_line(arrow = arrow(length = unit(0.1, "inches"))))+
+  labs(x = '', y = "Log2 Firmicutes / Bacteroidota ratio", fill = "Disease")
+dev.off()
+
+# PLOT HEALTHY IBS WITH ALL SAMPLES
+jpeg("./New_Figures/FB_logRatio_04.jpg", height = 1500, width = 2000, res = 300)
+ggplot(ratioFB, aes(x = host_disease, y = LogRatioFB, fill = host_disease))+
+  scale_fill_manual(values = c("blue", "red", "#CCCCCC"))+
+  geom_violin(aes(fill = host_disease), trim = TRUE, alpha = 0.5, scale = "area", na.rm = TRUE)+
+  #geom_point(aes(fill = host_disease), trim = FALSE, alpha = 0.5, position = position_dodge(0.9))+
+  #scale_fill_manual(values = c("white", "white", "white"))+
+  geom_boxplot(lwd = 1, width = 0.2, fill = "white")+
+  #stat_summary(fun.data=mean_sdl, mult=1, geom="pointrange", color="red")+
+  theme_classic()+
+  #guides(fill = FALSE, color = guide_legend(title="Datasets"))+
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        axis.text = element_text(size = 20),
+        legend.text = element_text(size = 20),
+        legend.title = element_text(size = 20),
+        axis.line = element_line(arrow = arrow(length = unit(0.1, "inches"))))+
+  labs(x = '', y = "Log2 Firmicutes / Bacteroidota ratio", fill = "Disease")
+dev.off()
+```
+
+
+
+
+#################################
+# PHYLA SIGNIFICANT DIFFERENCES #
+#################################
+
+In the Zhu dataset
+```{r}
+# Zhu
+table(phylum.agg$author)
+test <- phylum.agg[phylum.agg$author == "Zhu",]
+table(test$author)
+
+# FIRMICUTES
+f1 <- test[test$Phylum == "Firmicutes" & test$host_disease == "Healthy", "Abundance"]
+f2 <- test[test$Phylum == "Firmicutes" & test$host_disease == "IBS", "Abundance"]
+
+shapiro.test(f1) # normal
+shapiro.test(f2) # normal
+var.test(f1, f2, alternative = "two.sided")
+
+t.test(f1, f2) # p = 0.0002 DIFFERENCE
+
+# BACTEROIDOTA
+b1 <- test[test$Phylum == "Bacteroidota" & test$host_disease == "Healthy", "Abundance"]
+b2 <- test[test$Phylum == "Bacteroidota" & test$host_disease == "IBS", "Abundance"]
+
+shapiro.test(b1) # normal
+shapiro.test(b2) # normal
+var.test(b1, b2, alternative = "two.sided") # ok
+
+t.test(b1, b2) # p = 0.01 DIFFERENCE
+
+# PROTEOBACTERIA
+p1 <- test[test$Phylum == "Proteobacteria" & test$host_disease == "Healthy", "Abundance"]
+p2 <- test[test$Phylum == "Proteobacteria" & test$host_disease == "IBS", "Abundance"]
+
+shapiro.test(p1) # not normal
+
+wilcox.test(p1, p2) # p = 0.0007 DIFFERENCE
+```
+
+
+From the heatmaps, we saw some phyla which were less abundant in 454 pyroseq.
+```{r}
+# Synergistota
+test1 <- phylum.agg[phylum.agg$sequencing_tech == "Illumina MiSeq" | phylum.agg$sequencing_tech == "Ion Torrent",]
+test2 <- phylum.agg[phylum.agg$sequencing_tech == "454 pyrosequencing",]
+
+s1 <- test1[test1$Phylum == "Synergistota", "Abundance"]
+s2 <- test2[test2$Phylum == "Synergistota", "Abundance"]
+length(s1)+length(s2) # sanity check
+
+shapiro.test(s1)
+wilcox.test(s1, s2) # p = 0.001
+
+# Cyanobacteria
+s1 <- test1[test1$Phylum == "Cyanobacteria", "Abundance"]
+s2 <- test2[test2$Phylum == "Cyanobacteria", "Abundance"]
+length(s1)+length(s2) # sanity check
+
+shapiro.test(s1)
+wilcox.test(s1, s2) # p = 6e-11
+
+# Verrucomicrobiota
+s1 <- test1[test1$Phylum == "Verrucomicrobiota", "Abundance"]
+s2 <- test2[test2$Phylum == "Verrucomicrobiota", "Abundance"]
+length(s1)+length(s2) # sanity check
+
+shapiro.test(s1)
+wilcox.test(s1, s2) # p = 2e-16
+
+# Desulfobacterota
+s1 <- test1[test1$Phylum == "Desulfobacterota", "Abundance"]
+s2 <- test2[test2$Phylum == "Desulfobacterota", "Abundance"]
+length(s1)+length(s2) # sanity check
+
+shapiro.test(s1)
+wilcox.test(s1, s2) # p = 2e-16
+```
+
