@@ -24,6 +24,7 @@ physeq.lopresti <- readRDS(file.path(path, "phyloseq-objects/physeq_lopresti.rds
 physeq.mars     <- readRDS(file.path(path, "phyloseq-objects/physeq_mars.rds"))
 physeq.nagel    <- readRDS(file.path(path, "phyloseq-objects/physeq_nagel.rds"))
 physeq.pozuelo  <- readRDS(file.path(path, "phyloseq-objects/physeq_pozuelo.rds"))
+physeq.ringel   <- readRDS(file.path(path, "phyloseq-objects/physeq_ringel.rds"))
 physeq.zeber    <- readRDS(file.path(path, "phyloseq-objects/physeq_zeber.rds"))
 physeq.zhu      <- readRDS(file.path(path, "phyloseq-objects/physeq_zhu.rds"))
 physeq.zhuang   <- readRDS(file.path(path, "phyloseq-objects/physeq_zhuang.rds"))
@@ -69,6 +70,7 @@ datasets <- list("AGP-2021"      = physeq.agp,
                  "Mars-2020"     = physeq.mars,
                  "Nagel-2016"    = physeq.nagel,
                  "Pozuelo-2015"  = physeq.pozuelo,
+                 "Ringel-2015"   = physeq.ringel,
                  "Zeber-2016"    = physeq.zeber,
                  "Zhu-2019"      = physeq.zhu,
                  "Zhuang-2018"   = physeq.zhuang)
@@ -84,8 +86,6 @@ for(physeq.cohort in datasets){
   
   # Aggregate at each taxonomic level
   for (taxa in taxa.levels){
-    # Print dataset
-    
     # Aggregate
     df <- physeq.cohort %>%
       tax_glom(taxrank = taxa) %>%
