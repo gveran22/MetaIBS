@@ -2036,7 +2036,7 @@ metadata_table &lt;- read.csv(&quot;~/Projects/IBS_Meta-analysis_16S/data/analys
 
 # Simplify data
 rownames(metadata_table) &lt;- metadata_table$Run # have the same sample.names
-colnames(metadata_table) &lt;- c(&quot;Run&quot;, &quot;individual&quot;, &quot;host_disease&quot;, &quot;host_subtype&quot;, &quot;host_sex&quot;)
+colnames(metadata_table) &lt;- c(&quot;Run&quot;, &quot;host_ID&quot;, &quot;host_disease&quot;, &quot;host_subtype&quot;, &quot;host_sex&quot;)
 
 metadata_table$host_sex &lt;- as.character(metadata_table$host_sex)
 metadata_table[is.na(metadata_table[, &#39;host_sex&#39;]), &#39;host_sex&#39;] &lt;- &#39;unknown&#39; # replace the &#39;NA&#39;
@@ -2046,9 +2046,10 @@ metadata_table[metadata_table[, &#39;host_sex&#39;] == &quot;F&quot;, &#39;host_
 metadata_table$host_subtype &lt;- as.character(metadata_table$host_subtype)
 metadata_table[metadata_table$host_subtype == &quot;Healthy&quot;, &#39;host_subtype&#39;] &lt;- &#39;HC&#39;
 
-metadata_table$individual &lt;- gsub(&#39;\\:0$&#39;, &#39;&#39;, metadata_table$individual)
+metadata_table$host_ID &lt;- gsub(&#39;\\:0$&#39;, &#39;&#39;, metadata_table$host_ID)
 
 metadata_table$sample_type &lt;- &quot;stool&quot;
+metadata_table$Collection &lt;- &quot;1st&quot; # only 1 collection time point per individual
 metadata_table$author &lt;- &quot;Zeber-Lubecka&quot;
 metadata_table$sequencing_tech &lt;- &quot;Ion Torrent&quot;
 metadata_table$variable_region &lt;- &quot;Ion 16S Metagenomics Kit&quot;
@@ -2068,7 +2069,9 @@ physeq &lt;- phyloseq(otu_table(seqtable.nochim, taxa_are_rows=FALSE), # by defa
 physeq &lt;- subset_taxa(physeq, Kingdom != &quot;Eukaryota&quot;)
 physeq &lt;- subset_taxa(physeq, !is.na(Phylum))
 # Remove samples with less than 500 reads
-physeq &lt;- prune_samples(sample_sums(physeq)&gt;=500, physeq)</code></pre>
+physeq &lt;- prune_samples(sample_sums(physeq)&gt;=500, physeq)
+# No sample was deleted, so we don&#39;t need to remove taxa present in low-count samples
+# physeq &lt;- prune_taxa(taxa_sums(physeq)&gt;0, physeq)</code></pre>
 </div>
 <div id="save-to-disk" class="section level3">
 <h3>2. Save to disk</h3>
