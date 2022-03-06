@@ -21,8 +21,9 @@ knitr::opts_chunk$set(fig.width = 15, fig.height = 5, warning=FALSE, message=FAL
 ### Librairies
 
 ```{r library-import}
-library(phyloseq) # for phyloseq object
+library(phyloseq)
 library(ggplot2)
+library(ggsignif)
 library(cowplot)
 library(tidyverse)
 library(reshape2)
@@ -40,6 +41,7 @@ library(pheatmap) # for heatmap
 ```{r import-data}
 # Set path
 path <- "~/Projects/IBS_Meta-analysis_16S"
+path.plots <- file.path(path, "data/analysis-individual/PLOTS/plots-Mars-EDA")
 
 # Import phyloseq object
 physeq.mars <- readRDS(file.path(path, "phyloseq-objects/physeq_mars.rds"))
@@ -52,7 +54,7 @@ Phylogenetic tree was computed with the package `phangorn`, and the script was r
 
 ```{r plot-tree, echo=TRUE, eval=FALSE, fig.height = 6, fig.width = 10}
 # Look at the tree
-plot_tree(physeq.mars, color = "host_disease", ladderize="left")
+plot_tree(physeq.mars, color = "Phylum", ladderize="left")
 ```
 
 
@@ -124,12 +126,15 @@ wilcox.test(metadata[metadata$host_disease == "IBS",]$host_bmi,
 ```{r plot-absolute-abundance, fig.width=10, fig.height = 5}
 # Plot Phylum
 plot_bar(physeq.mars, fill = "Phylum") + facet_wrap("host_disease", scales="free_x") +
-  theme(axis.text.x = element_text(size = 8))+
+  theme_cowplot()+
+  theme(axis.text.x = element_text(size = 6, angle=90))+
   labs(x = "Samples", y = "Absolute abundance", title = "Mars dataset (2020)")
+# ggsave(file.path(path.plots, "absAbundance_phylum.jpg"), width=13, height=5)
 
 # Plot Class
 plot_bar(physeq.mars, fill = "Class")+ facet_wrap("host_disease", scales="free_x") +
-  theme(axis.text.x = element_text(size = 8))+
+  theme_cowplot()+
+  theme(axis.text.x = element_text(size = 6, angle=90))+
   labs(x = "Samples", y = "Absolute abundance", title = "Mars dataset (2020)")
 ```
 
@@ -156,21 +161,25 @@ class.table <- physeq.mars %>%
 sample_data(physeq.mars)$host_ID <- as.character(sample_data(physeq.mars)$host_ID)
 
 # Plot relative abundances
-ggplot(phylum.table, aes(x = reorder(Sample, Sample, function(x) mean(phylum.table[Sample == x & Phylum == 'Bacteroidota', 'Abundance'])),
+ggplot(phylum.table, aes(x = reorder(Sample, Sample, function(x) mean(phylum.table[Sample == x & Phylum == 'Firmicutes', 'Abundance'])),
                          y = Abundance, fill = Phylum))+
   facet_wrap(~ host_disease, scales = "free") + # scales = "free" removes empty lines
   geom_bar(stat = "identity") +
+  theme_cowplot()+
   theme(axis.text.x = element_blank())+
   labs(x = "Samples", y = "Relative abundance", title = "Mars dataset (2020)")
+# ggsave(file.path(path.plots, "relAbundance_phylum.jpg"), width=10, height=5)
 
-ggplot(class.table, aes(x = reorder(Sample, Sample, function(x) mean(phylum.table[Sample == x & Phylum == 'Bacteroidota', 'Abundance'])),
+ggplot(class.table, aes(x = reorder(Sample, Sample, function(x) mean(phylum.table[Sample == x & Phylum == 'Firmicutes', 'Abundance'])),
                         y = Abundance, fill = Class))+
   facet_wrap(~ host_disease, scales = "free") + # scales = "free" removes empty lines
   geom_bar(stat = "identity") +
+  theme_cowplot()+
   theme(axis.text.x = element_blank(),
         legend.key.size = unit(0.2, 'cm'),
         legend.text = element_text(size=8))+
   labs(x = "Samples", y = "Relative abundance", title = "Mars dataset (2020)")
+# ggsave(file.path(path.plots, "relAbundance_class.jpg"), width=12, height=5)
 
 # As curiosity, group samples per host_ID (is there a big difference between collection times?)
 ggplot(phylum.table, aes(x = Sample, y = Abundance, fill = Phylum))+
@@ -216,9 +225,11 @@ ggplot(ratio.FB, aes(x = host_disease, y = logRatioFB))+
   geom_violin(aes(fill=host_disease))+
   scale_fill_manual(values=scales::alpha(c("blue", "red"), .3))+
   geom_jitter(width=0.1)+
+  geom_signif(comparisons = list(c("Healthy", "IBS")), map_signif_level = TRUE, test="wilcox.test") +
   labs(x = "",  y = 'Log2(Firmicutes/Bacteroidota)')+
   theme_cowplot()+
   theme(legend.position="none")
+# ggsave(file.path(path.plots, "ratioFB.jpg"), width=4, height=6)
 # Statistical test
 wilcox.test(ratio.FB[ratio.FB$host_disease == "IBS","logRatioFB"],
             ratio.FB[ratio.FB$host_disease == "Healthy","logRatioFB"]) # p = 0.6
@@ -229,18 +240,33 @@ ggplot(ratio.FB, aes(x = host_disease, y = logRatioFB))+
   scale_fill_manual(values=scales::alpha(c("blue", "red"), .3))+
   geom_jitter(width=0.1)+
   facet_wrap(~Collection) +
+  geom_signif(comparisons = list(c("Healthy", "IBS")), map_signif_level = TRUE, test="wilcox.test") +
   labs(x = "",  y = 'Log2(Firmicutes/Bacteroidota)')+
   theme_cowplot()+
   theme(legend.position="none")
+
+ggplot(ratio.FB, aes(x = Collection, y = logRatioFB))+
+  geom_violin(aes(fill=host_disease))+
+  scale_fill_manual(values=scales::alpha(c("blue", "red"), .3))+
+  geom_point(size = 2)+
+  facet_wrap(~host_disease) +
+  geom_line(aes(group=host_ID), lwd=0.2) +
+  labs(x = "",  y = 'Log2(Firmicutes/Bacteroidota)')+
+  theme_cowplot()+
+  theme(legend.position="none")
+# ggsave(file.path(path.plots, "ratioFB_paired-data.jpg"), width=4, height=6)
 
 # Plot by IBS subtype
 ggplot(ratio.FB, aes(x = host_subtype, y = logRatioFB))+
   geom_violin(aes(fill=host_subtype))+
   scale_fill_manual(values=scales::alpha(c("blue", "brown", "red"), .3))+
   geom_jitter(width=0.1)+
+  geom_signif(comparisons = list(c("HC", "IBS-C"), c("HC", "IBS-D")),
+              map_signif_level = TRUE, test="wilcox.test", step_increase=0.1) +
   labs(x = "",  y = 'Log2(Firmicutes/Bacteroidota)')+
   theme_cowplot()+
   theme(legend.position="none")
+# ggsave(file.path(path.plots, "ratioFB_subtype.jpg"), width=5, height=7)
 
 # Statistical test HC vs IBS-C
 wilcox.test(ratio.FB[ratio.FB$host_subtype == "HC","logRatioFB"],
@@ -264,84 +290,6 @@ ggplot(ratio.FB, aes(x = host_disease, y = logRatioFB))+
   theme(legend.position="none")
 ```
 
-
-```{r export-plots-1, eval = FALSE, echo = FALSE}
-# Save path to plots
-path.plots <- file.path(path, "data/analysis-individual/PLOTS/plots-Mars-EDA")
-
-# Absolute abundance phylum
-jpeg(file.path(path.plots, "absAbundance_phylum.jpg"), width = 4000, height = 2000)
-plot_bar(physeq.mars, fill = "Phylum") + facet_wrap("host_disease", scales="free_x") +
-  theme(axis.text.x = element_text(size = 30, angle = -90),
-        axis.text.y = element_text(size = 30),
-        legend.text = element_text(size = 50),
-        axis.title = element_text(size = 50),
-        title = element_text(size = 70),
-        strip.text = element_text(size = 50))+
-  labs(x = "Samples", y = "Total read count", title = "Mars dataset (2020)")
-dev.off()
-
-# Relative abundances
-jpeg(file.path(path.plots, "relAbundance_phylum.jpg"), width = 4000, height = 2000)
-ggplot(phylum.table, aes(x = reorder(Sample, Sample, function(x) mean(phylum.table[Sample == x & Phylum == 'Bacteroidota', 'Abundance'])),
-                         y = Abundance, fill = Phylum))+
-  facet_wrap(~ host_disease, scales = "free") + # scales = "free" removes empty lines
-  geom_bar(stat = "identity") +
-  theme(axis.text.x = element_text(size = 30, angle = -90),
-        axis.text.y = element_text(size = 30),
-        legend.text = element_text(size = 50),
-        axis.title = element_text(size = 50),
-        title = element_text(size = 70),
-        strip.text = element_text(size = 50))+
-  labs(x = "Samples", y = "Relative abundance", title = "Mars dataset (2020)")
-dev.off()
-
-jpeg(file.path(path.plots, "relAbundance_class.jpg"), width = 4000, height = 2000)
-ggplot(class.table, aes(x = reorder(Sample, Sample, function(x) mean(phylum.table[Sample == x & Phylum == 'Bacteroidota', 'Abundance'])),
-                        y = Abundance, fill = Class))+
-  facet_wrap(~ host_disease, scales = "free") + # scales = "free" removes empty lines
-  geom_bar(stat = "identity") +
-  theme(axis.text.x = element_text(size = 30, angle = -90),
-        axis.text.y = element_text(size = 30),
-        legend.text = element_text(size = 50),
-        axis.title = element_text(size = 50),
-        title = element_text(size = 70),
-        strip.text = element_text(size = 50))+
-  labs(x = "Samples", y = "Relative abundance", title = "Mars dataset (2020)")
-dev.off()
-
-# Firmicutes:Bacteroidota log ratio
-jpeg(file.path(path.plots, "ratioFB.jpg"), width = 1000, height = 1500)
-ggplot(ratio.FB, aes(x = host_disease, y = logRatioFB))+
-  geom_violin(lwd=3, aes(fill=host_disease))+
-  geom_jitter(size = 10, width=0.1)+
-  scale_fill_manual(values=scales::alpha(c("blue", "red"), .3))+
-  labs(x = "",  y = 'Log2(Firmicutes/Bacteroidota)', title = "Firmicutes:Bacteroidota ratio")+
-  theme_cowplot()+
-  theme(axis.text = element_text(size = 50),
-        strip.text = element_text(size=50),
-        legend.position = "none",
-        axis.title = element_text(size = 50),
-        title = element_text(size = 50))
-dev.off()
-
-# Firmicutes:Bacteroidota log ratio with paired data
-jpeg(file.path(path.plots, "ratioFB_paired-data.jpg"), width = 1000, height = 1500)
-ggplot(ratio.FB, aes(x = Collection, y = logRatioFB))+
-  geom_violin(lwd=3, aes(fill=host_disease))+
-  facet_wrap(~host_disease)+
-  geom_point(size = 10)+
-  geom_line(aes(group=host_ID), lwd=0.5) +
-  scale_fill_manual(values=scales::alpha(c("blue", "red"), .3))+
-  labs(x = "Collection time",  y = 'Log2(Firmicutes/Bacteroidota)')+
-  theme_cowplot()+
-  theme(axis.text = element_text(size = 50),
-        strip.text = element_text(size=50),
-        legend.position = "none",
-        axis.title = element_text(size = 50),
-        title = element_text(size = 50))
-dev.off()
-```
 
 
 
@@ -408,6 +356,8 @@ physeq.clr <- microbiome::transform(physeq.mars, "clr") # the function adds pseu
 # save the physeq.rel object
 saveRDS(physeq.clr, file.path(path, "data/analysis-individual/Mars-2020/02_EDA-Mars/physeq_clr.rds"))
 ```
+
+
 
 
 #######################

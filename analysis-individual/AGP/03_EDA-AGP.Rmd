@@ -23,6 +23,7 @@ knitr::opts_chunk$set(fig.width = 15, fig.height = 5, warning=FALSE, message=FAL
 ```{r library-import}
 library(phyloseq) # for phyloseq object
 library(ggplot2)
+library(ggsignif)
 library(cowplot)
 library(plyr)
 library(dplyr)
@@ -40,6 +41,7 @@ library(pheatmap) # for heatmap
 ```{r import-data}
 # Set path
 path <- "~/Projects/IBS_Meta-analysis_16S"
+path.plots <- file.path(path, "data/analysis-individual/PLOTS/plots-AGP-EDA")
 
 # Import phyloseq object
 physeq.agp <- readRDS(file.path(path, "phyloseq-objects/physeq_agp.rds"))
@@ -52,7 +54,7 @@ Phylogenetic tree was computed with the package `phangorn`, and the script was r
 
 ```{r plot-tree, fig.height = 6, fig.width = 10}
 # Look at the tree
-plot_tree(physeq.agp, color = "host_disease", ladderize="left")
+plot_tree(physeq.agp, color = "Phylum", ladderize="left")
 ```
 
 
@@ -112,12 +114,13 @@ wilcox.test(metadata[metadata$host_disease == "IBS",]$host_bmi,
 
 ```{r plot-absolute-abundance, fig.width=10, fig.height = 5}
 # Plot Phylum
-plot_bar(physeq.agp, fill = "Phylum") + facet_wrap("host_disease", scales="free") +
+plot_bar(physeq.agp, fill = "Phylum") + facet_wrap("host_disease", scales="free_x") +
   theme(axis.text.x = element_blank())+
   labs(x = "Samples", y = "Absolute abundance", title = "AGP dataset")
+# ggsave(file.path(path.plots, "absAbundance_phylum.jpg"), width=13, height=7)
 ```
 
-**Sequencing depth** characteristics of the Zhuang dataset:  
+**Sequencing depth** characteristics of the AGP dataset:  
 - minimum of `r min(sample_sums(physeq.agp))` total count per sample  
 - median: `r median(sample_sums(physeq.agp))` total count per sample  
 - maximum of `r max(sample_sums(physeq.agp))` total count per sample  
@@ -139,19 +142,23 @@ class.table <- physeq.agp %>%
 
 
 # Plot relative abundances
-ggplot(phylum.table, aes(x = reorder(Sample, Sample, function(x) mean(phylum.table[Sample == x & Phylum == 'Bacteroidota', 'Abundance'])),
+ggplot(phylum.table, aes(x = reorder(Sample, Sample, function(x) mean(phylum.table[Sample == x & Phylum == 'Firmicutes', 'Abundance'])),
                          y = Abundance, fill = Phylum))+
   facet_wrap(~ host_disease, scales = "free") + # scales = "free" removes empty lines
-  geom_bar(stat = "identity") +
+  geom_bar(stat = "identity", width=1) +
   theme(axis.text.x = element_blank())+
   labs(x = "Samples", y = "Relative abundance", title = "AGP dataset")
+# ggsave(file.path(path.plots, "relAbundance_phylum.jpg"), width=12, height=5)
 
-ggplot(class.table, aes(x = reorder(Sample, Sample, function(x) mean(phylum.table[Sample == x & Phylum == 'Bacteroidota', 'Abundance'])),
+ggplot(class.table, aes(x = reorder(Sample, Sample, function(x) mean(phylum.table[Sample == x & Phylum == 'Firmicutes', 'Abundance'])),
                         y = Abundance, fill = Class))+
-  facet_wrap(~ host_disease, scales = "free") + # scales = "free" removes empty lines
-  geom_bar(stat = "identity") +
-  theme(axis.text.x = element_blank())+
+  facet_wrap(~ host_disease, scales = "free") +
+  geom_bar(stat = "identity", width=1) +
+  theme(axis.text.x = element_blank(),
+        legend.text = element_text(size=6),
+        legend.key.size = unit(0.2, "cm"))+
   labs(x = "Samples", y = "Relative abundance", title = "AGP dataset")
+# ggsave(file.path(path.plots, "relAbundance_class.jpg"), width=15, height=5)
 ```
 
 
@@ -179,75 +186,18 @@ ratio.FB$logRatioFB <- log2(ratio.FB$Firmicutes / ratio.FB$Bacteroidota)
 
 # Plot log2 ratio Firmicutes/Bacteroidota
 ggplot(ratio.FB, aes(x = host_disease, y = logRatioFB))+
-  geom_boxplot(outlier.shape = NA)+
-  geom_jitter(width=0.1)+
+  geom_violin(aes(fill=host_disease))+
+  scale_fill_manual(values=scales::alpha(c("blue", "red"), .3))+
+  geom_jitter(width=0.1, size=0.5)+
+  geom_signif(comparisons = list(c("Healthy", "IBS")), map_signif_level = TRUE, test="wilcox.test") +
   labs(x = "",  y = 'Log2(Firmicutes/Bacteroidota)', title = "Firmicutes:Bacteroidota ratio")+
-  theme_cowplot()
-
+  theme_cowplot()+
+  theme(legend.position="none")
+# ggsave(file.path(path.plots, "ratioFB.jpg"), width=4, height=6)
 
 # Statistical test
 wilcox.test(ratio.FB[ratio.FB$host_disease == "IBS","logRatioFB"],
             ratio.FB[ratio.FB$host_disease == "Healthy","logRatioFB"]) # p = 0.78
-```
-
-
-```{r export-plots-1, eval = FALSE, echo = FALSE}
-# Save path to plots
-path.plots <- file.path(path, "data/analysis-individual/PLOTS/plots-AGP-EDA")
-
-# Absolute abundance phylum
-jpeg(file.path(path.plots, "absAbundance_phylum.jpg"), width = 4000, height = 2000)
-plot_bar(physeq.agp, fill = "Phylum") + facet_wrap("host_disease", scales="free") +
-  theme(axis.text.x = element_blank(),
-        axis.text.y = element_text(size = 30),
-        legend.text = element_text(size = 50),
-        axis.title = element_text(size = 50),
-        title = element_text(size = 70),
-        strip.text = element_text(size = 50))+
-  labs(x = "Samples", y = "Total read count", title = "AGP dataset")
-dev.off()
-
-# Relative abundances
-jpeg(file.path(path.plots, "relAbundance_phylum.jpg"), width = 4000, height = 2000)
-ggplot(phylum.table, aes(x = reorder(Sample, Sample, function(x) mean(phylum.table[Sample == x & Phylum == 'Bacteroidota', 'Abundance'])),
-                         y = Abundance, fill = Phylum))+
-  facet_wrap(~ host_disease, scales = "free") + # scales = "free" removes empty lines
-  geom_bar(stat = "identity") +
-  theme(axis.text.x = element_blank(),
-        axis.text.y = element_text(size = 30),
-        legend.text = element_text(size = 50),
-        axis.title = element_text(size = 50),
-        title = element_text(size = 70),
-        strip.text = element_text(size = 50))+
-  labs(x = "Samples", y = "Relative abundance", title = "AGP dataset")
-dev.off()
-
-jpeg(file.path(path.plots, "relAbundance_class.jpg"), width = 4000, height = 2000)
-ggplot(class.table, aes(x = reorder(Sample, Sample, function(x) mean(phylum.table[Sample == x & Phylum == 'Bacteroidota', 'Abundance'])),
-                        y = Abundance, fill = Class))+
-  facet_wrap(~ host_disease, scales = "free") + # scales = "free" removes empty lines
-  geom_bar(stat = "identity") +
-  theme(axis.text.x = element_blank(),
-        axis.text.y = element_text(size = 30),
-        legend.text = element_text(size = 50),
-        axis.title = element_text(size = 50),
-        title = element_text(size = 70),
-        strip.text = element_text(size = 50))+
-  labs(x = "Samples", y = "Relative abundance", title = "AGP dataset")
-dev.off()
-
-# Firmicutes:Bacteroidota log ratio
-jpeg(file.path(path.plots, "ratioFB.jpg"), width = 1500, height = 2000)
-ggplot(ratio.FB, aes(x = host_disease, y = logRatioFB))+
-  geom_boxplot(outlier.shape = NA, lwd = 3)+
-  geom_jitter(size = 8, width=0.1)+
-  labs(x = "",  y = 'Log2(Firmicutes/Bacteroidota)', title = "AGP dataset")+
-  theme_classic()+
-  theme(axis.text = element_text(size = 50),
-        legend.text = element_text(size = 50),
-        axis.title = element_text(size = 50),
-        title = element_text(size = 50))
-dev.off()
 ```
 
 
@@ -316,6 +266,8 @@ otu_table(physeq.clr)[1:5, 1:5] # should all be relative
 # save the physeq.rel object
 saveRDS(physeq.clr, file.path(path, "data/analysis-individual/AGP/02_EDA-AGP/physeq_clr.rds"))
 ```
+
+
 
 
 #######################
