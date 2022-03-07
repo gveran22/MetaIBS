@@ -221,7 +221,7 @@ pheatmap(log10(familyTable),
          cluster_cols = F,
          # cutree_rows = 2,
          # cutree_cols = 2,
-         clustering_method = 'ward.D',
+         clustering_method = 'ward.D2',
          annotation_col = color.df,
          annotation_colors = annotationCol,
          main = "Hierarchical clustering with ward linkage (families as rows)")
