@@ -19,18 +19,18 @@ library(RColorBrewer)
 # Data
 path.phy <- "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/CLUSTER/PhyloTree/input"
 # physeq.ringel <- readRDS(file.path(path.phy, "physeq_ringel.rds"))
-physeq.labus <- readRDS(file.path(path.phy, "physeq_labus.rds"))
+physeq.labus    <- readRDS(file.path(path.phy, "physeq_labus.rds"))
 physeq.lopresti <- readRDS(file.path(path.phy, "physeq_lopresti.rds"))
-physeq.pozuelo <- readRDS(file.path(path.phy, "physeq_pozuelo.rds"))
-physeq.zhuang <- readRDS(file.path(path.phy, "physeq_zhuang.rds"))
-physeq.zhu <- readRDS(file.path(path.phy, "physeq_zhu.rds"))
-physeq.hugerth <- readRDS(file.path(path.phy, "physeq_hugerth.rds"))
-physeq.fukui <- readRDS(file.path(path.phy, "physeq_fukui.rds"))
-physeq.mars <- readRDS(file.path(path.phy, "physeq_mars.rds"))
-physeq.liu <- readRDS(file.path(path.phy, "physeq_liu.rds"))
-physeq.agp <- readRDS(file.path(path.phy, "physeq_agp.rds"))
-physeq.nagel <- readRDS(file.path(path.phy, "physeq_nagel.rds"))
-physeq.zeber <- readRDS(file.path(path.phy, "physeq_zeber.rds"))
+physeq.pozuelo  <- readRDS(file.path(path.phy, "physeq_pozuelo.rds"))
+physeq.zhuang   <- readRDS(file.path(path.phy, "physeq_zhuang.rds"))
+physeq.zhu      <- readRDS(file.path(path.phy, "physeq_zhu.rds"))
+physeq.hugerth  <- readRDS(file.path(path.phy, "physeq_hugerth.rds"))
+physeq.fukui    <- readRDS(file.path(path.phy, "physeq_fukui.rds"))
+physeq.mars     <- readRDS(file.path(path.phy, "physeq_mars.rds"))
+physeq.liu      <- readRDS(file.path(path.phy, "physeq_liu.rds"))
+physeq.agp      <- readRDS(file.path(path.phy, "physeq_agp.rds"))
+physeq.nagel    <- readRDS(file.path(path.phy, "physeq_nagel.rds"))
+physeq.zeber    <- readRDS(file.path(path.phy, "physeq_zeber.rds"))
 
 
 
@@ -74,6 +74,8 @@ phylum.table.main <- phylum.table %>%
 table(phylum.table.main$Phylum) # sanity check
 
 
+
+
 #############################################
 # PLOT PHYLA RELATIVE ABUNDANCES PER SAMPLE #
 #############################################
@@ -84,7 +86,7 @@ colors <- paste0(brewer.pal(6, "Dark2"), "80", sep="")
 names(colors) <- c("Actinobacteriota", "Bacteroidota", "Firmicutes", "Proteobacteria", "Verrucomicrobiota", "Other")
 
 # Plot main phyla by sample (fecal samples)
-ggplot(phylum.table.main %>% filter(sample_type == "stool"),
+a <- ggplot(phylum.table.main %>% filter(sample_type == "stool"),
        aes(x = reorder(Sample, Sample, function(x) mean(phylum.table.main[Sample == x & Phylum == 'Bacteroidota', 'Abundance'])),
            y = Abundance, fill = Phylum))+
   facet_wrap(~ host_disease, scales = "free_x") +
@@ -96,7 +98,7 @@ ggplot(phylum.table.main %>% filter(sample_type == "stool"),
         axis.ticks.x = element_blank(),
         strip.background = element_rect(fill="white", color="black"),
         strip.text = element_text(size=15),
-        #legend.position = "None",
+        legend.position = "none",
         legend.text = element_text(size=12),
         legend.title = element_text(size=12),
         legend.key.size = unit(0.2, 'cm'),
@@ -105,12 +107,12 @@ ggplot(phylum.table.main %>% filter(sample_type == "stool"),
   labs(x = "Fecal samples", y = "Relative abundance")
 
 # Save figure
-ggsave("~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/05_Relative-Abund/phyla_relabund_fecal_02.jpg", width=8, height=5) # high
-ggsave("~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/05_Relative-Abund/phyla_relabund_fecal_03.jpg", width=10, height=5) # large
+# ggsave("~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/05_Relative-Abund/phyla_relabund_fecal_02.jpg", width=8, height=5) # high
+# ggsave("~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/05_Relative-Abund/phyla_relabund_fecal_03.jpg", width=10, height=5) # large
 
 
 # Plot main phyla by sample (sigmoid samples)
-ggplot(phylum.table.main %>% filter(sample_type == "sigmoid"),
+b <- ggplot(phylum.table.main %>% filter(sample_type == "sigmoid"),
        aes(x = reorder(Sample, Sample, function(x) mean(phylum.table.main[Sample == x & Phylum == 'Bacteroidota', 'Abundance'])),
            y = Abundance, fill = Phylum))+
   facet_wrap(~ host_disease, scales = "free_x") +
@@ -131,8 +133,8 @@ ggplot(phylum.table.main %>% filter(sample_type == "sigmoid"),
   labs(x = "Biopsy samples", y = "Relative abundance")
 
 # Save figure
-ggsave("~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/05_Relative-Abund/phyla_relabund_sigmoid_02.jpg", width=8, height=5) # high
-ggsave("~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/05_Relative-Abund/phyla_relabund_sigmoid_03.jpg", width=10, height=5) # large
+# ggsave("~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/05_Relative-Abund/phyla_relabund_sigmoid_02.jpg", width=8, height=5) # high
+# ggsave("~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/05_Relative-Abund/phyla_relabund_sigmoid_03.jpg", width=10, height=5) # large
 
 
 
@@ -141,63 +143,179 @@ ggsave("~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/05_Relative-Abun
 # PLOT PHYLA RELATIVE ABUNDANCES PER DISEASE #
 ##############################################
 
+# Get a df with abundance of each Phylum per sample
+phylum.sample <- phylum.table.main %>%
+  # for each sample, sum the abundance of all ASVs belonging to the same phylum
+  group_by(Sample, host_disease, host_subtype, Collection, sample_type, author, Phylum) %>%
+  dplyr::summarize(Abundance=sum(Abundance)) %>%
+  ungroup()
+# Sanity check (sum per sample == 1)
+# phylum.sample %>%
+#   group_by(Sample) %>%
+#   summarize(sum_per_sample=sum(Abundance))
+
+
 # *********
 # BY HOST_DISEASE
 # *********
-# Get a df with average abundance of each Phylum per sample
-test <- phylum.table.main %>%
-  # keep only stool samples, 1st collection time point
-  filter(sample_type == "stool" & Collection=="1st") %>%
-  select(Sample, Abundance, Phylum, host_disease, host_subtype) %>%
-  # for each sample, sum the abundance of all ASVs belonging to the same phylum
-  group_by(Sample, Phylum) %>%
-  mutate(abundance=sum(Abundance)) %>%
-  ungroup() %>%
-  group_by(Sample) %>%
-  summarize(sum(abundance))
-  # get the mean abundance of each phylum per disease status (across samples)
-  group_by(host_disease, Phylum) %>%
-  summarize(Mean=mean(abundance))
 
-  # Plot fecal samples by host_disease
-ggplot(test,
+# Get the mean abundance of each phylum per disease status (across samples)
+phylum.disease <- phylum.sample %>%
+  # keep only stool samples, 1st collection time point
+  filter(Collection=="1st") %>% # only 2,450 samples afterwards
+  # get mean of each phylum per disease phenotype
+  group_by(sample_type, host_disease, Phylum) %>%
+  summarize(Mean=mean(Abundance)) %>%
+  ungroup() %>%
+  mutate(sample_type=factor(sample_type, levels=c("stool", "sigmoid")))
+# Sanity check (sum per disease == 1)
+# phylum.disease %>%
+#   group_by(sample_type, host_disease) %>%
+#   summarize(total=sum(Mean))
+
+# Get info on nb of samples per disease
+nsamples.disease <- phylum.table.main %>%
+  filter(Collection=="1st") %>%
+  group_by(sample_type, host_disease) %>%
+  summarize(number=paste0("n=", n_distinct(Sample))) %>% # should sum to 2,450 samples
+  mutate(sample_type=factor(sample_type, levels=c("stool", "sigmoid")))
+
+# PLOT samples by host_disease
+d <- ggplot(phylum.disease,
        aes(x = host_disease, y = Mean, fill = Phylum))+
-  geom_bar(stat = "identity", position='fill') +
+  facet_wrap(~sample_type)+
+  geom_bar(stat = "identity", aes(color=host_disease)) +
+  geom_text(data=nsamples.disease, aes(x = host_disease, y=1.03, label=number, fill=NULL))+
+  scale_color_manual(values=c("#3182bd", "#de2d26"))+
   scale_fill_manual(values=colors, guide=guide_legend(nrow=6))+
-  scale_y_continuous(expand = c(0, 0))+ # remove empty space between axis and plot
+  scale_y_continuous(expand = c(0, 0), limits=c(0,1.05))+ # remove empty space between axis and plot
   theme_cowplot()+
   theme(axis.text.x = element_text(size=10, color="black"),
-        #legend.position = "None",
+        legend.position = "none",
         legend.text = element_text(size=12),
         legend.title = element_text(size=12),
-        legend.key.size = unit(0.2, 'cm'),
+        legend.key.size = unit(0.3, 'cm'),
         panel.grid = element_blank(),
         panel.background=element_blank(),
         axis.line.x = element_line(size=0.5, color="black"))+
   labs(x = "", y = "Proportion")
+# ggsave("~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/05_Relative-Abund/phyla_relabund_1.jpg", width=7, height=5)
 
 
-test <- phylum.table.main %>%
+# *********
+# BY HOST_SUBTYPE
+# *********
+
+# Get the mean abundance of each phylum per disease status (across samples)
+phylum.subtype <- phylum.sample %>%
+  # keep only stool samples, 1st collection time point
+  filter(sample_type == "stool" & Collection=="1st") %>% # only 2,051 samples afterwards
+  # get mean of each phylum per IBS subtype
+  group_by(host_subtype, Phylum) %>%
+  summarize(Mean=mean(Abundance)) %>%
+  ungroup() %>%
+  mutate(host_subtype=recode(host_subtype, "HC"="Healthy"))
+# Sanity check (sum per subtype == 1)
+# phylum.subtype %>%
+#   group_by(host_subtype) %>%
+#   summarize(total=sum(Mean))
+
+# Get info on nb of fecal samples per subtype
+nsamples.subtype <- phylum.table.main %>%
   filter(sample_type == "stool" & Collection=="1st") %>%
   group_by(host_subtype) %>%
-  summarize(number=paste0("n=", n_distinct(Sample)))
+  summarize(number=paste0("n=", n_distinct(Sample))) %>% # should sum to 2,051 samples
+  mutate(host_subtype=recode(host_subtype, "HC"="Healthy"))
 
-ggplot(phylum.table.main %>% filter(sample_type == "stool" & Collection=="1st"),
-       aes(x = host_subtype, y = Abundance, fill = Phylum))+
-  geom_bar(stat = "identity", position = "fill") +
-  geom_text(data=test, aes(x = host_subtype, y=1.03, label=number, fill=NULL))+
+# PLOT fecal samples by host_subtype
+c <- ggplot(phylum.subtype %>% filter(host_subtype != "IBS-unspecified"),
+       aes(x = host_subtype, y = Mean, fill = Phylum))+
+  geom_bar(stat = "identity", aes(color=host_subtype)) +
+  geom_text(data=nsamples.subtype %>% filter(host_subtype != "IBS-unspecified"), aes(x = host_subtype, y=1.03, label=number, fill=NULL))+
+  scale_color_manual(values=c("#3182bd", "#de2d26", "#de2d26", "#de2d26", "#de2d26"))+
   scale_fill_manual(values=colors, guide=guide_legend(nrow=6))+
-  scale_y_continuous(expand = c(0, 0), limits=c(0,1.1))+ # remove empty space between axis and plot
+  scale_y_continuous(expand = c(0, 0), limits=c(0,1.05))+ # remove empty space between axis and plot
   theme_cowplot()+
   theme(axis.text.x = element_text(size=10, color="black"),
-        #legend.position = "None",
+        legend.position = "none",
         legend.text = element_text(size=12),
         legend.title = element_text(size=12),
-        legend.key.size = unit(0.2, 'cm'),
+        legend.key.size = unit(0.3, 'cm'),
         panel.grid = element_blank(),
         panel.background=element_blank(),
         axis.line.x = element_line(size=0.5, color="black"))+
-  labs(x = "", y = "Proportion")
+  labs(x = "", y = "Proportion", title="Fecal samples")
+# ggsave("~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/05_Relative-Abund/phyla_relabund_2.jpg", width=7, height=5)
 
-# Save figure
-ggsave("~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/05_Relative-Abund/phyla_relabund_2.jpg", width=5, height=5)
+
+# *********
+# BY COLLECTION TIME POINT
+# *********
+
+# Get the mean abundance of each phylum per disease status (across samples)
+phylum.collection <- phylum.sample %>%
+  # keep only stool samples, 1st collection time point
+  filter(author %in% c("Pozuelo", "Mars")) %>%
+  # get mean of each phylum per IBS subtype
+  group_by(host_disease, author, Collection, Phylum) %>%
+  summarize(Mean=mean(Abundance)) %>%
+  ungroup() %>%
+  mutate(Collection=replace(Collection, Collection=="1st", "t0"),
+         Collection=replace(Collection, Collection=="2nd" & author=="Mars", "t0+6mo"),
+         Collection=replace(Collection, Collection=="2nd" & author=="Pozuelo", "t0+1mo")) %>%
+  mutate(author=factor(author, levels=c("Pozuelo", "Mars")),
+         author=recode(author, "Mars"="Mars (sigmoid)"),
+         author=recode(author, "Pozuelo"="Pozuelo (stool)"))
+# Sanity check (sum per subtype == 1)
+# phylum.collection %>%
+#   group_by(host_disease, author, Collection) %>%
+#   summarize(total=sum(Mean))
+
+# Get info on nb of fecal samples per subtype
+nsamples.collection <- phylum.table.main %>%
+  filter(author %in% c("Pozuelo", "Mars")) %>%
+  group_by(host_disease, author, Collection) %>%
+  summarize(number=paste0("n=", n_distinct(Sample))) %>% # should sum to 342 samples
+  mutate(Collection=replace(Collection, Collection=="1st", "t0"),
+         Collection=replace(Collection, Collection=="2nd" & author=="Mars", "t0+6mo"),
+         Collection=replace(Collection, Collection=="2nd" & author=="Pozuelo", "t0+1mo")) %>%
+  mutate(author=factor(author, levels=c("Pozuelo", "Mars")),
+         author=recode(author, "Mars"="Mars (sigmoid)"),
+         author=recode(author, "Pozuelo"="Pozuelo (stool)"))
+
+# PLOT fecal samples by host_subtype (will manually change the facet strips on adobe illustrator)
+e <- ggplot(phylum.collection,
+       aes(x = host_disease, y = Mean, fill = Phylum))+
+  facet_wrap(~author+Collection, nrow=1)+
+  geom_bar(aes(color=host_disease), stat = "identity") +
+  geom_text(data=nsamples.collection, aes(x = host_disease, y=1.03, label=number, fill=NULL))+
+  scale_fill_manual(values=colors, guide=guide_legend(nrow=6))+
+  scale_color_manual(values=c("#3182bd", "#de2d26"), name="Disease phenotype")+
+  scale_y_continuous(expand = c(0, 0), limits=c(0,1.05))+ # remove empty space between axis and plot
+  theme_cowplot()+
+  theme(#legend.position = "None",
+        legend.text = element_text(size=12),
+        legend.title = element_text(size=12),
+        legend.key.size = unit(0.3, 'cm'),
+        panel.grid = element_blank(),
+        panel.background=element_blank(),
+        axis.line.x = element_line(size=0.5, color="black"))+
+  labs(x = "", y = "Proportion", title="")
+# ggsave("~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/05_Relative-Abund/phyla_relabund_3.jpg", width=7, height=5)
+
+
+
+# Combine plots
+ggdraw() +
+  draw_plot(a, x = 0, y = .5, width = .5, height = .5) +
+  draw_plot(b, x = .55, y = .5, width = .45, height = .5) +
+  draw_plot(c, x = 0, y = 0, width = .21, height = .45) +
+  draw_plot(d, x = 0.27, y = 0, width = 0.23, height = .45) +
+  draw_plot(e, x = 0.55, y = 0, width = 0.45, height = .5) +
+  draw_plot_label(label = c("A", "B", "C", "D", "E"), size = 15,
+                  x = c(0, .55, 0, 0.27, 0.55), y = c(1, 1, 0.45, 0.45, 0.45))
+# ggsave("~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/05_Relative-Abund/phyla_relabund_all.jpg", width=15, height=10)
+
+
+
+
