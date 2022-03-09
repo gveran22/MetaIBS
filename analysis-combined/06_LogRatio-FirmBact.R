@@ -113,19 +113,19 @@ ratio.df <- left_join(x=bacter, y=firmi, by=common.columns) %>%
   mutate(Bacteroidota=replace(Bacteroidota, Bacteroidota==0, 0.5),
          Firmicutes=replace(Firmicutes, Firmicutes==0, 0.5)) %>%
   # Compute log ratios
-  mutate(LogRatio_FirmBact = log2(Firmicutes/Bacteroidota)) %>%
+  mutate(LogRatio_FirmBact = log2(Firmicutes/Bacteroidota)) #%>%
   # Add column author_disease
-  mutate(author_disease=paste0(author, sep="_", host_disease)) %>%
+  # mutate(author_disease=paste0(author, sep="_", host_disease)) %>%
   # Add IBS subtype to AGP
-  mutate(host_subtype=replace(host_subtype,
-                              author=="AGP" & host_disease=="IBS" & bowel_movement_quality=="Constipated",
-                              "IBS-C")) %>%
-  mutate(host_subtype=replace(host_subtype,
-                              author=="AGP" & host_disease=="IBS" & bowel_movement_quality=="Diarrhea",
-                              "IBS-D")) %>%
-  mutate(host_subtype=replace(host_subtype,
-                              author=="AGP" & host_disease=="Healthy" & bowel_movement_quality!="Normal",
-                              "HC-unknown"))
+  # mutate(host_subtype=replace(host_subtype,
+  #                             author=="AGP" & host_disease=="IBS" & bowel_movement_quality=="Constipated",
+  #                             "IBS-C")) %>%
+  # mutate(host_subtype=replace(host_subtype,
+  #                             author=="AGP" & host_disease=="IBS" & bowel_movement_quality=="Diarrhea",
+  #                             "IBS-D")) %>%
+  # mutate(host_subtype=replace(host_subtype,
+  #                             author=="AGP" & host_disease=="Healthy" & bowel_movement_quality!="Normal",
+  #                             "HC-unknown"))
 
 # sanity check
 # ratio.df %>%
@@ -154,16 +154,17 @@ ratio.df$sequencing_tech <- factor(ratio.df$sequencing_tech, levels=seqtech.orde
 # Plot Firm/Bact ratio for fecal samples
 a <- ggplot(ratio.df %>% filter(Collection=="1st" & sample_type=="stool"),
        aes(x = author, y = LogRatio_FirmBact, fill=host_disease))+
-  geom_boxplot(position=position_dodge(width=0.75), outlier.shape = NA, width = 0.4, lwd=0.5, alpha=0.2)+
   geom_point(position=position_jitterdodge(dodge.width=0.75, jitter.width=0.1), aes(color=host_disease), size=0.2)+
+  geom_boxplot(position=position_dodge(width=0.75), outlier.shape = NA, width = 0.4, lwd=0.5, alpha=0.2)+
   # add p-values (computed in scripts 03_EDA_[dataset-name])
   geom_signif(y_position = c(8,8,8,8),
               xmin = c(0.8,1.8,4.8,7.8),
               xmax = c(1.2,2.2,5.2,8.2),
-              annotation = c("*","*","***","**"), tip_length = 0)+
+              annotation = c("*","*","**","**"), tip_length = 0)+
   # theme and color
   scale_color_manual(values=c("#3182bd", "#de2d26"), guide="none")+
   scale_fill_manual(values=c("#3182bd", "#de2d26"))+
+  ylim(c(-5,17))+ # note: we're cutting one point from Fukui (at y=-12)
   theme_cowplot()+
   theme(axis.text.x = element_text(angle = 45, color="black", hjust=1))+
   labs(x = '', y = expression(Log[2](Firmicutes/Bacteroidota)), fill="", title="Stool samples")
@@ -173,13 +174,11 @@ a <- ggplot(ratio.df %>% filter(Collection=="1st" & sample_type=="stool"),
 # Plot Firm/Bact ratio for sigmoid samples
 b <- ggplot(ratio.df %>% filter(Collection=="1st" & sample_type=="sigmoid"),
        aes(x = author, y = LogRatio_FirmBact, fill=host_disease))+
-  # facet_wrap(~author, nrow=1, strip.position="bottom")+
-  geom_boxplot(position=position_dodge(width=0.75), outlier.shape = NA, width = 0.4, lwd=0.5, alpha=0.2)+
   geom_point(position=position_jitterdodge(dodge.width=0.75, jitter.width=0.1), aes(color=host_disease), size=0.2)+
+  geom_boxplot(position=position_dodge(width=0.75), outlier.shape = NA, width = 0.4, lwd=0.5, alpha=0.2)+
   scale_color_manual(values=c("#3182bd", "#de2d26"), guide="none")+
   scale_fill_manual(values=c("#3182bd", "#de2d26"))+
   theme_cowplot()+
-  # scale_x_discrete(breaks=author_disease.order, labels= rep(c("Healthy", "IBS"), times = 12))+
   theme(axis.text.x = element_text(angle = 45, color="black", hjust=1))+
   labs(x = '', y =  expression(Log[2](Firmicutes/Bacteroidota)), fill="", title="Sigmoid samples")
 # ggsave("~/Projects/IBS_Meta-analysis_16S/data/plots_paper/firm_bact_02.jpg", width=5, height=5)
@@ -197,25 +196,24 @@ c <- ggplot(data = ratio.df %>%
                              author=recode(author, "Pozuelo"="Pozuelo (stool)")),
             aes(x = Collection, y = LogRatio_FirmBact))+
   facet_wrap(~author, nrow=1, strip.position="top", scales="free_x")+
-  geom_boxplot(aes(fill=host_disease), position=position_dodge(width=0.75), outlier.shape = NA, width = 0.4, lwd=0.5, alpha=0.2)+
   geom_point(position=position_jitterdodge(dodge.width=0.75, jitter.width=0.1), aes(color=host_disease), size=0.2)+
+  geom_boxplot(aes(fill=host_disease), position=position_dodge(width=0.75), outlier.shape = NA, width = 0.4, lwd=0.5, alpha=0.2)+
   geom_signif(y_position=c(8,8), xmin=c(0.8,1.8), xmax=c(1.2,2.2), annotations = c("**","**"), tip_length = 0)+
   # CAREFUL: will need to remove manually (on adobe illustrator) the ** on the Mars facet
   scale_color_manual(values=c("#3182bd", "#de2d26"), guide="none")+
   scale_fill_manual(values=c("#3182bd", "#de2d26"))+
   theme_cowplot()+
-  # scale_x_discrete(breaks=author_disease.order, labels= rep(c("Healthy", "IBS"), times = 12))+
   theme(axis.text.x = element_text(angle = 45, color="black", hjust=1))+
   labs(x = '', y = expression(Log[2](Firmicutes/Bacteroidota)), fill="", title="Collection time point")
 # ggsave("~/Projects/IBS_Meta-analysis_16S/data/plots_paper/firm_bact_03.jpg", width=6, height=5)
 
 
 # Plot Firm/Bact ratio per IBS subtype
-annotation.df <- data.frame(author=c("Labus", "LoPresti", "Pozuelo", "Pozuelo", "Pozuelo", "Zeber-Lubecka"),
-                             start=c("Healthy", "Healthy", "Healthy", "Healthy", "Healthy", "Healthy"),
-                             end=c("IBS-D", "IBS-C", "IBS-C", "IBS-D","IBS-M", "IBS-C"),
-                             label=c("*", "**", "*", "***", "*", "**"),
-                             y=c(8,8,3.5,4.5,5.5,4))
+annotation.df <- data.frame(author=c("Labus", "LoPresti", "Pozuelo", "Mars (sigmoid)", "Zeber-Lubecka"),
+                             start=c("Healthy", "Healthy", "Healthy", "Healthy", "Healthy"),
+                             end=c("IBS-D", "IBS-C", "IBS-D", "IBS-C","IBS-C"),
+                             label=c("*", "**", "*", "*", "**"),
+                             y=c(8,8,3.6,3.5,4))
 d <- ggplot(
     #+++++++++
     # Keep only data of interest
@@ -228,14 +226,12 @@ d <- ggplot(
                         mutate(host_subtype=replace(host_subtype, host_subtype=="HC", "Healthy")),
     aes(x = host_subtype, y = LogRatio_FirmBact))+
     #+++++++++
-  geom_signif(data=test, aes(y_position=y, xmin=start, xmax=end, annotations=label), manual=T, tip_length=0, vjust=0.4)+
+  geom_signif(data=annotation.df, aes(y_position=y, xmin=start, xmax=end, annotations=label), manual=T, tip_length=0, vjust=0.4)+
   facet_wrap(~factor(author, levels=c("Labus", "LoPresti", "Liu", "Pozuelo", "Mars (sigmoid)", "Zhuang", "Nagel", "Zeber-Lubecka")),
              scales="free_y", ncol=1, strip.position="right")+
-  # facet_grid(author~sample_type)+
   # ylim(c(-3,10))+
-  # geom_violin(lwd=0.5, alpha=0.2)+
-  geom_boxplot(aes(fill=host_subtype), lwd=0.5, width=0.4, outlier.shape=NA, alpha=0.2)+
   geom_jitter(aes(color=host_subtype), width=0.05, size=0.5)+
+  geom_boxplot(aes(fill=host_subtype), lwd=0.5, width=0.4, outlier.shape=NA, alpha=0.2)+
   scale_color_manual(values=c("#3182bd", "#a50f15", "#fcae91", "#fb6a4a"), guide="none")+
   scale_fill_manual(values=c("#3182bd", "#a50f15", "#fcae91", "#fb6a4a"), guide="none")+
   # THEME
