@@ -197,7 +197,7 @@ ggplot(phylum.table, aes(x = Sample, y = Abundance, fill = Phylum))+
 
 ### 3. Firmicutes/Bacteroidota ratio
 
-```{r plot-log-ratio, fig.height = 5, fig.width=3}
+```{r plot-log-ratio, fig.height = 4, fig.width=4}
 # Extract abundance of only Bacteroidota and Firmicutes
 relevant.covariates <- c('Sample', 'Abundance', 'host_disease', 'Phylum', 'host_ID', 'host_subtype', 'Collection', 'host_sex')
 
@@ -258,6 +258,7 @@ ggplot(ratio.FB, aes(x = Collection, y = logRatioFB))+
 
 # Plot by IBS subtype
 ggplot(ratio.FB, aes(x = host_subtype, y = logRatioFB))+
+  facet_wrap(~Collection) +
   geom_violin(aes(fill=host_subtype))+
   scale_fill_manual(values=scales::alpha(c("blue", "brown", "red"), .3))+
   geom_jitter(width=0.1)+
@@ -266,17 +267,18 @@ ggplot(ratio.FB, aes(x = host_subtype, y = logRatioFB))+
   labs(x = "",  y = 'Log2(Firmicutes/Bacteroidota)')+
   theme_cowplot()+
   theme(legend.position="none")
-# ggsave(file.path(path.plots, "ratioFB_subtype.jpg"), width=5, height=7)
+# ggsave(file.path(path.plots, "ratioFB_subtype.jpg"), width=5, height=5)
 
 # Statistical test HC vs IBS-C
-wilcox.test(ratio.FB[ratio.FB$host_subtype == "HC","logRatioFB"],
-            ratio.FB[ratio.FB$host_subtype == "IBS-C","logRatioFB"]) # p = 0.15
+wilcox.test(ratio.FB[ratio.FB$Collection == "1st" & ratio.FB$host_subtype == "HC","logRatioFB"],
+            ratio.FB[ratio.FB$Collection == "1st" & ratio.FB$host_subtype == "IBS-C","logRatioFB"]) # p = 0.04
+wilcox.test(ratio.FB[ratio.FB$Collection == "2nd" & ratio.FB$host_subtype == "HC","logRatioFB"],
+            ratio.FB[ratio.FB$Collection == "2nd" & ratio.FB$host_subtype == "IBS-C","logRatioFB"]) # p = 0.9
 # Statistical test HC vs IBS-D
-wilcox.test(ratio.FB[ratio.FB$host_subtype == "HC","logRatioFB"],
-            ratio.FB[ratio.FB$host_subtype == "IBS-D","logRatioFB"]) # p = 0.5
-# Statistical test IBS-D vs IBS-C
-wilcox.test(ratio.FB[ratio.FB$host_subtype == "IBS-C","logRatioFB"],
-            ratio.FB[ratio.FB$host_subtype == "IBS-D","logRatioFB"]) # p = 0.1
+wilcox.test(ratio.FB[ratio.FB$Collection == "1st" & ratio.FB$host_subtype == "HC","logRatioFB"],
+            ratio.FB[ratio.FB$Collection == "1st" & ratio.FB$host_subtype == "IBS-D","logRatioFB"]) # p = 0.7
+wilcox.test(ratio.FB[ratio.FB$Collection == "2nd" & ratio.FB$host_subtype == "HC","logRatioFB"],
+            ratio.FB[ratio.FB$Collection == "2nd" & ratio.FB$host_subtype == "IBS-D","logRatioFB"]) # p = 0.29
 
 
 # Just for curiosty, look by host_sex
