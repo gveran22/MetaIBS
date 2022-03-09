@@ -24,19 +24,19 @@ library(scales)
 
 # Data
 path.phy <- "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/CLUSTER/PhyloTree/input"
-physeq.ringel <- readRDS(file.path(path.phy, "physeq_ringel.rds"))
-physeq.labus <- readRDS(file.path(path.phy, "physeq_labus.rds"))
+physeq.ringel   <- readRDS(file.path(path.phy, "physeq_ringel.rds"))
+physeq.labus    <- readRDS(file.path(path.phy, "physeq_labus.rds"))
 physeq.lopresti <- readRDS(file.path(path.phy, "physeq_lopresti.rds"))
-physeq.pozuelo <- readRDS(file.path(path.phy, "physeq_pozuelo.rds"))
-physeq.zhuang <- readRDS(file.path(path.phy, "physeq_zhuang.rds"))
-physeq.zhu <- readRDS(file.path(path.phy, "physeq_zhu.rds"))
-physeq.hugerth <- readRDS(file.path(path.phy, "physeq_hugerth.rds"))
-physeq.fukui <- readRDS(file.path(path.phy, "physeq_fukui.rds"))
-physeq.mars <- readRDS(file.path(path.phy, "physeq_mars.rds"))
-physeq.liu <- readRDS(file.path(path.phy, "physeq_liu.rds"))
-physeq.agp <- readRDS(file.path(path.phy, "physeq_agp.rds"))
-physeq.nagel <- readRDS(file.path(path.phy, "physeq_nagel.rds"))
-physeq.zeber <- readRDS(file.path(path.phy, "physeq_zeber.rds"))
+physeq.pozuelo  <- readRDS(file.path(path.phy, "physeq_pozuelo.rds"))
+physeq.zhuang   <- readRDS(file.path(path.phy, "physeq_zhuang.rds"))
+physeq.zhu      <- readRDS(file.path(path.phy, "physeq_zhu.rds"))
+physeq.hugerth  <- readRDS(file.path(path.phy, "physeq_hugerth.rds"))
+physeq.fukui    <- readRDS(file.path(path.phy, "physeq_fukui.rds"))
+physeq.mars     <- readRDS(file.path(path.phy, "physeq_mars.rds"))
+physeq.liu      <- readRDS(file.path(path.phy, "physeq_liu.rds"))
+physeq.agp      <- readRDS(file.path(path.phy, "physeq_agp.rds"))
+physeq.nagel    <- readRDS(file.path(path.phy, "physeq_nagel.rds"))
+physeq.zeber    <- readRDS(file.path(path.phy, "physeq_zeber.rds"))
 
 
 
@@ -70,6 +70,7 @@ physeq.all <- merge_phyloseq(physeq.ringel,
 # 
 # cat("Nb of fecal samples:", nsamples(physeq.fecal))
 # cat("\nNb of sigmoid samples:", nsamples(physeq.sigmoid))
+
 
 
 
@@ -260,7 +261,6 @@ sampleType.df <- data.frame(spltype=sampleType.df$spltype,
 # Plot tree (all genera)
 p1 <- ggtree(tree.all, layout="circular", aes(color=group), lwd=0.4)+
   # geom_tiplab(aes(label=new_label), size=2, color="black")+
-  # geom_nodepoint(size=0.1, color="black")+
   scale_color_manual(values=colors)+
   labs(color="Phylum")
 
@@ -294,7 +294,8 @@ p3 <- gheatmap(p2+new_scale_fill(),
 gheatmap(p3+new_scale_fill(),
          sampleType.df, offset=1.7, width=.08, colnames = FALSE)+
   scale_fill_manual(values=c("#f0f0f0","#636363","#bdbdbd"), name="Sample type")+
-  labs(title="All samples")
+  labs(title="All samples")+
+  scale_y_reverse() # flip tree up/down
 ggsave("~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/03_TaxonomicTree/taxTree_all.jpg", width=12, height=8)
 
 
