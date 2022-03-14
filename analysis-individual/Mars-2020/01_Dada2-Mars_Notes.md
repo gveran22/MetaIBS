@@ -11,6 +11,14 @@ Mars et al. (_Cell_, 2020) - [Longitudinal Multi-omics Reveals Subset-Specific M
 - 2nd time point: 12 healthy & 21 IBS
 => Total 24 IBS & 48 healthy samples
 
+Paper describes that there are **42 individuals** that underwent flexible sigmoidoscopy, some of them a second time 6 months later, for a total of **72 samples** (Fig1A). Details from supplementary table 1 (Table S1):
+  - T1: 42 samples (14 HC - 28 IBS)
+  - T2: 29 samples (9 HC - 20 IBS)
+  => total of 71 samples (not 72...)
+
+However, from the metadata table downloaded on the SRA, there are **72 total samples** (24 HC - 48 IBS). Three of the patient ID from the Table S1 could not be found in the SRA metadata table. More details on this in the [R markdown file](00_Metadata-Mars.Rmd) that explores this issue and builds a metadata table usable for downstream analyses.
+
+
 ## Data Quality
 - **Technology** - Illumina MiSeq, paired end
 - **Nb of reads per sample** - mean of 68,693 reads per sample (1,633 - 129,697)
