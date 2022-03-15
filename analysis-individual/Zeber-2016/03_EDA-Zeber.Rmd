@@ -164,6 +164,15 @@ ggplot(class.table, aes(x = reorder(Sample, Sample, function(x) mean(class.table
 # ggsave(file.path(path.plots, "relAbundance_class.jpg"), width=12, height=5)
 ```
 
+One individual (PATIENT_72D) has 2 samples in the SRA metadata. Let's check if it's the same sample or not.
+```{r fig.width=5, fig.height = 5}
+ggplot(phylum.table %>% filter(host_ID=="PATIENT_72D "), aes(x = Sample, y = Abundance, fill = Phylum))+
+  geom_bar(stat = "identity", width=0.95) +
+  theme_cowplot()+
+  theme(axis.text.x = element_text(size=4, angle=90))
+```
+It doesn't look like the same sample, so we will treat it as a separate individual.
+
 
 
 ### 3. Firmicutes/Bacteroidota ratio
