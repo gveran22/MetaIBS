@@ -66,9 +66,9 @@ sum(ntaxa(physeq.labus)+
       ntaxa(physeq.zhu)+
       ntaxa(physeq.zhuang)+
       ntaxa(physeq.nagel)+
-      ntaxa(physeq.zeber)) # 81,451 before
+      ntaxa(physeq.zeber)) # 81,474 before
 
-ntaxa(physeq.all) # 79,917 after
+ntaxa(physeq.all) # 79,943 after
 
 
 # Put datasets in a list
@@ -90,7 +90,7 @@ datasets <- list("Labus"    = physeq.labus,
 # Let's get all ASVs in a dataframe and check if we can find common ones
 asv.df <- melt(lapply(datasets, function(x) taxa_names(x)))
 colnames(asv.df) <- c("asv", "author")
-length(unique(asv.df$asv)) # we do find 79,917 unique sequences
+length(unique(asv.df$asv)) # we do find 79,943 unique sequences
 
 # Let's see which datasets share the exact same ASV sequence
 common.asv <- asv.df %>%
@@ -136,10 +136,10 @@ physeq.common.LopRin <- prune_taxa(taxa_sums(physeq.common.LopRin)>0, physeq.com
 
 
 # Sanity check
-# ntaxa(physeq.common.NagPoz)
-# ntaxa(physeq.common.LiuZhug)
-# ntaxa(physeq.common.HugZhu)
-# ntaxa(physeq.common.LopRin)
+# ntaxa(physeq.common.NagPoz) # 806
+# ntaxa(physeq.common.LiuZhug) # 475
+# ntaxa(physeq.common.HugZhu) # 231
+# ntaxa(physeq.common.LopRin) # 19
 
 # psmelt(physeq.common.NagPoz) %>%
 #   group_by(OTU) %>%
