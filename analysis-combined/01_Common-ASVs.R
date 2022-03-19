@@ -18,20 +18,19 @@ library(cowplot)
 
 # Data
 path.phy <- "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/CLUSTER/PhyloTree/input"
-physeq.ringel <- readRDS(file.path(path.phy, "physeq_ringel.rds"))
-physeq.labus <- readRDS(file.path(path.phy, "physeq_labus.rds"))
+physeq.ringel   <- readRDS(file.path(path.phy, "physeq_ringel.rds"))
+physeq.labus    <- readRDS(file.path(path.phy, "physeq_labus.rds"))
 physeq.lopresti <- readRDS(file.path(path.phy, "physeq_lopresti.rds"))
-physeq.pozuelo <- readRDS(file.path(path.phy, "physeq_pozuelo.rds"))
-physeq.zhuang <- readRDS(file.path(path.phy, "physeq_zhuang.rds"))
-physeq.zhu <- readRDS(file.path(path.phy, "physeq_zhu.rds"))
-physeq.hugerth <- readRDS(file.path(path.phy, "physeq_hugerth.rds"))
-physeq.fukui <- readRDS(file.path(path.phy, "physeq_fukui.rds"))
-physeq.mars <- readRDS(file.path(path.phy, "physeq_mars.rds"))
-physeq.liu <- readRDS(file.path(path.phy, "physeq_liu.rds"))
-physeq.agp <- readRDS(file.path(path.phy, "physeq_agp.rds"))
-physeq.nagel <- readRDS(file.path(path.phy, "physeq_nagel.rds"))
-physeq.zeber <- readRDS(file.path(path.phy, "physeq_zeber.rds"))
-
+physeq.pozuelo  <- readRDS(file.path(path.phy, "physeq_pozuelo.rds"))
+physeq.zhuang   <- readRDS(file.path(path.phy, "physeq_zhuang.rds"))
+physeq.zhu      <- readRDS(file.path(path.phy, "physeq_zhu.rds"))
+physeq.hugerth  <- readRDS(file.path(path.phy, "physeq_hugerth.rds"))
+physeq.fukui    <- readRDS(file.path(path.phy, "physeq_fukui.rds"))
+physeq.mars     <- readRDS(file.path(path.phy, "physeq_mars.rds"))
+physeq.liu      <- readRDS(file.path(path.phy, "physeq_liu.rds"))
+physeq.agp      <- readRDS(file.path(path.phy, "physeq_agp.rds"))
+physeq.nagel    <- readRDS(file.path(path.phy, "physeq_nagel.rds"))
+physeq.zeber    <- readRDS(file.path(path.phy, "physeq_zeber.rds"))
 
 
 
@@ -67,9 +66,9 @@ sum(ntaxa(physeq.labus)+
       ntaxa(physeq.zhu)+
       ntaxa(physeq.zhuang)+
       ntaxa(physeq.nagel)+
-      ntaxa(physeq.zeber)) # 81,451 before
+      ntaxa(physeq.zeber)) # 81,474 before
 
-ntaxa(physeq.all) # 79,917 after
+ntaxa(physeq.all) # 79,943 after
 
 
 # Put datasets in a list
@@ -91,7 +90,7 @@ datasets <- list("Labus"    = physeq.labus,
 # Let's get all ASVs in a dataframe and check if we can find common ones
 asv.df <- melt(lapply(datasets, function(x) taxa_names(x)))
 colnames(asv.df) <- c("asv", "author")
-length(unique(asv.df$asv)) # we do find 79,917 unique sequences
+length(unique(asv.df$asv)) # we do find 79,943 unique sequences
 
 # Let's see which datasets share the exact same ASV sequence
 common.asv <- asv.df %>%
@@ -137,10 +136,10 @@ physeq.common.LopRin <- prune_taxa(taxa_sums(physeq.common.LopRin)>0, physeq.com
 
 
 # Sanity check
-# ntaxa(physeq.common.NagPoz)
-# ntaxa(physeq.common.LiuZhug)
-# ntaxa(physeq.common.HugZhu)
-# ntaxa(physeq.common.LopRin)
+# ntaxa(physeq.common.NagPoz) # 806
+# ntaxa(physeq.common.LiuZhug) # 475
+# ntaxa(physeq.common.HugZhu) # 231
+# ntaxa(physeq.common.LopRin) # 19
 
 # psmelt(physeq.common.NagPoz) %>%
 #   group_by(OTU) %>%
