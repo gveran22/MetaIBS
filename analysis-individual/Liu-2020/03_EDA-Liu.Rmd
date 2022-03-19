@@ -54,7 +54,7 @@ physeq.liu
 
 Phylogenetic tree was computed with the package `phangorn`, and the script was run on a cluster. Let's check we have correctly generated a phylogenetic tree.
 
-```{r plot-tree, echo=TRUE, eval=FALSE, fig.height = 6, fig.width = 10}
+```{r plot-tree, echo=TRUE, fig.height = 6, fig.width = 10}
 # Look at the tree
 plot_tree(physeq.liu, color = "Phylum", ladderize="left")
 ```
@@ -157,7 +157,6 @@ class.table <- physeq.liu %>%
   transform_sample_counts(function(x) {x/sum(x)} ) %>%
   psmelt()
 
-
 # Plot relative abundances
 ggplot(phylum.table, aes(x = reorder(Sample, Sample, function(x) mean(phylum.table[Sample == x & Phylum == 'Firmicutes', 'Abundance'])),
                          y = Abundance, fill = Phylum))+
@@ -188,14 +187,19 @@ ggplot(class.table, aes(x = reorder(Sample, Sample, function(x) mean(phylum.tabl
 ```{r plot-log-ratio, fig.height = 5, fig.width=5}
 relevant.covariates <- c('Sample', 'Abundance', 'host_subtype', 'Phylum', 'Bristol', 'IBS_SSS', "host_sex")
 
+# Agglomerate to phylum level (without making counts relative)
+phylum.df <- physeq.liu %>%
+  tax_glom(taxrank = "Phylum") %>%
+  psmelt()
+
 # Extract abundance of only Bacteroidota and Firmicutes
-bacter <- phylum.table %>%
+bacter <- phylum.df %>%
   filter(Phylum == "Bacteroidota") %>%
   select(all_of(relevant.covariates)) %>%
   dplyr::rename(Bacteroidota = Abundance) %>%
   arrange(Sample)
 
-firmi <- phylum.table %>%
+firmi <- phylum.df %>%
   filter(Phylum == "Firmicutes") %>%
   select(all_of(relevant.covariates)) %>%
   dplyr::rename(Firmicutes = Abundance) %>%
@@ -204,6 +208,9 @@ firmi <- phylum.table %>%
 # Calculate log2 ratio Firmicutes/Bacteroidota
 ratio.FB <- left_join(x=bacter, y=firmi, by=c('Sample', 'host_subtype', 'Bristol', 'IBS_SSS', 'host_sex')) %>%
   relocate(Firmicutes, .after=Bacteroidota) %>%
+  # There aren't any 0 counts so we don't need to add pseudocounts
+  # mutate(Bacteroidota=replace(Bacteroidota, Bacteroidota==0, 0.5),
+  #        Firmicutes=replace(Firmicutes, Firmicutes==0, 0.5)) %>%
   # Compute log ratios
   mutate(logRatioFB = log2(Firmicutes/Bacteroidota))
 
