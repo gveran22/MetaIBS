@@ -36,7 +36,8 @@ library(stringr)
 ##  QUALITY CHECK  ##
 #####################
 
-First, we import the fastq files containing the raw reads. The samples were downloaded from the ENA database with the accession number PRJEB31817.
+First, we import the fastq files containing the raw reads. The samples were downloaded from the ENA database with the accession number 
+PRJNA637763.
 
 ```{r quality-check, echo=TRUE, results="hide"}
 # Save the path to the directory containing the fastq zipped files
