@@ -373,7 +373,7 @@ head(taxa.print)
 table(taxa.print[,1], useNA="ifany") # Show the different kingdoms (should be only bacteria)
 table(taxa.print[taxa.print[,1] == 'Eukaryota',2], useNA="ifany") # the eukaryota are all NAs
 
-table(taxa.print[,2]) # Show the different phyla
+table(taxa.print[,2], useNA="ifany") # Show the different phyla
 table(is.na(taxa.print[,2])) # is there any NA phyla?
 ```
 
