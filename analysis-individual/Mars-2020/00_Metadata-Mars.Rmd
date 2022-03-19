@@ -51,6 +51,8 @@ sraDF <- sra_metadata %>%
   select(all_of(c("Run", "title"))) %>%
   separate(col=title, into=c("host_ID", "time_point"), sep="v", remove=TRUE)
 head(sraDF)
+dim(sraDF) # 72 samples
+length(unique(sraDF$host_ID)) # 39 individuals (3 less than indicated in the paper)
 
 # CLEANUP PAPER SUPP
 suppDF <- paper_supp %>%
@@ -73,6 +75,8 @@ suppDF <- paper_supp %>%
   mutate(host_sex=replace(host_sex, host_sex=="F", "female"),
          host_sex=replace(host_sex, host_sex=="M", "male"))
 head(suppDF)
+dim(suppDF) # 71 samples
+length(unique(suppDF$host_ID)) # 42 individuals (like indicated in the paper)
 ```
 
 
@@ -84,7 +88,12 @@ head(suppDF)
 Let's merge tables to get a metadata table we will use for downstream analyses.
 
 ```{r create-metadata-df}
+# Let's check we can find all host_ID from SRA metadata in the supp. table and vice versa
+setdiff(sraDF$host_ID, suppDF$host_ID)
+setdiff(suppDF$host_ID, sraDF$host_ID) # there are 3 ID that are absent from the SRA table.
+
 # MERGE TABLES
+# As all ID in the SRA table can be found in the supp. table, we will merge the supp.table onto the SRA table.
 clean.df <- left_join(sraDF, suppDF, by=c("host_ID", "time_point")) %>%
   # Fill in the few NAs (covariates missing for a few 2nd time points)
   group_by(host_ID) %>%
@@ -100,6 +109,7 @@ clean.df <- left_join(sraDF, suppDF, by=c("host_ID", "time_point")) %>%
   mutate(Collection=replace(Collection, Collection=="1", "1st"),
          Collection=replace(Collection, Collection=="2", "2nd"))
 head(clean.df)
+dim(clean.df) # 72 samples
 ```
 
 

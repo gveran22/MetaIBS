@@ -306,13 +306,18 @@ colnames(seqtable.new) <- new.asvs
 # Sanity check
 # for (i in 1:length(asvs)){
 #   test <- str_detect(string = getSequences(seqtable)[i],
-#                    pattern = getSequences(seqtable.new)[i])
+#                      pattern = getSequences(seqtable.new)[i])
 #   if(test==FALSE){print('FALSE')}
 # }
 
 # Is there any duplicate ASVs now?
 table(duplicated(new.asvs))
 table(duplicated(asvs))
+
+# Create table to have corresponding ASVs pre/post-cut (to compare taxonomy assignment later on)
+asv.df <- data.frame("asv" = paste0("ASV", 1:length(asvs)),
+                     "pre_cut" = asvs,
+                     "post_cut" = new.asvs)
 
 # We will merge columns with same ASV and sum their counts
 seqtable.small <- sapply(unique(colnames(seqtable.new)),
@@ -400,6 +405,8 @@ saveRDS(nb.reads, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/DAD
 ## ASSIGN TAXONOMY ##
 #####################
 
+### 1 - Assign taxonomy
+
 Extensions: The dada2 package also implements a method to make species level assignments based on exact matching between ASVs and sequenced reference strains. Recent analysis suggests that exact matching (or 100% identity) is the only appropriate way to assign species to 16S gene fragments. Currently, species-assignment training fastas are available for the Silva and RDP 16S databases. To follow the optional species addition step, download the silva_species_assignment_v132.fa.gz file, and place it in the directory with the fastq files.
 
 ```{r assign-taxonomy, eval = FALSE, echo = TRUE}
@@ -442,6 +449,91 @@ table(taxa.small.print[,1]) # Show the different kingdoms (should be only bacter
 table(taxa.small.print[,2]) # Show the different phyla
 table(is.na(taxa.small.print[,2])) # is there any NA phyla?
 ```
+
+
+
+### 2 - Compare taxonomic assignment with/without cutting reads
+
+```{r compare-tax-assignment, fig.width = 6, fig.height = 6}
+# taxa dataframes
+taxa.df <- data.frame(taxa)
+taxa.df$asv <- rownames(taxa.df)
+taxa.small.df <- data.frame(taxa.small)
+taxa.small.df$asv <- rownames(taxa.small.df)
+
+# remove chimera from asv pre/post cut dataframe
+asv.df.nochim <- asv.df[asv.df$pre_cut %in% rownames(taxa.df),]
+colnames(asv.df.nochim) <- c("asvID", "asv_precut", "asv_postcut")
+# Sanity checks
+# table(duplicated(asv.df.nochim$post_cut))
+# dim(asv.df.nochim)
+# table(asv.df.nochim$pre_cut %in% rownames(taxa))
+# table(asv.df.nochim$post_cut %in% rownames(taxa.small)) # 59 ASVs post-cut are not in the taxonomic table (probably because they are chimeras)
+
+# Compare taxonomic assignment pre/post-cut (phylum level)
+compare.df <- merge(asv.df.nochim, taxa.df[,c("Phylum", "asv")], by.x="asv_precut", by.y="asv") # pre-cut phylum
+colnames(compare.df)[4] <- "Phylum_precut"
+compare.df <- merge(x=compare.df, y=taxa.small.df[,c("Phylum", "asv")], by.x="asv_postcut", by.y="asv") # post-cut phylum
+colnames(compare.df)[5] <- "Phylum_postcut"
+
+# The 59 ASVs present in pre-cut but not in post-cut were removed (59 rows were deleted)
+dim(compare.df)
+
+# How many rows (ASVs) have different phylum?
+table(compare.df$Phylum_precut != compare.df$Phylum_postcut, useNA="ifany") # 29 ASVs assigned to different phyla
+phylum.all <- compare.df %>%
+  select(asvID, Phylum_precut, Phylum_postcut) %>%
+  rename(precut=Phylum_precut, postcut=Phylum_postcut) %>%
+  mutate(diff=ifelse(precut != postcut, TRUE, FALSE)) %>%
+  tidyr::pivot_longer(!c(asvID, diff), names_to="cut", values_to="Phylum")
+  
+
+# Plot
+library(ggalluvial)
+ggplot(phylum.all,
+       aes(x = cut, stratum = Phylum, alluvium = asvID,
+           label = Phylum)) +
+  geom_flow(aes(color=diff),stat = "alluvium", lode.guidance = "frontback") +
+  geom_stratum(aes(fill=Phylum)) +
+  scale_color_manual(values=c("lightgrey", "#de2d26", "lightgrey"))+
+  scale_fill_brewer(type = "qual", palette = "Set3") +
+  theme_bw()+
+  labs(x="", y="#ASVs", title="ASV taxonomic assignment (with/without cutting)", color='Different?')
+# ggsave("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Zhu-2019/01_Dada2-Zhu/pre-post-cut_taxAssignment_phylum.jpg", width=10, height=6)
+
+
+# *********************
+# SAME AT GENUS LEVEL
+compare.df.genus <- merge(asv.df.nochim, taxa.df[,c("Genus", "asv")], by.x="asv_precut", by.y="asv") # pre-cut genus
+colnames(compare.df.genus)[4] <- "Genus_precut"
+compare.df.genus <- merge(x=compare.df.genus, y=taxa.small.df[,c("Genus", "asv")], by.x="asv_postcut", by.y="asv") # post-cut genus
+colnames(compare.df.genus)[5] <- "Genus_postcut"
+dim(compare.df.genus)
+
+# How many rows (ASVs) have different phylum?
+table(compare.df.genus$Genus_precut != compare.df.genus$Genus_postcut, useNA="ifany") # 22 ASVs assigned to diff. genus, but many more NAs
+genus.all <- compare.df.genus %>%
+  select(asvID, Genus_precut, Genus_postcut) %>%
+  rename(precut=Genus_precut, postcut=Genus_postcut) %>%
+  mutate(diff=ifelse(precut != postcut, TRUE, FALSE)) %>%
+  tidyr::pivot_longer(!c(asvID, diff), names_to="cut", values_to="Genus")
+
+
+# Plot
+ggplot(genus.all,
+       aes(x = cut, stratum = Genus, alluvium = asvID,
+           label = Genus)) +
+  geom_flow(aes(color=diff),stat = "alluvium", lode.guidance = "frontback") +
+  geom_stratum(aes(fill=Genus)) +
+  scale_color_manual(values=c("lightgrey", "#de2d26", "lightgrey"))+
+  theme_bw()+
+  theme(legend.text = element_text(size=3),
+        legend.key.size = unit(0.1, "cm"))+
+  labs(x="", y="#ASVs", title="ASV taxonomic assignment (with/without cutting)", color='Different?')+
+  guides(fill=guide_legend(ncol=3))
+# ggsave("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Zhu-2019/01_Dada2-Zhu/pre-post-cut_taxAssignment_genus.jpg", width=10, height=6)
+```
+
 
 
 ########################
@@ -492,6 +584,8 @@ physeq <- subset_taxa(physeq, Kingdom != "Eukaryota")
 physeq <- subset_taxa(physeq, !is.na(Phylum))
 # Remove samples with less than 500 reads
 physeq <- prune_samples(sample_sums(physeq)>=500, physeq)
+# No sample was deleted, so we don't need to remove taxa present in low-count samples
+# physeq <- prune_taxa(taxa_sums(physeq)>0, physeq)
 
 # Remove taxa that are eukaryota, or have unassigned Phyla
 physeq.small <- subset_taxa(physeq.small, Kingdom != "Eukaryota")
@@ -533,7 +627,7 @@ saveRDS(physeq.small, file.path(path, "01_Dada2-Zhu/physeq_zhu_shortASV.rds")) #
 
 ```{r plot, fig.width = 10, fig.height = 5}
 # Absolute abundance
-plot_bar(physeq, fill = "Phylum")+ facet_wrap("host_disease", scales="free") + theme(axis.text.x = element_blank())
+plot_bar(physeq, fill = "Phylum")+ facet_wrap("host_disease", scales="free_x") + theme(axis.text.x = element_blank())
 
 # Relative abundance for Phylum
 phylum.table <- physeq %>%
@@ -546,12 +640,11 @@ ggplot(phylum.table, aes(x = Sample, y = Abundance, fill = Phylum))+
   geom_bar(stat = "identity") +
   theme(axis.text.x = element_text(size = 5, angle = -90))+
   labs(x = "Samples", y = "Relative abundance")
-
 ```
 
 ```{r plot-2, fig.width = 10, fig.height = 5}
 # Absolute abundance
-plot_bar(physeq.small, fill = "Phylum")+ facet_wrap("host_disease", scales="free") + theme(axis.text.x = element_blank())
+plot_bar(physeq.small, fill = "Phylum")+ facet_wrap("host_disease", scales="free_x") + theme(axis.text.x = element_blank())
 
 # Relative abundance for Phylum
 phylum.table <- physeq.small %>%
@@ -564,7 +657,6 @@ ggplot(phylum.table, aes(x = Sample, y = Abundance, fill = Phylum))+
   geom_bar(stat = "identity") +
   theme(axis.text.x = element_text(size = 5, angle = -90))+
   labs(x = "Samples", y = "Relative abundance")
-
 ```
 
 For any further analysis, we will be doing it on the _physeq_shortASV_ object, as the ASVs sequences better reflect the V4 **variable** region.

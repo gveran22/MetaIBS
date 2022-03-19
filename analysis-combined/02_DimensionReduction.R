@@ -12,6 +12,7 @@
 # Libraries
 library(phyloseq)
 library(ggplot2)
+library(cowplot)
 #library(umap)
 library(tidyverse)
 #library(reshape2)
@@ -73,9 +74,9 @@ physeq.all # 2,651 samples and 79,917 taxa
 
 # table(sample_sums(physeq.all)<500) # sanity check
 path <- "~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/02_DimensionReduction"
-physeq.NZcomp <- readRDS(file.path(path, "physeq_all_NZcomp.rds"))
-physeq.CSN <- readRDS(file.path(path, "physeq_all_CSN.rds"))
-physeq.clr <- readRDS(file.path(path, "physeq_all_clr.rds"))
+# physeq.NZcomp <- readRDS(file.path(path, "physeq_all_NZcomp.rds"))
+# physeq.CSN <- readRDS(file.path(path, "physeq_all_CSN.rds"))
+# physeq.clr <- readRDS(file.path(path, "physeq_all_clr.rds"))
 
 
 # NON-ZERO COMPOSITIONS
@@ -163,11 +164,43 @@ plotDistances2D <- function(dlist, ordination="MDS", coloring="host_disease"){
 
 dist.all <- getDistances()
 plot.df <- plotDistances2D(dlist=dist.all, ordination="NMDS")
+plot.df <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/02_DimensionReduction/output_plot-df-pcoa.rds")
 
 # Plot
-ggplot(plot.df, aes(Axis.1, Axis.2, color=host_disease))+
-  geom_point(size=6, alpha=0.5)  + scale_color_manual(values = c('blue', 'red'))+
+ggplot(plot.df, aes(Axis.1, Axis.2, color=author))+
+  geom_point(size=2, alpha=0.5)  +# scale_color_manual(values = c('blue', 'red', 'black'))+
   facet_wrap(distance~., scales='free', nrow=1)+
+  theme_cowplot()+
+  theme(strip.text.x = element_text(size=20))+
+  labs(color="Disease")
+
+
+
+# XXXXXXXXXXX TEST XXXXXXXXXXX
+
+# Aitchison distance
+glom.ait <- phyloseq::distance(physeq.clr, method = 'euclidean') # aitchison (takes ~1h30 to compute)
+# saveRDS(glom.ait, "~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/02_DimensionReduction/dist_aitchison_allSamples.rds")
+iMDS.Ait <- ordinate(physeq=physeq.clr, method="NMDS", distance=glom.ait, k=3)
+plot.df  <- plot_ordination(physeq.clr, iMDS.Ait)$data
+
+
+# Plot
+ggplot(plot.df, aes(Axis.1, Axis.2, color=author))+
+  geom_point(size=2, alpha=0.5)  + #scale_color_manual(values = c('blue', 'red', 'black'))+
+  theme_cowplot()+
+  theme(strip.text.x = element_text(size=20))+
+  labs(color="Disease")
+
+ggplot(plot.df, aes(NMDS1, NMDS2, color=host_disease))+
+  geom_point(size=2, alpha=0.5) +
+  scale_color_manual(values = c('blue', 'red', 'black'))+
+  theme_cowplot()+
+  theme(strip.text.x = element_text(size=20))+
+  labs(color="Disease")
+
+ggplot(plot.df, aes(NMDS1, NMDS2, color=sequencing_tech))+
+  geom_point(size=2, alpha=0.5)  + #scale_color_manual(values = c('blue', 'red', 'black'))+
   theme_bw()+
   theme(strip.text.x = element_text(size=20))+
   labs(color="Disease")

@@ -41,6 +41,7 @@ library(pheatmap) # for heatmap
 ```{r import-data}
 # Set path
 path <- "~/Projects/IBS_Meta-analysis_16S"
+path.plots <- file.path(path, "data/analysis-individual/PLOTS/plots-Ringel-EDA")
 
 # Import phyloseq object
 physeq.ringel <- readRDS(file.path(path, "phyloseq-objects/physeq_ringel.rds"))
@@ -55,7 +56,7 @@ Phylogenetic tree was computed with the package `phangorn`, and the script was r
 
 ```{r plot-tree, fig.height = 6, fig.width = 10}
 # Look at the tree
-plot_tree(physeq.ringel, ladderize="left")
+plot_tree(physeq.ringel, color = "Phylum", ladderize="left")
 ```
 
 
@@ -86,6 +87,7 @@ physeq.NZcomp <- readRDS(file.path(path, "data/analysis-individual/Ringel-2015/0
 plot_bar(physeq.ringel, fill = "Phylum") +
   theme(axis.text.x = element_blank())+
   labs(x = "Samples", y = "Absolute abundance", title = "Ringel-Kulka dataset")
+# ggsave(file.path(path.plots, "absAbundance_phylum.jpg"), width=13, height=5)
 ```
 
 **Sequencing depth** characteristics of the Zhuang dataset:  
@@ -115,59 +117,15 @@ ggplot(phylum.table, aes(x = reorder(Sample, Sample, function(x) mean(phylum.tab
   geom_bar(stat = "identity") +
   theme(axis.text.x = element_blank())+
   labs(x = "Samples", y = "Relative abundance", title = "Ringel-Kulka dataset")
+# ggsave(file.path(path.plots, "relAbundance_phylum.jpg"), width=10, height=5)
 
 ggplot(class.table, aes(x = reorder(Sample, Sample, function(x) mean(phylum.table[Sample == x & Phylum == 'Firmicutes', 'Abundance'])),
                         y = Abundance, fill = Class))+
   geom_bar(stat = "identity") +
   theme(axis.text.x = element_blank())+
   labs(x = "Samples", y = "Relative abundance", title = "Ringel-Kulka dataset")
+# ggsave(file.path(path.plots, "relAbundance_class.jpg"), width=12, height=5)
 ```
-
-
-```{r export-plots-1, eval = FALSE, echo = FALSE}
-# Save path to plots
-path.plots <- file.path(path, "data/analysis-individual/PLOTS/plots-Ringel-EDA")
-
-# Absolute abundance phylum
-jpeg(file.path(path.plots, "absAbundance_phylum.jpg"), width = 4000, height = 2000)
-plot_bar(physeq.ringel, fill = "Phylum") +
-  theme(axis.text.x = element_blank(),
-        axis.text.y = element_text(size = 30),
-        legend.text = element_text(size = 50),
-        axis.title = element_text(size = 50),
-        title = element_text(size = 70),
-        strip.text = element_text(size = 50))+
-  labs(x = "Samples", y = "Total read count", title = "Ringel-Kulka dataset (2015)")
-dev.off()
-
-# Relative abundances
-jpeg(file.path(path.plots, "relAbundance_phylum.jpg"), width = 4000, height = 2000)
-ggplot(phylum.table, aes(x = reorder(Sample, Sample, function(x) mean(phylum.table[Sample == x & Phylum == 'Firmicutes', 'Abundance'])),
-                         y = Abundance, fill = Phylum))+
-  geom_bar(stat = "identity") +
-  theme(axis.text.x = element_blank(),
-        axis.text.y = element_text(size = 30),
-        legend.text = element_text(size = 50),
-        axis.title = element_text(size = 50),
-        title = element_text(size = 70),
-        strip.text = element_text(size = 50))+
-  labs(x = "Samples", y = "Relative abundance", title = "Ringel-Kulka dataset (2015)")
-dev.off()
-
-jpeg(file.path(path.plots, "relAbundance_class.jpg"), width = 4000, height = 2000)
-ggplot(class.table, aes(x = reorder(Sample, Sample, function(x) mean(phylum.table[Sample == x & Phylum == 'Firmicutes', 'Abundance'])),
-                        y = Abundance, fill = Class))+
-  geom_bar(stat = "identity") +
-  theme(axis.text.x = element_blank(),
-        axis.text.y = element_text(size = 30),
-        legend.text = element_text(size = 50),
-        axis.title = element_text(size = 50),
-        title = element_text(size = 70),
-        strip.text = element_text(size = 50))+
-  labs(x = "Samples", y = "Relative abundance", title = "Ringel-Kulka dataset (2015)")
-dev.off()
-```
-
 
 
 

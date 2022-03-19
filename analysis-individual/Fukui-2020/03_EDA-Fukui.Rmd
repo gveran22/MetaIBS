@@ -21,6 +21,7 @@ knitr::opts_chunk$set(fig.width = 15, fig.height = 5, warning=FALSE, message=FAL
 ```{r library-import}
 library(phyloseq) # for phyloseq object
 library(ggplot2)
+library(ggsignif)
 library(cowplot)
 library(plyr)
 library(dplyr)
@@ -41,6 +42,7 @@ library(dendextend) # for dendrogram
 ```{r import-data}
 # Set path
 path <- "~/Projects/IBS_Meta-analysis_16S"
+path.plots <- file.path(path, "data/analysis-individual/PLOTS/plots-Fukui-EDA")
 
 # Import phyloseq object
 physeq.fukui <- readRDS(file.path(path, "phyloseq-objects/physeq_fukui.rds"))
@@ -53,7 +55,7 @@ Phylogenetic tree was computed with the package `phangorn`, and the script was r
 
 ```{r plot-tree, fig.height = 6, fig.width = 10}
 # Look at the tree
-plot_tree(physeq.fukui, color = "host_disease", ladderize="left")
+plot_tree(physeq.fukui, color = "Phylum", ladderize="left")
 ```
 
 
@@ -78,17 +80,20 @@ physeq.NZcomp <- readRDS(file.path(path, "data/analysis-individual/Fukui-2020/02
 
 ```{r plot-absolute-abundance, fig.width=10, fig.height = 5}
 # Plot Phylum
-plot_bar(physeq.fukui, fill = "Phylum") + facet_wrap("host_disease", scales="free") +
-  theme(axis.text.x = element_text(size = 8))+
-  labs(x = "Samples", y = "Absolute abundance", title = "fukui dataset (2020)")
+plot_bar(physeq.fukui, fill = "Phylum") + facet_wrap("host_disease", scales="free_x") +
+  theme_cowplot()+
+  theme(axis.text.x = element_text(size = 6, angle=90))+
+  labs(x = "Samples", y = "Absolute abundance", title = "Fukui dataset (2020)")
+# ggsave(file.path(path.plots, "absAbundance_phylum.jpg"), width=13, height=5)
 
 # Plot Class
-plot_bar(physeq.fukui, fill = "Class")+ facet_wrap("host_disease", scales="free") +
-  theme(axis.text.x = element_text(size = 8))+
-  labs(x = "Samples", y = "Absolute abundance", title = "fukui dataset (2020)")
+plot_bar(physeq.fukui, fill = "Class")+ facet_wrap("host_disease", scales="free_x") +
+  theme_cowplot()+
+  theme(axis.text.x = element_text(size = 6, angle=90))+
+  labs(x = "Samples", y = "Absolute abundance", title = "Fukui dataset (2020)")
 ```
 
-**Sequencing depth** characteristics of the fukui dataset:  
+**Sequencing depth** characteristics of the Fukui dataset:  
 - minimum of `r min(sample_sums(physeq.fukui))` total count per sample  
 - median: `r median(sample_sums(physeq.fukui))` total count per sample  
 - maximum of `r max(sample_sums(physeq.fukui))` total count per sample  
@@ -114,15 +119,19 @@ ggplot(phylum.table, aes(x = reorder(Sample, Sample, function(x) mean(phylum.tab
                          y = Abundance, fill = Phylum))+
   facet_wrap(~ host_disease, scales = "free") + # scales = "free" removes empty lines
   geom_bar(stat = "identity") +
-  theme(axis.text.x = element_text(size = 8, angle = -90))+
+  theme_cowplot()+
+  theme(axis.text.x = element_text(size = 6, angle = -90))+
   labs(x = "Samples", y = "Relative abundance", title = "Fukui dataset (2020)")
+# ggsave(file.path(path.plots, "relAbundance_phylum.jpg"), width=10, height=5)
 
-ggplot(class.table, aes(x = Sample, y = Abundance, fill = Class))+
+ggplot(class.table, aes(x = reorder(Sample, Sample, function(x) mean(phylum.table[Sample == x & Phylum == 'Firmicutes', 'Abundance'])),
+                        y = Abundance, fill = Class))+
   facet_wrap(~ host_disease, scales = "free") + # scales = "free" removes empty lines
   geom_bar(stat = "identity") +
-  theme(axis.text.x = element_text(size = 8, angle = -90))+
+  theme_cowplot()+
+  theme(axis.text.x = element_text(size = 6, angle = -90))+
   labs(x = "Samples", y = "Relative abundance", title = "Fukui dataset (2020)")
-
+# ggsave(file.path(path.plots, "relAbundance_class.jpg"), width=10, height=5)
 ```
 
 
@@ -150,77 +159,20 @@ ratio.FB$logRatioFB <- log2(ratio.FB$Firmicutes / ratio.FB$Bacteroidota)
 
 # Plot log2 ratio Firmicutes/Bacteroidota
 ggplot(ratio.FB, aes(x = host_disease, y = logRatioFB))+
-  geom_boxplot(outlier.shape = NA)+
+  geom_violin(aes(fill=host_disease))+
+  scale_fill_manual(values=scales::alpha(c("blue", "red"), .3))+
   geom_jitter(width=0.1)+
+  geom_signif(comparisons = list(c("Healthy", "IBS")), map_signif_level = TRUE, test="wilcox.test") +
   labs(x = "",  y = 'Log2(Firmicutes/Bacteroidota)', title = "Firmicutes:Bacteroidota ratio")+
-  theme_cowplot()
-
+  theme_cowplot()+
+  theme(legend.position="none")
+# ggsave(file.path(path.plots, "ratioFB.jpg"), width=4, height=6)
 
 # Statistical test
 wilcox.test(ratio.FB[ratio.FB$host_disease == "IBS","logRatioFB"],
             ratio.FB[ratio.FB$host_disease == "Healthy","logRatioFB"]) # p = 0.24
 ```
 
-
-```{r export-plots-1, eval = FALSE, echo = FALSE}
-# Save path to plots
-path.plots <- file.path(path, "data/analysis-individual/PLOTS/plots-Fukui-EDA")
-
-# Absolute abundance phylum
-jpeg(file.path(path.plots, "absAbundance_phylum.jpg"), width = 4000, height = 2000)
-plot_bar(physeq.fukui, fill = "Phylum") + facet_wrap("host_disease", scales="free") +
-  theme(axis.text.x = element_text(size = 30, angle = -90),
-        axis.text.y = element_text(size = 30),
-        legend.text = element_text(size = 50),
-        axis.title = element_text(size = 50),
-        title = element_text(size = 70),
-        strip.text = element_text(size = 50))+
-  labs(x = "Samples", y = "Total read count", title = "Fukui dataset (2020)")
-dev.off()
-
-# Relative abundances
-jpeg(file.path(path.plots, "relAbundance_phylum.jpg"), width = 4000, height = 2000)
-ggplot(phylum.table, aes(x = reorder(Sample, Sample, function(x) mean(phylum.table[Sample == x & Phylum == 'Bacteroidota', 'Abundance'])),
-                         y = Abundance, fill = Phylum))+
-  facet_wrap(~ host_disease, scales = "free") + # scales = "free" removes empty lines
-  geom_bar(stat = "identity") +
-  theme(axis.text.x = element_text(size = 30, angle = -90),
-        axis.text.y = element_text(size = 30),
-        legend.text = element_text(size = 50),
-        axis.title = element_text(size = 50),
-        title = element_text(size = 70),
-        strip.text = element_text(size = 50))+
-  labs(x = "Samples", y = "Relative abundance", title = "Fukui dataset (2020)")
-dev.off()
-
-jpeg(file.path(path.plots, "relAbundance_class.jpg"), width = 4000, height = 2000)
-ggplot(class.table, aes(x = reorder(Sample, Sample, function(x) mean(phylum.table[Sample == x & Phylum == 'Bacteroidota', 'Abundance'])),
-                        y = Abundance, fill = Class))+
-  facet_wrap(~ host_disease, scales = "free") + # scales = "free" removes empty lines
-  geom_bar(stat = "identity") +
-  theme(axis.text.x = element_text(size = 30, angle = -90),
-        axis.text.y = element_text(size = 30),
-        legend.text = element_text(size = 50),
-        axis.title = element_text(size = 50),
-        title = element_text(size = 70),
-        strip.text = element_text(size = 50))+
-  labs(x = "Samples", y = "Relative abundance", title = "Fukui dataset (2020)")
-dev.off()
-
-# Firmicutes:Bacteroidota log ratio
-jpeg(file.path(path.plots, "ratioFB.jpg"), width = 1500, height = 2000)
-ggplot(ratio.FB, aes(x = host_disease, y = logRatioFB))+
-  geom_violin(lwd=3, aes(fill=host_disease))+
-  geom_jitter(size = 10, width=0.1)+
-  scale_fill_manual(values=scales::alpha(c("blue", "red"), .3))+
-  labs(x = "",  y = 'Log2(Firmicutes/Bacteroidota)', title = "Fukui dataset (2020)")+
-  theme_classic()+
-  theme(axis.text = element_text(size = 50),
-        legend.text = element_text(size = 50),
-        axis.title = element_text(size = 50),
-        title = element_text(size = 50))
-dev.off()
-```
 
 
 
@@ -287,6 +239,8 @@ otu_table(physeq.clr)[1:5, 1:5] # should all be relative
 # save the physeq.rel object
 saveRDS(physeq.clr, file.path(path, "data/analysis-individual/Fukui-2020/02_EDA-Fukui/physeq_clr.rds"))
 ```
+
+
 
 
 #######################

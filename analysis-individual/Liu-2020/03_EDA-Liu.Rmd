@@ -23,6 +23,7 @@ knitr::opts_chunk$set(fig.width = 15, fig.height = 5, warning=FALSE, message=FAL
 ```{r library-import}
 library(phyloseq) # for phyloseq object
 library(ggplot2)
+library(ggsignif)
 library(ggforce)
 library(ggdendro)
 library(cowplot)
@@ -42,6 +43,7 @@ library(pheatmap) # for heatmap
 ```{r import-data}
 # Set path
 path <- "~/Projects/IBS_Meta-analysis_16S"
+path.plots <- file.path(path, "data/analysis-individual/PLOTS/plots-Liu-EDA")
 
 # Import phyloseq object
 physeq.liu <- readRDS(file.path(path, "phyloseq-objects/physeq_liu.rds"))
@@ -52,9 +54,9 @@ physeq.liu
 
 Phylogenetic tree was computed with the package `phangorn`, and the script was run on a cluster. Let's check we have correctly generated a phylogenetic tree.
 
-```{r plot-tree, echo=TRUE, eval=FALSE, fig.height = 6, fig.width = 10}
+```{r plot-tree, echo=TRUE, fig.height = 6, fig.width = 10}
 # Look at the tree
-plot_tree(physeq.liu, color = "host_disease", ladderize="left")
+plot_tree(physeq.liu, color = "Phylum", ladderize="left")
 ```
 
 
@@ -121,15 +123,16 @@ wilcox.test(metadata[metadata$host_disease == "IBS",]$host_bmi,
 plot_bar(physeq.liu, fill = "Phylum") + facet_wrap("host_subtype", scales="free_x") +
   theme(axis.text.x = element_text(size = 6),
         legend.text = element_text(size=8),
-        legend.key.size = unit(0.5, "cm"))+
+        legend.key.size = unit(0.2, "cm"))+
   labs(x = "Samples", y = "Absolute abundance", title = "Liu dataset (2020)")+
   guides(fill=guide_legend(ncol=2))
+# ggsave(file.path(path.plots, "absAbundance_phylum.jpg"), width=13, height=5)
 
 # Plot Class
 plot_bar(physeq.liu, fill = "Class")+ facet_wrap("host_subtype", scales="free_x") +
   theme(axis.text.x = element_text(size = 6),
         legend.text = element_text(size=6),
-        legend.key.size = unit(0.5, "cm"))+
+        legend.key.size = unit(0.2, "cm"))+
   labs(x = "Samples", y = "Absolute abundance", title = "Liu dataset (2020)")+
   guides(fill=guide_legend(ncol=3))
 ```
@@ -154,7 +157,6 @@ class.table <- physeq.liu %>%
   transform_sample_counts(function(x) {x/sum(x)} ) %>%
   psmelt()
 
-
 # Plot relative abundances
 ggplot(phylum.table, aes(x = reorder(Sample, Sample, function(x) mean(phylum.table[Sample == x & Phylum == 'Firmicutes', 'Abundance'])),
                          y = Abundance, fill = Phylum))+
@@ -162,9 +164,10 @@ ggplot(phylum.table, aes(x = reorder(Sample, Sample, function(x) mean(phylum.tab
   geom_bar(stat = "identity") +
   theme(axis.text.x = element_blank(),
         legend.text = element_text(size=8),
-        legend.key.size = unit(0.5, "cm"))+
+        legend.key.size = unit(0.2, "cm"))+
   labs(x = "Samples", y = "Relative abundance", title = "Liu dataset (2020)")+
   guides(fill=guide_legend(ncol=2))
+# ggsave(file.path(path.plots, "relAbundance_phylum.jpg"), width=12, height=5)
 
 ggplot(class.table, aes(x = reorder(Sample, Sample, function(x) mean(phylum.table[Sample == x & Phylum == 'Firmicutes', 'Abundance'])),
                         y = Abundance, fill = Class))+
@@ -175,6 +178,7 @@ ggplot(class.table, aes(x = reorder(Sample, Sample, function(x) mean(phylum.tabl
         legend.key.size = unit(0.2, "cm"))+
   labs(x = "Samples", y = "Relative abundance", title = "Liu dataset (2020)")+
   guides(fill=guide_legend(ncol=3))
+# ggsave(file.path(path.plots, "relAbundance_class.jpg"), width=12, height=5)
 ```
 
 
@@ -183,14 +187,19 @@ ggplot(class.table, aes(x = reorder(Sample, Sample, function(x) mean(phylum.tabl
 ```{r plot-log-ratio, fig.height = 5, fig.width=5}
 relevant.covariates <- c('Sample', 'Abundance', 'host_subtype', 'Phylum', 'Bristol', 'IBS_SSS', "host_sex")
 
+# Agglomerate to phylum level (without making counts relative)
+phylum.df <- physeq.liu %>%
+  tax_glom(taxrank = "Phylum") %>%
+  psmelt()
+
 # Extract abundance of only Bacteroidota and Firmicutes
-bacter <- phylum.table %>%
+bacter <- phylum.df %>%
   filter(Phylum == "Bacteroidota") %>%
   select(all_of(relevant.covariates)) %>%
   dplyr::rename(Bacteroidota = Abundance) %>%
   arrange(Sample)
 
-firmi <- phylum.table %>%
+firmi <- phylum.df %>%
   filter(Phylum == "Firmicutes") %>%
   select(all_of(relevant.covariates)) %>%
   dplyr::rename(Firmicutes = Abundance) %>%
@@ -199,6 +208,9 @@ firmi <- phylum.table %>%
 # Calculate log2 ratio Firmicutes/Bacteroidota
 ratio.FB <- left_join(x=bacter, y=firmi, by=c('Sample', 'host_subtype', 'Bristol', 'IBS_SSS', 'host_sex')) %>%
   relocate(Firmicutes, .after=Bacteroidota) %>%
+  # There aren't any 0 counts so we don't need to add pseudocounts
+  # mutate(Bacteroidota=replace(Bacteroidota, Bacteroidota==0, 0.5),
+  #        Firmicutes=replace(Firmicutes, Firmicutes==0, 0.5)) %>%
   # Compute log ratios
   mutate(logRatioFB = log2(Firmicutes/Bacteroidota))
 
@@ -208,9 +220,11 @@ ggplot(ratio.FB, aes(x = host_subtype, y = logRatioFB))+
   geom_violin(aes(fill=host_subtype))+
   scale_fill_manual(values=scales::alpha(c("blue", "red"), .3))+
   geom_jitter(width=0.1)+
+  geom_signif(comparisons = list(c("HC", "IBS-D")), map_signif_level = TRUE, test="wilcox.test") +
   labs(x = "",  y = 'Log2(Firmicutes/Bacteroidota)', title = "Firmicutes:Bacteroidota ratio")+
   theme_cowplot()+
   theme(legend.position="none")
+# ggsave(file.path(path.plots, "ratioFB.jpg"), width=4, height=6)
 # Statistical test
 wilcox.test(ratio.FB[ratio.FB$host_subtype == "IBS-D","logRatioFB"],
             ratio.FB[ratio.FB$host_subtype == "HC","logRatioFB"]) # p=0.14
@@ -223,6 +237,7 @@ ggplot(ratio.FB, aes(x = Bristol, y = logRatioFB))+
   scale_color_manual(values=c("blue", "red"))+
   labs(x = "",  y = 'Log2(Firmicutes/Bacteroidota)', title = "Firmicutes:Bacteroidota ratio")+
   theme_cowplot()
+# ggsave(file.path(path.plots, "ratioFB_Bristol.jpg"), width=5, height=5)
 
 
 # Plot by IBS symptom severity score (mild IBS < 175; moderate < 300; severe >300)
@@ -231,107 +246,18 @@ ggplot(ratio.FB, aes(x = IBS_SSS, y = logRatioFB))+
   scale_color_manual(values=c("blue", "red"))+
   labs(x = "IBS SSS",  y = 'Log2(Firmicutes/Bacteroidota)')+
   theme_cowplot()
+# ggsave(file.path(path.plots, "ratioFB_IBS-SSS.jpg"), width=5, height=5)
 
 
 # Plot by gender
 ggplot(ratio.FB, aes(x = host_sex, y = logRatioFB))+
   geom_violin()+
   geom_jitter(width=0.1)+
+  geom_signif(comparisons = list(c("male", "female")), map_signif_level = TRUE, test="wilcox.test") +
   labs(x = "",  y = 'Log2(Firmicutes/Bacteroidota)')+
   theme_cowplot()
 ```
 
-
-```{r export-plots-1, eval = FALSE, echo = FALSE}
-# Save path to plots
-path.plots <- file.path(path, "data/analysis-individual/PLOTS/plots-Liu-EDA")
-
-# Absolute abundance phylum
-jpeg(file.path(path.plots, "absAbundance_phylum.jpg"), width = 4000, height = 2000)
-plot_bar(physeq.liu, fill = "Phylum") + facet_wrap("host_subtype", scales="free_x") +
-  theme(axis.text.x = element_blank(),
-        axis.text.y = element_text(size = 30),
-        legend.text = element_text(size = 30),
-        axis.title = element_text(size = 50),
-        title = element_text(size = 70),
-        strip.text = element_text(size = 50))+
-  guides(fill=guide_legend(ncol=2))+
-  labs(x = "Samples", y = "Total read count", title = "Liu dataset (2020)")
-dev.off()
-
-# Relative abundances
-jpeg(file.path(path.plots, "relAbundance_phylum.jpg"), width = 4000, height = 2000)
-ggplot(phylum.table, aes(x = reorder(Sample, Sample, function(x) mean(phylum.table[Sample == x & Phylum == 'Firmicutes', 'Abundance'])),
-                         y = Abundance, fill = Phylum))+
-  facet_wrap(~ host_subtype, scales = "free") + # scales = "free" removes empty lines
-  geom_bar(stat = "identity") +
-  theme(axis.text.x = element_blank(),
-        axis.text.y = element_text(size = 30),
-        legend.text = element_text(size = 30),
-        axis.title = element_text(size = 50),
-        title = element_text(size = 70),
-        strip.text = element_text(size = 50))+
-  guides(fill=guide_legend(ncol=2))+
-  labs(x = "Samples", y = "Relative abundance", title = "Liu dataset (2020)")
-dev.off()
-
-jpeg(file.path(path.plots, "relAbundance_class.jpg"), width = 4000, height = 2000)
-ggplot(class.table, aes(x = reorder(Sample, Sample, function(x) mean(phylum.table[Sample == x & Phylum == 'Firmicutes', 'Abundance'])),
-                        y = Abundance, fill = Class))+
-  facet_wrap(~ host_subtype, scales = "free") + # scales = "free" removes empty lines
-  geom_bar(stat = "identity") +
-  theme(axis.text.x = element_blank(),
-        axis.text.y = element_text(size = 30),
-        legend.text = element_text(size = 30),
-        axis.title = element_text(size = 50),
-        title = element_text(size = 70),
-        strip.text = element_text(size = 50))+
-  guides(fill=guide_legend(ncol=2))+
-  labs(x = "Samples", y = "Relative abundance", title = "Liu dataset (2020)")
-dev.off()
-
-# Firmicutes:Bacteroidota log ratio
-jpeg(file.path(path.plots, "ratioFB.jpg"), width = 1500, height = 2000)
-ggplot(ratio.FB, aes(x = host_subtype, y = logRatioFB))+
-  geom_violin(lwd=3, aes(fill=host_subtype))+
-  geom_jitter(size = 8, width=0.1)+
-  scale_fill_manual(values=scales::alpha(c("blue", "red"), .3))+
-  labs(x = "",  y = 'Log2(Firmicutes/Bacteroidota)', title = "Liu dataset (2020)")+
-  theme_cowplot()+
-  theme(axis.text = element_text(size = 50),
-        axis.title = element_text(size = 50),
-        title = element_text(size = 50),
-        legend.position="none")
-dev.off()
-
-# Firmicutes:Bacteroidota log ratio by Bristol scale
-jpeg(file.path(path.plots, "ratioFB_Bristol.jpg"), width = 1500, height = 2000)
-ggplot(ratio.FB, aes(x = Bristol, y = logRatioFB))+
-  geom_violin(aes(group=Bristol), lwd=3)+
-  geom_jitter(aes(color=host_subtype), width=0.1, size=8)+
-  scale_color_manual(values=c("blue", "red"))+
-  labs(x = "Bristol stool scale",  y = 'Log2(Firmicutes/Bacteroidota)', title = "Liu dataset (2020)")+
-  theme_cowplot()+
-  theme(axis.text = element_text(size = 50),
-        axis.title = element_text(size = 50),
-        title = element_text(size = 50),
-        legend.text=element_text(size=50))
-dev.off()
-
-
-# Firmicutes:Bacteroidota log ratio by IBS symptom severity score
-jpeg(file.path(path.plots, "ratioFB_IBS-SSS.jpg"), width = 1500, height = 2000)
-ggplot(ratio.FB, aes(x = IBS_SSS, y = logRatioFB))+
-  geom_point(aes(color=host_subtype), size=8)+
-  scale_color_manual(values=c("blue", "red"))+
-  labs(x = "IBS SSS",  y = 'Log2(Firmicutes/Bacteroidota)')+
-  theme_cowplot()+
-  theme(axis.text = element_text(size = 50),
-        axis.title = element_text(size = 50),
-        title = element_text(size = 50),
-        legend.text=element_text(size=50))
-dev.off()
-```
 
 
 
@@ -403,6 +329,8 @@ saveRDS(physeq.clr, file.path(path, "data/analysis-individual/Liu-2020/02_EDA-Li
 ```
 
 
+
+
 #######################
 ## COMPUTE DISTANCES ##
 #######################
@@ -437,25 +365,25 @@ plotDistances2D <- function(dlist, ordination="MDS"){
   # Weighted UniFrac
   set.seed(123)
   iMDS.UniF <- ordinate(physeq.rel, ordination, distance=dlist$UniF)
-  plist[[1]] <- plot_ordination(physeq.rel, iMDS.UniF, color="host_disease")
+  plist[[1]] <- plot_ordination(physeq.rel, iMDS.UniF, color="host_subtype")
   
   print("Aitchison")
   # Aitchison
   set.seed(123)
   iMDS.Ait <- ordinate(physeq.clr, ordination, distance=dlist$Ait)
-  plist[[2]] <- plot_ordination(physeq.clr, iMDS.Ait, color="host_disease")
+  plist[[2]] <- plot_ordination(physeq.clr, iMDS.Ait, color="host_subtype")
   
   print("Bray")
   # Bray-Curtis
   set.seed(123)
   iMDS.Bray <- ordinate(physeq.CSN, ordination, distance=dlist$Bray)
-  plist[[3]] <- plot_ordination(physeq.CSN, iMDS.Bray, color="host_disease")
+  plist[[3]] <- plot_ordination(physeq.CSN, iMDS.Bray, color="host_subtype")
   
   print("Canberra")
   # Canberra
   set.seed(123)
   iMDS.Can <- ordinate(physeq.NZcomp, ordination, distance=dlist$Can)
-  plist[[4]] <- plot_ordination(physeq.NZcomp, iMDS.Can, color="host_disease")
+  plist[[4]] <- plot_ordination(physeq.NZcomp, iMDS.Can, color="host_subtype")
   
   # Creating a dataframe to plot everything
   plot.df = ldply(plist, function(x) x$data)
@@ -474,7 +402,7 @@ dist.liu <- getDistances()
 plot.df <- plotDistances2D(dist.liu)
 
 # Plot
-ggplot(plot.df, aes(Axis.1, Axis.2, color=host_disease))+
+ggplot(plot.df, aes(Axis.1, Axis.2, color=host_subtype))+
   geom_point(size=4, alpha=0.5)  + scale_color_manual(values = c('blue', 'red'))+
   facet_wrap(distance~., scales='free', nrow=1)+
   theme_bw()+
@@ -506,12 +434,11 @@ plotDistances3D <- function(d, name_dist){
   
   # Plot
   fig.3D <- plot_ly(x=xyz[,1], y=xyz[,2], z=xyz[,3], type="scatter3d", mode="markers",
-                    color=sample_data(physeq.liu)$host_disease, colors = c("blue", "red"))%>%
+                    color=sample_data(physeq.liu)$host_subtype, colors = c("blue", "red"))%>%
     layout(title = paste('MDS in 3D with', name_dist, 'distance', sep = ' '))
   
   return(fig.3D)
 }
-
 ```
 
 
@@ -665,7 +592,7 @@ table(phylum.table.main$Phylum) # sanity check
 
 
 # Plot
-ggplot(phylum.table.main, aes(x = host_disease, y = Abundance, fill = Phylum))+
+ggplot(phylum.table.main, aes(x = host_subtype, y = Abundance, fill = Phylum))+
   geom_bar(stat = "identity", position = "fill") +
   scale_fill_manual(values=c("#f03b20", "#3182bd", "#feb24c", "#bdbdbd", "#31a354"))+
   scale_y_continuous(expand = c(0, 0))+ # remove empty space between axis and plot
@@ -676,38 +603,6 @@ ggplot(phylum.table.main, aes(x = host_disease, y = Abundance, fill = Phylum))+
 
 
 ![(A) Relative taxonomic abundances at the level of phylum are shown in bar charts.](/Users/scarcy/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Liu-2020/02_EDA-Liu/fig2A.png){width=40%}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
