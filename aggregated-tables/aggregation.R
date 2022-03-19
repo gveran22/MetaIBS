@@ -102,24 +102,3 @@ for(physeq.cohort in datasets){
   }
 
 }
-
-#### TO DELETE ###
-i=0
-for(physeq.cohort in datasets){
-  
-  i=i+1
-  cat("++", gsub( "-.*$", "", names(datasets[i])), "++\n")
-  
-  # Get the tax table
-  df <- tax_table(physeq.cohort) %>%
-    as.data.frame()
-  
-  # Aggregate at each taxonomic level
-  for (taxa in taxa.levels){
-    cat(taxa, ":", length(unique(na.omit(df[,taxa]))), "\n") # print nb of each taxonomic level
-  }
-  
-}
-test <- tax_table(physeq.agp) %>%
-  as.data.frame()
-length(unique(na.omit(test[,"Family"])))
