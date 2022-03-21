@@ -352,10 +352,26 @@ track
 
 
 ```{r seqdepth, echo=FALSE, eval=FALSE, include=FALSE}
+# Import metadata to remove the 17 samples that are not HC/IBS
+metadata_table <- read.csv("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Pozuelo-2015/00_Metadata-Pozuelo/Pozuelo-Metadata.csv", header = TRUE, sep = ",") %>% select(-X)
+rownames(metadata_table) <- metadata_table$Run
+samples_to_remove <- rownames(metadata_table[metadata_table$host_disease == "TO-DISCARD",])
+# length(samples_to_remove) # 17
+
 # Save nb of reads per sample before / after dada2 pipeline
 nb.reads <- data.frame("before" = raw_stats$reads,
                        "after" = rowSums(seqtable.nochim),
                        "dataset" = "Pozuelo")
+
+# Remove the samples that are neither healthy nor IBS
+nb.reads <- nb.reads[!rownames(nb.reads) %in% samples_to_remove,]
+# dim(nb.reads) # 273
+
+# Sanity check
+# test <- merge(nb.reads, metadata_table, by="row.names")
+# table(test$host_disease) # 88 HC and 185 IBS
+
+# Save
 saveRDS(nb.reads, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/DADA2-FILT/seqdepth_pozuelo.rds")
 ```
 
