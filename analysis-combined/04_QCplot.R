@@ -32,6 +32,11 @@ df <- reshape2::melt(rbind(readRDS(file.path(path, "seqdepth_labus.rds")),
                               readRDS(file.path(path, "seqdepth_zeber.rds"))),
                        id.vars="dataset", variable.name="QC", value.name="seqdepth")
 
+# Sanity checks
+dim(df[df$QC=="before",]) # 2948 samples
+# Note: in the flowchart, we say that we processed 2951 raw FASTQ files
+# but in the Hugerth dataset, 3 FASTQ files had a weird header and couldn't be processed => 2948 samples
+
 
 ########
 # PLOT #
@@ -50,7 +55,6 @@ ggplot(df, aes(x = dataset, y = seqdepth, fill=QC))+
   geom_boxplot(position=position_dodge(width=0.75), outlier.shape = NA, width = 0.4, lwd=0.5, alpha=0.3)+
   theme_cowplot()+
   scale_y_continuous(labels=comma, limits=c(0,2e5))+
-  # ylim(c(0,2e5))+
   scale_color_manual(values=c("#bf812d", "#35978f"), guide="none")+
   scale_fill_manual(values=c("#dfc27d", "#35978f"))+
   theme(axis.text.x = element_text(angle = 45, hjust=1))+
