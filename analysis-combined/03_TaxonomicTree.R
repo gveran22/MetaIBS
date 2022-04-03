@@ -166,12 +166,12 @@ nb_ASV_per_genus <- function(physeq){
 #   cat("Common-scale normalization...\n")
 #   physeq.CSN <- transform_sample_counts(physeq, function(x) (x*100) / sum(x) )
 #   print(table(sample_sums(physeq.CSN))) # sanity check total of 100 counts per sample
-#   
+# 
 #   # Get the mean count per sample for each ASV
 #   cat("\nAverage count of each genus per sample....\n")
 #   meanCountASV <- t(data.frame(as.list(colMeans(otu_table(physeq.CSN)))))
 #   # sum(meanCountASV[,1]) # sanity check should sum to 100
-#   
+# 
 #   # Get a dataframe with the average count of each Genus per sample
 #   countGenus.df <- meanCountASV %>%
 #     as.data.frame()%>%
@@ -188,10 +188,10 @@ nb_ASV_per_genus <- function(physeq){
 #     summarize(count=sum(Count)) %>% # if several ASVs belong to same Genus, need to sum their counts
 #     # about 30,851 ASVs belong to an unknown genus (which represents ~10% of the counts)
 #     filter(!is.na(Genus))
-#   
+# 
 #   countGenus.df <- data.frame(count=countGenus.df$count,
 #                               row.names = countGenus.df$leaf)
-#   
+# 
 #   # Return dataframe
 #   return(countGenus.df)
 # }
@@ -343,6 +343,7 @@ ggsave("~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/03_TaxonomicTree
 #                       limits=c(1,13),
 #                       breaks = c(1,5,10),
 #                       name="Number of datasets")+
+#   scale_y_reverse() +# flip tree up/down
 #   labs(title="Fecal samples")
 # ggsave("~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/03_TaxonomicTree/taxTree_fecal.jpg", width=12, height=8)
 
@@ -351,7 +352,7 @@ ggsave("~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/03_TaxonomicTree
 ## ***********************
 ## 3 - SIGMOID SAMPLES
 
-# # Agglomerate to Genus level
+# Agglomerate to Genus level
 # physeq.sigmoid.glom <- tax_glom(physeq.sigmoid, "Genus")
 # # saveRDS(physeq.sigmoid.glom, "~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/03_TaxonomicTree/physeq_sigmoid_glomGenus.rds")
 # # physeq.sigmoid.glom <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/03_TaxonomicTree/physeq_sigmoid_glomGenus.rds")
@@ -391,6 +392,7 @@ ggsave("~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/03_TaxonomicTree
 #                       limits=c(1,13),
 #                       breaks = c(1,5,10),
 #                       name="Number of datasets")+
+#   scale_y_reverse() +
 #   labs(title="Sigmoid samples")
 # ggsave("~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/03_TaxonomicTree/taxTree_sigmoid.jpg", width=12, height=8)
 

@@ -53,15 +53,6 @@ physeq <- merge_phyloseq(physeq.labus,
                          physeq.nagel,
                          physeq.zeber)
 
-# Separate fecal & sigmoid samples
-# physeq.fecal <- subset_samples(physeq, sample_type == 'stool') # 2,145 samples
-# physeq.fecal <- prune_taxa(taxa_sums(physeq.fecal)>0, physeq.fecal) # remove ASVs that are not present anymore
-# nsamples(physeq.fecal)
-# 
-# physeq.sigmoid <- subset_samples(physeq, sample_type == 'sigmoid') # 431 samples
-# physeq.sigmoid <- prune_taxa(taxa_sums(physeq.sigmoid)>0, physeq.sigmoid)
-# nsamples(physeq.sigmoid)
-
 # Agglomerate to phylum level and melt to long format
 phylumTable <- physeq %>%
   tax_glom(taxrank = "Phylum") %>%
@@ -113,25 +104,7 @@ ratio.df <- left_join(x=bacter, y=firmi, by=common.columns) %>%
   mutate(Bacteroidota=replace(Bacteroidota, Bacteroidota==0, 0.5),
          Firmicutes=replace(Firmicutes, Firmicutes==0, 0.5)) %>%
   # Compute log ratios
-  mutate(LogRatio_FirmBact = log2(Firmicutes/Bacteroidota)) #%>%
-  # Add column author_disease
-  # mutate(author_disease=paste0(author, sep="_", host_disease)) %>%
-  # Add IBS subtype to AGP
-  # mutate(host_subtype=replace(host_subtype,
-  #                             author=="AGP" & host_disease=="IBS" & bowel_movement_quality=="Constipated",
-  #                             "IBS-C")) %>%
-  # mutate(host_subtype=replace(host_subtype,
-  #                             author=="AGP" & host_disease=="IBS" & bowel_movement_quality=="Diarrhea",
-  #                             "IBS-D")) %>%
-  # mutate(host_subtype=replace(host_subtype,
-  #                             author=="AGP" & host_disease=="Healthy" & bowel_movement_quality!="Normal",
-  #                             "HC-unknown"))
-
-# sanity check
-# ratio.df %>%
-#   filter(author=="AGP") %>%
-#   group_by(host_disease, bowel_movement_quality, host_subtype) %>%
-#   count()
+  mutate(LogRatio_FirmBact = log2(Firmicutes/Bacteroidota))
 
 
 # Set dataset order for plots
@@ -168,7 +141,6 @@ a <- ggplot(ratio.df %>% filter(Collection=="1st" & sample_type=="stool"),
   theme_cowplot()+
   theme(axis.text.x = element_text(angle = 45, color="black", hjust=1))+
   labs(x = '', y = expression(Log[2](Firmicutes/Bacteroidota)), fill="", title="Stool samples")
-# ggsave("~/Projects/IBS_Meta-analysis_16S/data/plots_paper/firm_bact_01.jpg", width=10, height=5)
 
 
 # Plot Firm/Bact ratio for sigmoid samples
@@ -181,7 +153,6 @@ b <- ggplot(ratio.df %>% filter(Collection=="1st" & sample_type=="sigmoid"),
   theme_cowplot()+
   theme(axis.text.x = element_text(angle = 45, color="black", hjust=1))+
   labs(x = '', y =  expression(Log[2](Firmicutes/Bacteroidota)), fill="", title="Sigmoid samples")
-# ggsave("~/Projects/IBS_Meta-analysis_16S/data/plots_paper/firm_bact_02.jpg", width=5, height=5)
 
 
 # Plot Firm/Bact ratio per collection time point
@@ -205,7 +176,6 @@ c <- ggplot(data = ratio.df %>%
   theme_cowplot()+
   theme(axis.text.x = element_text(angle = 45, color="black", hjust=1))+
   labs(x = '', y = expression(Log[2](Firmicutes/Bacteroidota)), fill="", title="Collection time point")
-# ggsave("~/Projects/IBS_Meta-analysis_16S/data/plots_paper/firm_bact_03.jpg", width=6, height=5)
 
 
 # Plot Firm/Bact ratio per IBS subtype
@@ -239,7 +209,6 @@ d <- ggplot(
   theme(strip.text.y = element_text(angle=0, hjust=0),
         strip.background = element_blank())+
   labs(title="IBS subtypes", x = '', y =  expression(Log[2](Firmicutes/Bacteroidota)))
-# ggsave("~/Projects/IBS_Meta-analysis_16S/data/plots_paper/firm_bact_04.jpg", width=5, height=9)
 
 
 # Combine plots
@@ -251,6 +220,5 @@ ggdraw() +
   draw_plot_label(label = c("A", "B", "C", "D"), size = 15,
                   x = c(0, 0, 0.30, 0.65), y = c(1, 0.5, 0.5, 1))
 ggsave("~/Projects/IBS_Meta-analysis_16S/data/plots_paper/firm_bact_05.jpg", width=15, height=10)
-
 
 
