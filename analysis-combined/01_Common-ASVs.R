@@ -18,19 +18,54 @@ library(cowplot)
 
 # Data
 path.phy <- "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/CLUSTER/PhyloTree/input"
-physeq.ringel   <- readRDS(file.path(path.phy, "physeq_ringel.rds"))
 physeq.labus    <- readRDS(file.path(path.phy, "physeq_labus.rds"))
 physeq.lopresti <- readRDS(file.path(path.phy, "physeq_lopresti.rds"))
-physeq.pozuelo  <- readRDS(file.path(path.phy, "physeq_pozuelo.rds"))
-physeq.zhuang   <- readRDS(file.path(path.phy, "physeq_zhuang.rds"))
-physeq.zhu      <- readRDS(file.path(path.phy, "physeq_zhu.rds"))
-physeq.hugerth  <- readRDS(file.path(path.phy, "physeq_hugerth.rds"))
-physeq.fukui    <- readRDS(file.path(path.phy, "physeq_fukui.rds"))
-physeq.mars     <- readRDS(file.path(path.phy, "physeq_mars.rds"))
-physeq.liu      <- readRDS(file.path(path.phy, "physeq_liu.rds"))
+physeq.ringel   <- readRDS(file.path(path.phy, "physeq_ringel.rds"))
 physeq.agp      <- readRDS(file.path(path.phy, "physeq_agp.rds"))
+physeq.liu      <- readRDS(file.path(path.phy, "physeq_liu.rds"))
+physeq.pozuelo  <- readRDS(file.path(path.phy, "physeq_pozuelo.rds"))
+physeq.fukui    <- readRDS(file.path(path.phy, "physeq_fukui.rds"))
+physeq.hugerth  <- readRDS(file.path(path.phy, "physeq_hugerth.rds"))
+physeq.mars     <- readRDS(file.path(path.phy, "physeq_mars.rds"))
+physeq.zhu      <- readRDS(file.path(path.phy, "physeq_zhu.rds"))
+physeq.zhuang   <- readRDS(file.path(path.phy, "physeq_zhuang.rds"))
 physeq.nagel    <- readRDS(file.path(path.phy, "physeq_nagel.rds"))
 physeq.zeber    <- readRDS(file.path(path.phy, "physeq_zeber.rds"))
+
+# Put datasets in a list
+datasets <- list("Labus"    = physeq.labus,
+                 "Lopresti" = physeq.lopresti,
+                 "Ringel"   = physeq.ringel,
+                 "AGP"      = physeq.agp,
+                 "Liu"      = physeq.liu,
+                 "Pozuelo"  = physeq.pozuelo,
+                 "Fukui"    = physeq.fukui,
+                 "Mars"     = physeq.mars,
+                 "Hugerth"  = physeq.hugerth,
+                 "Zhu"      = physeq.zhu,
+                 "Zhuang"   = physeq.zhuang,
+                 "Nagel"    = physeq.nagel,
+                 "Zeber"    = physeq.zeber)
+
+# If the phyloseq objects contain phylogenetic trees, they need to be removed
+# for (i in 1:length(datasets)){
+#   print(names(datasets)[i])
+#   # Get the phyloseq object
+#   physeq <- datasets[[i]]
+#   # Replace rownames in tax_table and colnames in otu_table by ASV sequences (and not "ASV1, ASV2, ...")
+#   taxa_names(physeq) <- as.character(refseq(physeq))
+#   # Remove phylogenetic tree
+#   physeq <- phyloseq(otu_table(physeq),
+#                      sample_data(physeq), 
+#                      tax_table(physeq),
+#                      refseq(physeq))
+#   # Replace the phyloseq object in the list
+#   datasets[[i]] <- physeq
+# }
+# # Sanity checks
+# print(datasets$Labus) # shouldn't have a phy_tree() slot
+# print(taxa_names(datasets$Labus)[1:3]) # should be DNA sequences (the ASV sequences) and not "ASV1, ASV2, ASV3"
+
 
 
 
@@ -39,19 +74,19 @@ physeq.zeber    <- readRDS(file.path(path.phy, "physeq_zeber.rds"))
 ##############################################
 
 # Merge phyloseq objects
-physeq.all <- merge_phyloseq(physeq.labus,
-                             physeq.lopresti,
-                             physeq.ringel,
-                             physeq.agp,
-                             physeq.liu,
-                             physeq.pozuelo,
-                             physeq.fukui,
-                             physeq.mars,
-                             physeq.hugerth,
-                             physeq.zhu,
-                             physeq.zhuang,
-                             physeq.nagel,
-                             physeq.zeber)
+physeq.all <- merge_phyloseq(datasets$Labus,
+                             datasets$Lopresti,
+                             datasets$Ringel,
+                             datasets$AGP,
+                             datasets$Liu,
+                             datasets$Pozuelo,
+                             datasets$Fukui,
+                             datasets$Mars,
+                             datasets$Hugerth,
+                             datasets$Zhu,
+                             datasets$Zhuang,
+                             datasets$Nagel,
+                             datasets$Zeber)
 
 # Compare the number of ASVs before/after merging
 sum(ntaxa(physeq.labus)+
@@ -69,22 +104,6 @@ sum(ntaxa(physeq.labus)+
       ntaxa(physeq.zeber)) # 81,474 before
 
 ntaxa(physeq.all) # 79,943 after
-
-
-# Put datasets in a list
-datasets <- list("Labus"    = physeq.labus,
-                 "Lopresti" = physeq.lopresti,
-                 "Ringel"   = physeq.ringel,
-                 "AGP"      = physeq.agp,
-                 "Liu"      = physeq.liu,
-                 "Pozuelo"  = physeq.pozuelo,
-                 "Fukui"    = physeq.fukui,
-                 "Mars"     = physeq.mars,
-                 "Hugerth"  = physeq.hugerth,
-                 "Zhu"      = physeq.zhu,
-                 "Zhuang"   = physeq.zhuang,
-                 "Nagel"    = physeq.nagel,
-                 "Zeber"    = physeq.zeber)
 
 
 # Let's get all ASVs in a dataframe and check if we can find common ones

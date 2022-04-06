@@ -107,8 +107,8 @@ a <- ggplot(phylum.table.main %>% filter(sample_type == "stool"),
   labs(x = "Fecal samples", y = "Relative abundance")
 
 # Save figure
-# ggsave("~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/05_Relative-Abund/phyla_relabund_fecal_02.jpg", width=8, height=5) # high
-# ggsave("~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/05_Relative-Abund/phyla_relabund_fecal_03.jpg", width=10, height=5) # large
+# ggsave("~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/05_Relative-Abund/phyla_relabund_fecal_01.jpg", width=8, height=5) # high
+# ggsave("~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/05_Relative-Abund/phyla_relabund_fecal_02.jpg", width=10, height=5) # large
 
 
 # Plot main phyla by sample (sigmoid samples)
@@ -124,7 +124,7 @@ b <- ggplot(phylum.table.main %>% filter(sample_type == "sigmoid"),
         axis.ticks.x = element_blank(),
         strip.background = element_rect(fill="white", color="black"),
         strip.text = element_text(size=15),
-        #legend.position = "None",
+        # legend.position = "None",
         legend.text = element_text(size=12),
         legend.title = element_text(size=12),
         legend.key.size = unit(0.2, 'cm'),
@@ -133,8 +133,8 @@ b <- ggplot(phylum.table.main %>% filter(sample_type == "sigmoid"),
   labs(x = "Biopsy samples", y = "Relative abundance")
 
 # Save figure
-# ggsave("~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/05_Relative-Abund/phyla_relabund_sigmoid_02.jpg", width=8, height=5) # high
-# ggsave("~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/05_Relative-Abund/phyla_relabund_sigmoid_03.jpg", width=10, height=5) # large
+# ggsave("~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/05_Relative-Abund/phyla_relabund_sigmoid_01.jpg", width=8, height=5) # high
+# ggsave("~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/05_Relative-Abund/phyla_relabund_sigmoid_02.jpg", width=10, height=5) # large
 
 
 
@@ -150,9 +150,10 @@ phylum.sample <- phylum.table.main %>%
   dplyr::summarize(Abundance=sum(Abundance)) %>%
   ungroup()
 # Sanity check (sum per sample == 1)
-# phylum.sample %>%
+# test <- phylum.sample %>%
 #   group_by(Sample) %>%
 #   summarize(sum_per_sample=sum(Abundance))
+# table(test$sum_per_sample)
 
 
 # *********
@@ -245,7 +246,7 @@ c <- ggplot(phylum.subtype %>% filter(host_subtype != "IBS-unspecified"),
         panel.background=element_blank(),
         axis.line.x = element_line(size=0.5, color="black"))+
   labs(x = "", y = "Proportion", title="Fecal samples")
-# ggsave("~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/05_Relative-Abund/phyla_relabund_2.jpg", width=7, height=5)
+# ggsave("~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/05_Relative-Abund/phyla_relabund_2.jpg", width=6, height=5)
 
 
 # *********

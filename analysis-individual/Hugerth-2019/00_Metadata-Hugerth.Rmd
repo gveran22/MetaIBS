@@ -56,7 +56,7 @@ col <- c("Run", "Collection_Date", "environment_.biome.", "host_body_product", "
 
 # CLEANUP SRADF
 sraDF <- sra_metadata %>%
-  select(col) %>%
+  select(all_of(col)) %>%
   # remove 26 "bioreactor" samples (controls)
   filter(environment_.biome. != "bioreactor") %>% 
   select(-environment_.biome.) %>%
@@ -151,7 +151,7 @@ paperDF %>%
 paperDF %>%
   count(host_disease)
 # take into account that one healthy sample got a double match into the SRA
-# => 321 healthy samples (paper describes 466)
+# => 322 healthy samples (paper describes 466)
 # => 96 IBS samples (paper describes 95)
 # => rest is non-IBS and non-healthy (n=144)
 ```
@@ -199,7 +199,7 @@ bind_rows(paperDF %>% filter(!Run %in% paperRuns.DF$Run),
   arrange(host_ID)
 # 7 samples from supplementary ASV table are not in samples suggested to download
 # 6 samples suggested to download are not in supplementary ASV table
-# HOWEVER, these samples correspond to the sample individuals!! (same host_IDs...)
+# HOWEVER, these samples correspond to the same individuals!! (same host_IDs...)
 ```
 
 Overall, we have found the 561 samples included in the analysis by the paper. We found the sample names from (1) the supplementary ASV table and from (2) the samples ERS3379832-ERS3380418. They both correspond to the same samples ( _except for 6-7 samples, but they belong to the same individuals..._).
