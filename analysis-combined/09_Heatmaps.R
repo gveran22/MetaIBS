@@ -61,9 +61,9 @@ physeq.fecal <- subset_samples(physeq, sample_type == 'stool') # 2,220 samples
 physeq.fecal <- prune_taxa(taxa_sums(physeq.fecal)>0, physeq.fecal) # remove ASVs that are not present anymore
 cat("Nb of fecal samples:", nsamples(physeq.fecal))
 
-# physeq.sigmoid <- subset_samples(physeq, sample_type == 'sigmoid') # 431 samples
-# physeq.sigmoid <- prune_taxa(taxa_sums(physeq.sigmoid)>0, physeq.sigmoid) # remove ASVs that are not present anymore
-# cat("\nNb of sigmoid samples:", nsamples(physeq.sigmoid))
+physeq.sigmoid <- subset_samples(physeq, sample_type == 'sigmoid') # 431 samples
+physeq.sigmoid <- prune_taxa(taxa_sums(physeq.sigmoid)>0, physeq.sigmoid) # remove ASVs that are not present anymore
+cat("\nNb of sigmoid samples:", nsamples(physeq.sigmoid))
 
 
 # Covariates for heatmap labels
@@ -236,3 +236,68 @@ dev.off()
 
 
 
+
+
+##############################################
+# HEATMAP FAMILIES AS ROWS (SIGMOID SAMPLES) #
+##############################################
+
+# Agglomerate to Family level
+family.agg.sigmoid <- physeq.sigmoid %>%
+  tax_glom(taxrank = "Family") %>%
+  transform_sample_counts(function(x) {x/sum(x)} ) %>%
+  psmelt()
+
+
+# Get dataframe family x samples
+familyTable.sigmoid <- acast(family.agg.sigmoid, Family ~ Sample, fun.aggregate=sum, value.var = 'Abundance')
+
+# Sanity checks
+familyTable.sigmoid[1:5,1:5]
+dim(familyTable.sigmoid)
+table(is.na(familyTable.sigmoid))
+table(colSums(familyTable.sigmoid)) # sum per sample
+table(rownames(familyTable.sigmoid))
+table(rowSums(familyTable.sigmoid) == 0)
+
+# For coloring, add "pseudocounts"
+# min(familyTable.sigmoid[familyTable.sigmoid>0]) # min is 2e-5
+familyTable.sigmoid[familyTable.sigmoid == 0] <- 1e-7
+
+
+# Covariates for heatmap
+color.sigmoid <- data.frame(disease = sample_data(physeq.sigmoid)[,'host_disease'],
+                            seq_tech = sample_data(physeq.sigmoid)[,'sequencing_tech'],
+                            author = sample_data(physeq.sigmoid)[,'author'])
+color.sigmoid <- color.sigmoid %>%
+  mutate(author = factor(color.sigmoid$author, levels = c('LoPresti','Hugerth','Mars'))) %>%
+  arrange(author, host_disease)
+sample.order.sigmoid <- rownames(color.sigmoid) # order of samples
+# table(color.sigmoid$author) # sanity check
+
+# Colors for heatmap
+annotationCol.sigmoid <- list(host_disease = c(Healthy='#08519c', IBS='#ef3b2c'),
+                              sequencing_tech = c('454 pyrosequencing'='#6a51a3', 'Illumina paired-end'='#238b45'),
+                              author = setNames(c("#1F78B4", "#FF7F00", "#dfc27d"), levels(color.sigmoid$author)))
+
+
+
+
+# Reorder samples
+familyTable.sigmoid <- familyTable.sigmoid[,sample.order.sigmoid] # reorder samples
+
+jpeg("~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/09_Heatmaps/sigmoid/family_heatmp_ordered.jpg", height = 4000, width = 4000, res = 400)
+pheatmap(log10(familyTable.sigmoid),
+         color = colorRampPalette(rev(brewer.pal(n = 7, name = "RdYlBu")))(50),
+         show_rownames = T,
+         show_colnames = F,
+         fontsize_row = 6,
+         cluster_rows = T,
+         cluster_cols = F,
+         # cutree_rows = 2,
+         # cutree_cols = 2,
+         clustering_method = 'ward.D2',
+         annotation_col = color.sigmoid,
+         annotation_colors = annotationCol.sigmoid,
+         main = "Hierarchical clustering with ward linkage (families as rows)")
+dev.off()
