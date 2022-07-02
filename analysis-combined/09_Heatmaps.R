@@ -281,11 +281,10 @@ annotationCol.sigmoid <- list(host_disease = c(Healthy='#08519c', IBS='#ef3b2c')
                               author = setNames(c("#1F78B4", "#FF7F00", "#dfc27d"), levels(color.sigmoid$author)))
 
 
-
-
 # Reorder samples
 familyTable.sigmoid <- familyTable.sigmoid[,sample.order.sigmoid] # reorder samples
 
+# Plot
 jpeg("~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/09_Heatmaps/sigmoid/family_heatmp_ordered.jpg", height = 4000, width = 4000, res = 400)
 pheatmap(log10(familyTable.sigmoid),
          color = colorRampPalette(rev(brewer.pal(n = 7, name = "RdYlBu")))(50),
