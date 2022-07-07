@@ -88,7 +88,7 @@ physeq_fecal.CSN <- transform_sample_counts(physeq_fecal.family, function(x) (x*
 # saveRDS(physeq_fecal.CSN, "~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/02_DimensionReduction/physeq_fecal_CSN.rds")
 
 # Compute Bray-Curtis
-glom_fecal.bray <- phyloseq::distance(physeq_fecal.CSN, method = "bray") # real long to compute
+glom_fecal.bray <- phyloseq::distance(physeq_fecal.CSN, method = "bray")
 
 # Compute principal coordinate analysis (PCoA)
 set.seed(123)
@@ -101,9 +101,18 @@ plot_fecal.df <- plot_ordination(physeq_fecal.CSN, iMDS_fecal.Bray)$data
 # PLOT PCoA
 # **********
 
+# Set order for authors & seqtech
+plot_fecal.df <- plot_fecal.df %>%
+  mutate(author = factor(plot_fecal.df$author, levels = c('Labus', 'LoPresti', 'Ringel', # 454 pyrosequencing
+                                                           'AGP', 'Liu', 'Pozuelo', # Illumina single end
+                                                           'Fukui', 'Hugerth', 'Mars', 'Zhu', 'Zhuang', # Illumina paired end
+                                                           'Nagel', 'Zeber-Lubecka'))) %>%
+  mutate(sequencing_tech = factor(plot_fecal.df$sequencing_tech, levels= c("454 pyrosequencing", "Illumina single-end",
+                                                                            "Illumina paired-end", "Ion Torrent")))
+
 # Per author/dataset
 ggplot(plot_fecal.df, aes(Axis.1, Axis.2, color=author))+
-  geom_point(size=2, alpha=0.5) +
+  geom_point(size=.5) +
   scale_color_manual(values=pals::brewer.paired(12), name="")+ # author
   labs(title = "Dataset")+
   theme_cowplot()+
@@ -134,3 +143,62 @@ ggplot(plot_fecal.df, aes(Axis.1, Axis.2, color=sequencing_tech))+
 ###################
 # SIGMOID SAMPLES #
 ###################
+
+# *********************
+# BRAY-CURTIS DISTANCE 
+# *********************
+
+# Agglomerate to Family level
+physeq_sigmoid.family <- tax_glom(physeq.sigmoid, "Family")
+# View(tax_table(physeq_sigmoid.family)) #  sanity check
+
+# Common-scale normalization
+physeq_sigmoid.CSN <- transform_sample_counts(physeq_sigmoid.family, function(x) (x*min(sample_sums(physeq_sigmoid.family))) / sum(x) )
+# table(rowSums(otu_table(physeq_sigmoid.CSN))) # check that all rows are summing to the same total
+# saveRDS(physeq_sigmoid.CSN, "~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/02_DimensionReduction/physeq_sigmoid_CSN.rds")
+
+# Compute Bray-Curtis
+glom_sigmoid.bray <- phyloseq::distance(physeq_sigmoid.CSN, method = "bray")
+
+# Compute principal coordinate analysis (PCoA)
+set.seed(123)
+iMDS_sigmoid.Bray <- ordinate(physeq=physeq_sigmoid.CSN, method="PCoA", distance=glom_sigmoid.bray)
+plot_sigmoid.df <- plot_ordination(physeq_sigmoid.CSN, iMDS_sigmoid.Bray)$data
+
+
+
+# **********
+# PLOT PCoA
+# **********
+
+# Set order for authors & seqtech
+plot_sigmoid.df <- plot_sigmoid.df %>%
+  mutate(author = factor(plot_sigmoid.df$author, levels = c('LoPresti', 'Hugerth', 'Mars'))) %>%
+  mutate(sequencing_tech = factor(plot_sigmoid.df$sequencing_tech, levels= c("454 pyrosequencing","Illumina paired-end")))
+
+# Per author/dataset
+ggplot(plot_sigmoid.df, aes(Axis.1, Axis.2, color=author))+
+  geom_point(size=.5) +
+  scale_color_manual(values=c("#1F78B4", "#FF7F00", "#dfc27d"), name="")+ # author
+  labs(title = "Dataset")+
+  theme_cowplot()+
+  theme(line = element_blank(),
+        plot.title = element_text(hjust = 0.5))
+
+# Per host_disease
+ggplot(plot_sigmoid.df, aes(Axis.1, Axis.2, color=host_disease))+
+  geom_point(size=.5) +
+  scale_color_manual(values = c('blue', 'red', 'black'), name="")+ # disease
+  labs(title = "Disease phenotype")+
+  theme_cowplot()+
+  theme(line = element_blank(),
+        plot.title = element_text(hjust = 0.5))
+
+# Per seq. technology
+ggplot(plot_sigmoid.df, aes(Axis.1, Axis.2, color=sequencing_tech))+
+  geom_point(size=.5) +
+  scale_color_manual(values=c("#6a51a3", "#238b45"), name="")+ # seqtech
+  labs(title = "Seq. technology")+
+  theme_cowplot()+
+  theme(line = element_blank(),
+        plot.title = element_text(hjust = 0.5))
