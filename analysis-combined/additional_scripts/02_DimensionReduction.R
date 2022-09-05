@@ -1,6 +1,6 @@
 ##########################
-# Purpose: Dimension reduction of all samples
-# Date: January 2022
+# Purpose: Compute Aitchison, Bray-Curtis, Canberra distances on all samples
+# Date: July 2022
 # Author: Salomé Carcy
 ##########################
 
@@ -13,10 +13,8 @@
 library(phyloseq)
 library(ggplot2)
 library(cowplot)
-#library(umap)
 library(tidyverse)
-#library(reshape2)
-#library(gtools)
+
 
 # Data
 path.phy <- "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/CLUSTER/PhyloTree/input"
@@ -57,12 +55,16 @@ physeq.all <- merge_phyloseq(physeq.ringel,
                              physeq.zeber)
 
 # Sanity check
-physeq.all # 2,651 samples and 79,917 taxa
+physeq.all # 2,651 samples and 79,943 taxa
+
 
 # Separate fecal & sigmoid samples
-# physeq.fecal <- subset_samples(physeq.all, sample_type == 'stool') # 2,228 samples
-# physeq.sigmoid <- subset_samples(physeq, sample_type == 'sigmoid') # 431 samples
+# physeq.fecal <- subset_samples(physeq.all, sample_type == 'stool') # 2,220 samples
+# physeq.fecal <- prune_taxa(taxa_sums(physeq.fecal)>0, physeq.fecal) # remove ASVs that are not present anymore
 # cat("Nb of fecal samples:", nsamples(physeq.fecal))
+# 
+# physeq.sigmoid <- subset_samples(physeq.all, sample_type == 'sigmoid') # 431 samples
+# physeq.sigmoid <- prune_taxa(taxa_sums(physeq.sigmoid)>0, physeq.sigmoid) # remove ASVs that are not present anymore
 # cat("\nNb of sigmoid samples:", nsamples(physeq.sigmoid))
 
 
@@ -71,6 +73,9 @@ physeq.all # 2,651 samples and 79,917 taxa
 ######################
 # DATA NORMALIZATION #
 ######################
+
+# If want to agglomerate to a certain taxonomic level, do it before normalization
+# physeq.all <- tax_glom(physeq.all, "Family")
 
 # table(sample_sums(physeq.all)<500) # sanity check
 path <- "~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/02_DimensionReduction"
@@ -93,21 +98,21 @@ physeq.NZcomp <- transform_sample_counts(physeq.NZcomp, function(x) x / sum(x) )
 physeq.CSN <- physeq.all
 physeq.CSN <- transform_sample_counts(physeq.CSN, function(x) (x*min(sample_sums(physeq.CSN))) / sum(x) )
 # table(rowSums(otu_table(physeq.CSN))) # check that all rows are summing to the same total
-# saveRDS(physeq.CSN, file.path(path, "data/analysis-combined/02_DimensionReduction/physeq_all_CSN.rds"))
+# saveRDS(physeq.CSN, file.path(path, "physeq_all_CSN.rds"))
 
 
 # CENTERED LOG RATIO (CLR) COUNT
 physeq.clr <- microbiome::transform(physeq.all, "clr") # the function adds pseudocounts itself
 otu_table(physeq.all)[1:5, 1:5] # should contain absolute counts
 otu_table(physeq.clr)[1:5, 1:5] # should all be relative
-# saveRDS(physeq.clr, file.path(path, "data/analysis-combined/02_DimensionReduction/physeq_all_clr.rds"))
+# saveRDS(physeq.clr, file.path(path, "physeq_all_clr.rds"))
 
 
 
 
-#######################
-# DIMENSION REDUCTION #
-#######################
+#############
+# FUNCTIONS #
+#############
 
 # Compute distances
 getDistances <- function(){
@@ -121,8 +126,9 @@ getDistances <- function(){
   return(dist.list)
 }
 
+
 # Function to plot distances
-plotDistances2D <- function(dlist, ordination="MDS", coloring="host_disease"){
+plotDistances2D <- function(dlist, ordination="MDS"){
   plist <- NULL
   plist <- vector("list", 3)
   names(plist) <- c("Aitchison", "Bray-Curtis", "Canberra")
@@ -156,51 +162,108 @@ plotDistances2D <- function(dlist, ordination="MDS", coloring="host_disease"){
 
 
 
+##################################
+# COMPUTE DISTANCES & ORDINATION #
+##################################
+
+# Compute distances
+dist.all <- getDistances()
+# saveRDS(dist.all, file.path(path, "output_ait-bray-can-distances.rds"))
+# dist.all <- readRDS(file.path(path, "output_ait-bray-can-distances.rds"))
+
+
+# Compute ordination (MDS)
+plot.df.mds <- plotDistances2D(dlist=dist.all, ordination="MDS")
+# saveRDS(plot.df.mds, file.path(path, "output_plot-df-MDS.rds"))
+# plot.df.mds <- readRDS(file.path(path, "output_plot-df-MDS.rds"))
+
+
+# Compute ordination (NMDS)
+plot.df.nmds <- plotDistances2D(dlist=dist.all, ordination="NMDS")
+# saveRDS(plot.df.nmds, file.path(path, "output_plot-df-NMDS.rds"))
+# plot.df.nmds <- readRDS(file.path(path, "output_plot-df-NMDS.rds"))
+# CAREFUL !!!! NMDS DID NOT CONVERGE !!!!!
+
+
+# Set order for authors & seqtech
+ordered_author <- c('Labus', 'LoPresti', 'Ringel', # 454 pyrosequencing
+                    'AGP', 'Liu', 'Pozuelo', # Illumina single end
+                    'Fukui', 'Hugerth', 'Mars', 'Zhu', 'Zhuang', # Illumina paired end
+                    'Nagel', 'Zeber-Lubecka')
+ordered_seqtech <- c("454 pyrosequencing", "Illumina single-end",
+                     "Illumina paired-end", "Ion Torrent")
+
+
+
+
 ########
 # PLOT #
 ########
 
-# dist.all <- readRDS(file.path(path, "output_ait-bray-can-distances.rds"))
 
-dist.all <- getDistances()
-plot.df <- plotDistances2D(dlist=dist.all, ordination="NMDS")
-plot.df <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/02_DimensionReduction/output_plot-df-pcoa.rds")
+plot <- function(plot.df, dist){
+  
+  # Set order for authors & seqtech
+  plot.df <- plot.df %>%
+    mutate(author = factor(plot.df$author, levels = ordered_author)) %>%
+    mutate(sequencing_tech = factor(plot.df$sequencing_tech, levels= ordered_seqtech))
+  
+  # Keep only the values from the distance (Aitchison, Bray or Canberra)
+  plot.df <- plot.df %>% filter(distance==dist)
+  
+  # Per host_disease
+  a <- ggplot(plot.df, aes(Axis.1, Axis.2, color=host_disease))+
+    geom_point(size=.5) +
+    scale_color_manual(values = c('blue', 'red', 'black'), name="")+ # disease
+    labs(title = "Disease phenotype")+
+    theme_cowplot()+
+    theme(line = element_blank(),
+          plot.title = element_text(hjust = 0.5))
+  
+  # Per author/dataset
+  b <- ggplot(plot.df, aes(Axis.1, Axis.2, color=author))+
+    geom_point(size=.5) +
+    scale_color_manual(values=pals::brewer.paired(13), name="")+ # author
+    labs(title = "Dataset")+
+    theme_cowplot()+
+    theme(line = element_blank(),
+          plot.title = element_text(hjust = 0.5))
+  
+  # Per seq. technology
+  c <- ggplot(plot.df, aes(Axis.1, Axis.2, color=sequencing_tech))+
+    geom_point(size=.5) +
+    scale_color_manual(values=c("#6a51a3", "#a1d99b", "#238b45", "#f16913"), name="")+ # seqtech
+    labs(title = "Seq. technology")+
+    theme_cowplot()+
+    theme(line = element_blank(),
+          plot.title = element_text(hjust = 0.5))
+  
+  ggdraw() +
+    draw_plot(a, x = 0,     y = 0, width = .32, height = 1) +
+    draw_plot(b, x = .33,   y = 0, width = .32, height = 1) +
+    draw_plot(c, x = .66,   y = 0, width = .32, height = 1)
+  
+}
 
-# Plot
-ggplot(plot.df, aes(Axis.1, Axis.2, color=author))+
-  geom_point(size=2, alpha=0.5)  +# scale_color_manual(values = c('blue', 'red', 'black'))+
-  facet_wrap(distance~., scales='free', nrow=1)+
-  theme_cowplot()+
-  theme(strip.text.x = element_text(size=20))+
-  labs(color="Disease")
+
+# *******
+#   MDS
+# *******
+
+plot(plot.df=plot.df.mds, dist="Aitchison")
+plot(plot.df=plot.df.mds2, dist="Bray-Curtis")
+plot(plot.df=plot.df.mds, dist="Canberra")
 
 
+# *******
+#  NMDS
+# *******
 
-# XXXXXXXXXXX TEST XXXXXXXXXXX
-
-# Aitchison distance
-glom.ait <- phyloseq::distance(physeq.clr, method = 'euclidean') # aitchison (takes ~1h30 to compute)
-# saveRDS(glom.ait, "~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/02_DimensionReduction/dist_aitchison_allSamples.rds")
-iMDS.Ait <- ordinate(physeq=physeq.clr, method="NMDS", distance=glom.ait, k=3)
-plot.df  <- plot_ordination(physeq.clr, iMDS.Ait)$data
-
-
-# Plot
-ggplot(plot.df, aes(Axis.1, Axis.2, color=author))+
-  geom_point(size=2, alpha=0.5)  + #scale_color_manual(values = c('blue', 'red', 'black'))+
-  theme_cowplot()+
-  theme(strip.text.x = element_text(size=20))+
-  labs(color="Disease")
-
-ggplot(plot.df, aes(NMDS1, NMDS2, color=host_disease))+
-  geom_point(size=2, alpha=0.5) +
-  scale_color_manual(values = c('blue', 'red', 'black'))+
-  theme_cowplot()+
-  theme(strip.text.x = element_text(size=20))+
-  labs(color="Disease")
-
-ggplot(plot.df, aes(NMDS1, NMDS2, color=sequencing_tech))+
-  geom_point(size=2, alpha=0.5)  + #scale_color_manual(values = c('blue', 'red', 'black'))+
-  theme_bw()+
-  theme(strip.text.x = element_text(size=20))+
-  labs(color="Disease")
+# CAREFUL !!!! NMDS DID NOT CONVERGE !!!!!
+# plot.df.nmds <- plot.df.nmds %>%
+#   rename("Axis.1" = "NMDS1",
+#          "Axis.2" = "NMDS2")
+# 
+# plot(plot.df=plot.df.nmds, dist="Aitchison")
+# plot(plot.df=plot.df.nmds, dist="Bray-Curtis")
+# plot(plot.df=plot.df.nmds, dist="Canberra")

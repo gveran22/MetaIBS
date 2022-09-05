@@ -51,7 +51,7 @@ physeq <- merge_phyloseq(physeq.labus,
                          physeq.liu,
                          physeq.agp,
                          physeq.nagel,
-                         physeq.zeber)
+                         physeq.zeber) # 2,576 samples
 
 # Agglomerate to phylum level and melt to long format
 phylumTable <- physeq %>%
@@ -221,4 +221,70 @@ ggdraw() +
                   x = c(0, 0, 0.30, 0.65), y = c(1, 0.5, 0.5, 1))
 ggsave("~/Projects/IBS_Meta-analysis_16S/data/plots_paper/firm_bact_05.jpg", width=15, height=10)
 
+
+
+
+#################################################
+# PLOT FIRMICUTES/BACTEROIDOTA LOG RATIO IN AGP #
+#################################################
+
+ratio.df.AGP <- ratio.df %>%
+  filter(author=="AGP") %>%
+  # Update the host_subtype column to bowel movement
+  mutate(host_subtype=replace(host_subtype,
+                              host_disease=="IBS" & bowel_movement_quality=="Constipated",
+                              "Constipated")) %>%
+  mutate(host_subtype=replace(host_subtype,
+                              host_disease=="IBS" & bowel_movement_quality=="Diarrhea",
+                              "Diarrhea")) %>%
+  mutate(host_subtype=replace(host_subtype,
+                              host_disease=="IBS" & bowel_movement_quality=="Unknown",
+                              "Unknown")) %>%
+  mutate(host_subtype=replace(host_subtype,
+                              host_disease=="Healthy" & bowel_movement_quality=="Normal",
+                              "Healthy"))
+
+# Plot Firm/Bact ratio per stool morphology
+bwlmvt.order <- c("Healthy", "Constipated", "Diarrhea", "Unknown")
+ratio.df.AGP$host_subtype <- factor(ratio.df.AGP$host_subtype, levels=bwlmvt.order)
+
+a1 <- ggplot(ratio.df.AGP %>% filter(!is.na(host_subtype)),
+       aes(x = host_subtype, y = LogRatio_FirmBact, fill=host_disease))+
+  geom_point(position=position_jitterdodge(dodge.width=0.75, jitter.width=0.1), aes(color=host_disease), size=0.2)+
+  geom_boxplot(position=position_dodge(width=0.75), outlier.shape = NA, width = 0.4, lwd=0.5, alpha=0.2)+
+  # add p-values
+  # geom_signif(comparisons = list(c("Healthy", "Constipated"),
+  #                                c("Healthy", "Diarrhea"),
+  #                                c("Healthy", "Unknown")),
+  #             map_signif_level = TRUE, test="wilcox.test", step_increase=.13, tip_length=0) +
+  # theme and color
+  scale_color_manual(values=c("#3182bd", "#de2d26"), guide="none")+
+  scale_fill_manual(values=c("#3182bd", "#de2d26"))+
+  theme_cowplot()+
+  theme(axis.text.x = element_text(angle = 45, color="black", hjust=1))+
+  labs(x = '', y = expression(Log[2](Firmicutes/Bacteroidota)), fill="", title="Bowel movement quality")
+
+
+# Plot Firm/Bact ratio per stool frequency
+ratio.df.AGP$bowel_movement_frequency <- factor(ratio.df.AGP$bowel_movement_frequency,
+                                                levels=c("Less than one", "One", "Two", "Three", "Four", "Five or more", "Unknown"))
+b1 <- ggplot(ratio.df.AGP,
+       aes(x = bowel_movement_frequency, y = LogRatio_FirmBact, fill=host_disease))+
+  geom_point(position=position_jitterdodge(dodge.width=0.75, jitter.width=0.1), aes(color=host_disease), size=0.2)+
+  geom_boxplot(position=position_dodge(width=0.75), outlier.shape = NA, width = 0.4, lwd=0.5, alpha=0.2)+
+  # theme and color
+  scale_color_manual(values=c("#3182bd", "#de2d26"), guide="none")+
+  scale_fill_manual(values=c("#3182bd", "#de2d26"))+
+  theme_cowplot()+
+  theme(axis.text.x = element_text(angle = 45, color="black", hjust=1))+
+  labs(x = '', y = expression(Log[2](Firmicutes/Bacteroidota)), fill="", title="Bowel movement frequency")
+
+
+# Combine plots
+ggdraw() +
+  draw_plot(a1, x = 0, y = .5, width = 1, height = .5) +
+  draw_plot(b1, x = 0, y = 0, width = 1, height = .5) +
+  draw_plot_label(label = c("A", "B"), size = 15,
+                  x = c(0, 0), y = c(1, 0.5))
+ggsave("~/Projects/IBS_Meta-analysis_16S/data/plots_paper/SuppFig5.jpg", width=6, height=9)
 
