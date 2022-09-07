@@ -5,6 +5,13 @@ In the simple pipeline, these ASV sequences were aligned to the SILVA taxonomy (
 
 To compare the output from using solely the SILVA reference database, to the output given by the AnnotIEM, I have saved the taxonomic tables of these ASVs in the [silva-tax](./silva-taxtable) directory, as _.rds_ files.
 
+Be careful, these ASV sequences or taxonomic tables **do not correspond to the final list of ASVs used in downstream statistical analyses**. After assigning taxonomy, a few more steps of data preprocessing were performed:
+- I removed ASVs that belonged to Eukaryota and/or that had an unknown Phylum;
+- I deleted samples with less than 500 total counts, and as some ASVs were present only in these low-count samples, they got removed as well with the “bad-quality” samples;
+- In the Pozuelo dataset in particular, I removed 17 samples that were neither healthy nor IBS, and as some ASVs were present only in these non-healthy non-IBS samples, they got removed as well.
+
+Thus, there are more ASVs in this directory (both in the .fasta files and .rds taxtable files) than in the "final" [phyloseq objects](../phyloseq-objects/) shared on this github repository.  Sometimes only 1 ASV got removed (e.g. in the Nagel dataset), sometimes up to 1,928 ASVs got removed (e.g. in the AGP dataset).
+
 
 ## To note!!!
 - for the **AGP** dataset, after taxonomy assignment, I would remove the bloom sequences as advised (see the section "4. Remove bloom sequences" in "Last preprocessing" in the [AGP R notebook](../analysis-individual/AGP/01_Dada2-AGP.Rmd)). Then I would check that the identified "bloom ASVs" belong mostly to Proteobacteria, as expected.
