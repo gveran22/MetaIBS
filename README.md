@@ -3,6 +3,8 @@
 This is the repository for the study MetaIBS - large-scale amplicon-based meta analysis of irritable bowel syndrome (add paper link when available).
 This repository contains all the data and code used for the meta-analysis, and can also be used as a template to extend this meta-analysis with your own data!
 
+![gif](https://www.dana-farber.org/uploadedImages/Newsroom/Features/Gut_Instincts/microbiome-animated.gif)
+
 <br/>
 
 # Structure of the repository

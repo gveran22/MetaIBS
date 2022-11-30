@@ -253,7 +253,7 @@ ggsave("~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/02_UMAP/plots/si
 g <- ggplot(dims.umap %>% arrange(match(host_subtype, c("IBS-unspecified", "NA", "HC", "IBS-C", "IBS-D", "IBS-M"))),
        aes(x = UMAP_1, y = UMAP_2, color = host_subtype))+
   geom_point(size = 2)+
-  scale_color_manual(values = c("#3182bd", "#a50f15", "#fcae91", "#fb6a4a", "#f0f0f0", "#d9d9d9"), name="")+ # disease
+  scale_color_manual(values = c("#3182bd", "#a50f15", "#fcae91", "#fb6a4a", "#bdbdbd", "black"), name="")+ # disease
   labs(x="UMAP 1", y="UMAP 2", title = "Stool samples")+
   theme_cowplot()+
   theme(line = element_blank(),
@@ -264,7 +264,7 @@ g <- ggplot(dims.umap %>% arrange(match(host_subtype, c("IBS-unspecified", "NA",
 h <- ggplot(dims.umap.sigm %>% arrange(match(host_subtype, c("IBS-unspecified", "HC", "IBS-C", "IBS-D", "IBS-M"))),
        aes(x = UMAP_1, y = UMAP_2, color = host_subtype))+
   geom_point(size = 2)+
-  scale_color_manual(values = c("#3182bd", "#a50f15", "#fcae91", "#fb6a4a", "#f0f0f0"), name="")+ # disease
+  scale_color_manual(values = c("#3182bd", "#a50f15", "#fcae91", "#fb6a4a", "#bdbdbd"), name="")+ # disease
   labs(x="UMAP 1", y="UMAP 2", title = "Sigmoid samples")+
   theme_cowplot()+
   theme(line = element_blank(),
@@ -276,4 +276,5 @@ ggdraw() +
   draw_plot(g, x = 0,  y = 0, width = .5, height = 1) +
   draw_plot(h, x = .5, y = 0, width = .5, height = 1)
 ggsave("~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/02_UMAP/plots/host-subtype_umap_family.jpeg", width=11, height=6)
+# ggsave("~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/02_UMAP/plots/host-subtype_umap_legend.jpeg", width=15, height=6)
 
