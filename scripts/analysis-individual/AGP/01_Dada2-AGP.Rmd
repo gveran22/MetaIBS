@@ -32,26 +32,26 @@ library(stringr)
 ```
 
 
-```{r pdf-import, echo = FALSE}
+```{r html-import, echo = FALSE}
 #_____________________________________________________________________
-#____________ THIS IS ONLY FOR (quicker) PDF OUTPUT __________________
+#____________ THIS IS ONLY FOR (quicker) HTML OUTPUT __________________
 #_____________________________________________________________________
-path <- "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/AGP"
+path <- "~/Projects/IBS_Meta-analysis_16S/data_local/analysis-individual/AGP"
 
 # seq depth
-raw_stats <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/AGP/01_Dada2-AGP/raw_stats.rds")
+raw_stats <- readRDS("~/Projects/IBS_Meta-analysis_16S/data_local/analysis-individual/AGP/01_Dada2-AGP/raw_stats.rds")
 # out process
-out2 <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/AGP/01_Dada2-AGP/out2.rds")
+out2 <- readRDS("~/Projects/IBS_Meta-analysis_16S/data_local/analysis-individual/AGP/01_Dada2-AGP/out2.rds")
 # quality profiles
 filt2_samples <- sort(list.files(file.path(path, "filtered2"), pattern=".fastq.gz", full.names = TRUE))
 # error rates
-err <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/AGP/01_Dada2-AGP/err.rds")
+err <- readRDS("~/Projects/IBS_Meta-analysis_16S/data_local/analysis-individual/AGP/01_Dada2-AGP/err.rds")
 # infered ASVs
-seq_infered <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/AGP/01_Dada2-AGP/seq_infered.rds")
+seq_infered <- readRDS("~/Projects/IBS_Meta-analysis_16S/data_local/analysis-individual/AGP/01_Dada2-AGP/seq_infered.rds")
 # taxa
-taxa <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/CLUSTER/Taxonomy/output/taxa_agp.rds")
+taxa <- readRDS("~/Projects/IBS_Meta-analysis_16S/data_local/analysis-individual/CLUSTER/Taxonomy/output/taxa_agp.rds")
 # phyloseq object
-physeq <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/AGP/01_Dada2-AGP/physeq_agp_with_bloom.rds")
+physeq <- readRDS("~/Projects/IBS_Meta-analysis_16S/data_local/analysis-individual/AGP/01_Dada2-AGP/physeq_agp_with_bloom.rds")
 ```
 
 
@@ -63,7 +63,7 @@ First, we import the fastq files containing the raw reads. The samples were down
 
 ```{r quality-check, echo=TRUE}
 # Save the path to the directory containing the fastq zipped files
-path <- "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/AGP"
+path <- "~/Projects/IBS_Meta-analysis_16S/data_local/analysis-individual/AGP"
 # list.files(path) # check we are in the right directory
 
 # fastq filenames have format: SAMPLENAME.fastq.gz
@@ -206,6 +206,7 @@ The quality profile of these discarded samples show some abnormalities, and read
 Now we will build the parametric error model, to be able to infer amplicon sequence variants (ASVs) later on.
 
 ```{r error-rate-estimate, eval = FALSE}
+set.seed(123)
 err <- learnErrors(FNs_filt, multithread=TRUE, randomize=TRUE, verbose = 1)
 ```
 
@@ -327,7 +328,7 @@ nb.reads <- as.data.frame(rowSums(seqtable.nochim)) %>%
   mutate(after = nafill(after, fill=0),
          "dataset" = "AGP")
 
-saveRDS(nb.reads, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/DADA2-FILT/seqdepth_agp.rds")
+saveRDS(nb.reads, "~/Projects/IBS_Meta-analysis_16S/data/dada2-filt/seqdepth_agp.rds")
 ```
 
 
@@ -335,16 +336,16 @@ saveRDS(nb.reads, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/DAD
 ## ASSIGN TAXONOMY ##
 #####################
 
-Extensions: The dada2 package also implements a method to make species level assignments based on exact matching between ASVs and sequenced reference strains. Recent analysis suggests that exact matching (or 100% identity) is the only appropriate way to assign species to 16S gene fragments. Currently, species-assignment training fastas are available for the Silva and RDP 16S databases. To follow the optional species addition step, download the silva_species_assignment_v132.fa.gz file, and place it in the directory with the fastq files.
+Extensions: The dada2 package also implements a method to make species level assignments based on exact matching between ASVs and sequenced reference strains. Recent analysis suggests that exact matching (or 100% identity) is the only appropriate way to assign species to 16S gene fragments. Currently, species-assignment training fastas are available for the Silva and RDP 16S databases (you can download them from the DADA2 website).
 
 ```{r assign-taxonomy, eval = FALSE}
 # Assign taxonomy (with silva v138)
-taxa <- assignTaxonomy(seqtable.nochim, "~/Projects/IBS_Meta-analysis_16S/data/silva_nr_v138_train_set.fa.gz",
+taxa <- assignTaxonomy(seqtable.nochim, "~/Projects/IBS_Meta-analysis_16S/data_local/silva_nr_v138_train_set.fa.gz",
                        tryRC = TRUE, # try reverse complement of the sequences
                        multithread=TRUE, verbose = TRUE)
 
 # Add species assignment
-taxa <- addSpecies(taxa, "~/Projects/IBS_Meta-analysis_16S/data/silva_species_assignment_v138.fa.gz")
+taxa <- addSpecies(taxa, "~/Projects/IBS_Meta-analysis_16S/data_local/silva_species_assignment_v138.fa.gz")
 ```
 
 ```{r taxa-sanity-check}
@@ -408,7 +409,7 @@ physeq <- prune_taxa(taxa_sums(physeq)>0, physeq)
 ### 2. Save to disk
 
 ```{r save, eval=FALSE}
-# Save to disk
+# Save to disk (for quicker html output)
 saveRDS(raw_stats, file.path(path, "01_Dada2-AGP/raw_stats.rds"))
 saveRDS(out2, file.path(path, "01_Dada2-AGP/out2.rds"))
 saveRDS(err, file.path(path, "01_Dada2-AGP/err.rds"))

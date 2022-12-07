@@ -22,11 +22,11 @@ path <- "~/Projects/IBS_Meta-analysis_16S"
 
 # This csv file was downloaded from the SRA
 # with the accession number PRJEB11419
-sradf <- read.csv(file.path(path, "data/analysis-individual/AGP/00_Metadata_AGP/SraRunTable.csv"))
+sradf <- read.csv(file.path(path, "scripts/analysis-individual/AGP/00_Metadata-AGP/SraRunTable.csv"))
 
 # This tsv file was downloaded from the figshare
 # link shared by the paper from McDonald et al., 2018
-paperdf <- read_tsv(file.path(path, "data/analysis-individual/AGP/00_Metadata_AGP/correctedt2.tsv"))
+paperdf <- read_tsv(file.path(path, "scripts/analysis-individual/AGP/00_Metadata_AGP/correctedt2.tsv"))
 
 # Compare two tables
 dim(sradf) # 34,552 samples
@@ -230,8 +230,8 @@ metadata <- bind_rows(healthyDF, ibsDF) %>%
 ########
 
 # Export the list of Runs to download
-write.table(metadata$Run, "./data/analysis-individual/AGP/original/list_files.txt", sep="\t",
+write.table(metadata$Run, "./scripts/analysis-individual/AGP/download-samples/list_files.txt", sep="\t",
             row.names=FALSE, col.names=FALSE, quote=FALSE)
 
 # Export the metadata table
-write.csv(metadata, "./data/analysis-individual/AGP/Metadata-AGP.csv")
+write.csv(metadata, "./scripts/analysis-individual/AGP/00_Metadata-AGP/Metadata-AGP.csv")
