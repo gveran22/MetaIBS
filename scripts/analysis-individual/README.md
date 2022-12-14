@@ -11,3 +11,7 @@ Within each sub-directory, you will find:
 3. A `02_PhyloTree-NameDataset.R` script, which infers a phylogenetic tree and saves it in the phyloseq object (taken from the [Bioconductor Workflow](https://f1000research.com/articles/5-1492/v2)). We advise to run these scripts on a server if possible (would take a long time to run on local computer, especially for big datasets). They take as input the phyloseq objects with ASV+taxonomic+metadata tables (from step 2.), and output a phyloseq object that also contains a phylogenetic tree (can be found in the [phyloseq-objects](../../data/phyloseq-objects/) directory, within the "data" directory))
 4. A `03_EDA-NameDataset.Rmd`, which performs standard exploratory data analyses (firmicutes/bacteroidota ratio, &beta;-diversity, etc.). These scripts were not used for figures in the paper.
 5. HTML outputs of the `01_Dada2-NameDataset.Rmd` and `03_EDA-NameDataset.Rmd` R notebooks can be found in a `html_outputs` subdirectory, to compare your output with ours.
+
+
+# Important links
+Silva taxonomic reference database formatted for assigning taxonomy with DADA2: https://benjjneb.github.io/dada2/training.html
