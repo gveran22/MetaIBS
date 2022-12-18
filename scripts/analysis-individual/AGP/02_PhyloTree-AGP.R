@@ -1,18 +1,20 @@
 #____________________________________________________________________
 # IMPORT LIBRARIES
-
-library(phyloseq, lib.loc = "~/R/x86_64-pc-linux-gnu-library/3.6/")
-library(dada2, lib.loc = "~/R/x86_64-pc-linux-gnu-library/3.6/")
-library(DECIPHER, lib.loc = "~/R/x86_64-pc-linux-gnu-library/3.6/")
+library(phyloseq)
+library(dada2)
+library(DECIPHER)
 library(phangorn)
 library(stats)
 library(Biostrings)
 library(base)
 
+# CHANGE THIS PATH (for your cluster)
+path.root <- "/grid/wsbs/home_norepl/scarcy/IBS/PhyloTree"
+
 
 #____________________________________________________________________
 # IMPORT DATA
-physeq <- readRDS("~/IBS/PhyloTree/physeq_AGP.rds")
+physeq <- readRDS(file.path(path.root, "input/physeq_agp.rds"))
 seqtable.nochim <- as.matrix(as.data.frame(otu_table(physeq)))
 
 # Sanity check
@@ -59,4 +61,4 @@ physeq <- merge_phyloseq(physeq, dna) # store the dna sequences in the refseq of
 taxa_names(physeq) <- paste0("ASV", seq(ntaxa(physeq))) # replace the whole dna sequences in the taxa_names by a surname ASV1, ASV2, etc.
 
 # Save physeq object
-saveRDS(physeq, "~/IBS/PhyloTree/Phangorn/OutputPhangorn/physeq_AGP.rds")
+saveRDS(physeq, file.path(path.root, "output/physeq_agp.rds"))
