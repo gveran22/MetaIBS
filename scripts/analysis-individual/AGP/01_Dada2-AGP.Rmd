@@ -6,15 +6,17 @@ output:
   html_document:
     df_print: paged
     toc: true
+    toc_float: true
 ---
 
 ```{r, include=FALSE}
 knitr::opts_chunk$set(fig.width = 3.5, fig.height = 3, warning=FALSE, message=FALSE,
-                      root.dir = "~/Projects/IBS_Meta-analysis_16S/analysis-individual/AGP/")
+                      root.dir = "~/Projects/MetaIBS/scripts/analysis-individual/AGP/")
 ```
 
 
-# Import library
+# 1. IMPORT
+
 ```{r library-import}
 library(dada2)
 packageVersion("dada2") # check dada2 version
@@ -29,46 +31,45 @@ library(plyr)
 library(dplyr)
 library(qckitfastq) # per base sequence content
 library(stringr)
+
+# ROOT DIRECTORY (to modify on your computer)
+path.root <- "~/Projects/MetaIBS"
+path.agp  <- file.path(path.root, "scripts/analysis-individual/AGP")
+path.data <- file.path(path.root, "data/preprocessing/analysis-individual/AGP")
 ```
 
 
 ```{r html-import, echo = FALSE}
 #_____________________________________________________________________
-#____________ THIS IS ONLY FOR (quicker) HTML OUTPUT __________________
+#____________ THIS IS ONLY FOR (quicker) HTML OUTPUT _________________
 #_____________________________________________________________________
-path <- "~/Projects/IBS_Meta-analysis_16S/data_local/analysis-individual/AGP"
 
-# seq depth
-raw_stats <- readRDS("~/Projects/IBS_Meta-analysis_16S/data_local/analysis-individual/AGP/01_Dada2-AGP/raw_stats.rds")
-# out process
-out2 <- readRDS("~/Projects/IBS_Meta-analysis_16S/data_local/analysis-individual/AGP/01_Dada2-AGP/out2.rds")
-# quality profiles
-filt2_samples <- sort(list.files(file.path(path, "filtered2"), pattern=".fastq.gz", full.names = TRUE))
-# error rates
-err <- readRDS("~/Projects/IBS_Meta-analysis_16S/data_local/analysis-individual/AGP/01_Dada2-AGP/err.rds")
-# infered ASVs
-seq_infered <- readRDS("~/Projects/IBS_Meta-analysis_16S/data_local/analysis-individual/AGP/01_Dada2-AGP/seq_infered.rds")
-# taxa
-taxa <- readRDS("~/Projects/IBS_Meta-analysis_16S/data_local/analysis-individual/CLUSTER/Taxonomy/output/taxa_agp.rds")
-# phyloseq object
-physeq <- readRDS("~/Projects/IBS_Meta-analysis_16S/data_local/analysis-individual/AGP/01_Dada2-AGP/physeq_agp_with_bloom.rds")
+raw_stats     <- readRDS(file.path(path.data, "01_Dada2-AGP/raw_stats.rds")) # seq depth
+out2          <- readRDS(file.path(path.data, "01_Dada2-AGP/out2.rds")) # out process
+filt2_samples <- sort(list.files(file.path(path.data, "filtered_fastq"), pattern=".fastq.gz", full.names = TRUE)) # quality profiles
+err           <- readRDS(file.path(path.data, "01_Dada2-AGP/err.rds")) # error rates
+seq_infered   <- readRDS(file.path(path.data, "01_Dada2-AGP/seq_infered.rds")) # inferred ASVs
+taxa          <- readRDS(file.path(path.data, "01_Dada2-AGP/taxa_agp_with_bloom.rds")) # taxa
+physeq        <- readRDS(file.path(path.data, "01_Dada2-AGP/physeq_agp_with_bloom.rds")) # phyloseq object
 ```
 
 
-#####################
-##  QUALITY CHECK  ##
-#####################
+
+
+********************
+# 2. QUALITY CHECK
+********************
 
 First, we import the fastq files containing the raw reads. The samples were downloaded from the SRA database with the accession number PRJEB11419. IBS and healthy samples were selected out of the thousands of samples as described in [00_Metadata-AGP.R](00_Metadata-AGP.R).
 
 ```{r quality-check, echo=TRUE}
 # Save the path to the directory containing the fastq zipped files
-path <- "~/Projects/IBS_Meta-analysis_16S/data_local/analysis-individual/AGP"
+path.fastq <- file.path(path.agp, "download-AGP-samples/")
 # list.files(path) # check we are in the right directory
 
 # fastq filenames have format: SAMPLENAME.fastq.gz
 # Saves the whole directory path to each file name
-FNs <- sort(list.files(file.path(path, "original"), pattern=".fastq.gz", full.names = TRUE))
+FNs <- sort(list.files(path.fastq, pattern=".fastq.gz", full.names = TRUE))
 show(FNs[1:5])
 
 # Extract sample names, assuming filenames have format: SAMPLENAME.fastq
@@ -109,7 +110,7 @@ Now, we will look whether the reads still contain the primers.
 
 ```{r primer-check, eval = TRUE, message=FALSE}
 # Import metadata, that contains the primer sequences
-metadata <- read.csv(file.path(path, "Metadata-AGP.csv"))
+metadata <- read.csv(file.path(path.agp, "00_Metadata-AGP/SraRunTable.csv"))
 table(metadata$pcr_primers..exp.)
 
 # V4
@@ -166,7 +167,7 @@ Then, we perform a quality filtering of the reads.
 
 ```{r quality-filter, eval = FALSE, echo = TRUE}
 # Place filtered files in a filtered/ subdirectory
-filt2_samples <- file.path(path, "filtered2", paste0(sample.names, "_filt.fastq.gz"))
+filt2_samples <- file.path(path.data, "filtered_fastq", paste0(sample.names, "_filt.fastq.gz"))
 # Assign names for the filtered fastq.gz files
 names(filt2_samples) <- sample.names
 
@@ -180,7 +181,7 @@ out2 <- filterAndTrim(fwd = FNs, filt = filt2_samples,
 
 
 # Update list of filtered files
-FNs_filt <- sort(list.files(file.path(path, "filtered2"), pattern=".fastq.gz", full.names = TRUE))
+FNs_filt <- sort(list.files(file.path(path.data, "filtered_fastq"), pattern=".fastq.gz", full.names = TRUE))
 sample.names_filt <- sapply(strsplit(basename(FNs_filt), "_"), `[`, 1)
 names(FNs_filt) <- sample.names_filt
 
@@ -328,7 +329,7 @@ nb.reads <- as.data.frame(rowSums(seqtable.nochim)) %>%
   mutate(after = nafill(after, fill=0),
          "dataset" = "AGP")
 
-saveRDS(nb.reads, "~/Projects/IBS_Meta-analysis_16S/data/dada2-filt/seqdepth_agp.rds")
+saveRDS(nb.reads, file.path(path.root, "data/preprocessing/dada2-filt/nbreads_agp.rds"))
 ```
 
 
@@ -340,12 +341,12 @@ Extensions: The dada2 package also implements a method to make species level ass
 
 ```{r assign-taxonomy, eval = FALSE}
 # Assign taxonomy (with silva v138)
-taxa <- assignTaxonomy(seqtable.nochim, "~/Projects/IBS_Meta-analysis_16S/data_local/silva_nr_v138_train_set.fa.gz",
+taxa <- assignTaxonomy(seqtable.nochim, file.path(path.root, "data/preprocessing/silva-taxonomic-ref/silva_nr_v138_train_set.fa.gz"),
                        tryRC = TRUE, # try reverse complement of the sequences
                        multithread=TRUE, verbose = TRUE)
 
 # Add species assignment
-taxa <- addSpecies(taxa, "~/Projects/IBS_Meta-analysis_16S/data_local/silva_species_assignment_v138.fa.gz")
+taxa <- addSpecies(taxa, file.path(path.root, "data/preprocessing/silva-taxonomic-ref/silva_species_assignment_v138.fa.gz"))
 ```
 
 ```{r taxa-sanity-check}
@@ -373,7 +374,7 @@ The preprocessing will be easier to do with ASV, taxonomic and metadata tables c
 ```{r phyloseq-preprocess, echo=TRUE, eval=FALSE}
 #_________________________
 # Import metadata
-metadata <- read.csv(file.path(path, "Metadata-AGP.csv"))
+metadata <- read.csv(file.path(path.agp, "00_Metadata-AGP/Metadata-AGP.csv"))
 
 # Keep relevant covariates
 sampledf <- metadata %>%
@@ -406,21 +407,8 @@ physeq <- prune_taxa(taxa_sums(physeq)>0, physeq)
 ```
 
 
-### 2. Save to disk
 
-```{r save, eval=FALSE}
-# Save to disk (for quicker html output)
-saveRDS(raw_stats, file.path(path, "01_Dada2-AGP/raw_stats.rds"))
-saveRDS(out2, file.path(path, "01_Dada2-AGP/out2.rds"))
-saveRDS(err, file.path(path, "01_Dada2-AGP/err.rds"))
-saveRDS(seq_infered, file.path(path, "01_Dada2-AGP/seq_infered.rds"))
-
-# Taxa
-saveRDS(taxa, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/CLUSTER/Taxonomy/output/taxa_agp.rds")
-```
-
-
-### 3. Quick peek at data analysis
+### 2. Quick peek at data analysis
 
 ```{r plot, fig.width = 10}
 # Absolute abundance
@@ -444,7 +432,7 @@ ggplot(phylum.table, aes(x = reorder(Sample, Sample, function(x) mean(phylum.tab
 ```
 
 
-### 4. Remove bloom sequences
+### 3. Remove bloom sequences
 
 Looking at it more closely, there is a high proportion of Proteobacteria compared to other datasets. Considering that fecal samples were shipped from the participants' home at room temperature, there is evidence that some bacteria grow at room temperature, which would bias the microbial composition (https://journals.asm.org/doi/10.1128/mSystems.00199-16#B5). Authors from the AGP removed a selection of **bloom sequences** that were shared on their [github repository][1] in a FASTA file.
 
@@ -452,7 +440,7 @@ Looking at it more closely, there is a high proportion of Proteobacteria compare
 
 ```{r bloom-sequences, fig.width = 10, fig.height = 5}
 # Import bloom sequences
-bloom <- readDNAStringSet(file.path(path, "newbloom.all.fna"))
+bloom <- readDNAStringSet(file.path(path.data, "newbloom.all.fna"))
 
 
 # Identify ASVs to keep (ones that are not bloom sequences)
@@ -513,12 +501,23 @@ b <- ggplot(phylum.table.filt, aes(x = host_disease,
   theme_bw()
 
 gridExtra::grid.arrange(a, b, ncol=2, widths=c(0.3,0.7))
+```
 
-# SAVE FINAL DATA
-# saveRDS(otu_table(physeq.filt), file.path(path, "01_Dada2-AGP/ASVtable_final.rds")) # ASV table
-# saveRDS(tax_table(physeq.filt), file.path(path, "01_Dada2-AGP/taxa_final.rds")) # taxa table
-# saveRDS(sample_data(physeq.filt), file.path(path, "01_Dada2-AGP/metadata_final.rds")) # metadata table
 
-# Taxa & Phyloseq object
-# saveRDS(physeq.filt, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/CLUSTER/PhyloTree/input/physeq_agp.rds")
+### 4. Save to disk
+
+```{r save, eval=FALSE}
+# Save to disk (for quicker html output)
+saveRDS(raw_stats,   file.path(path.data, "01_Dada2-AGP/raw_stats.rds"))
+saveRDS(out2,        file.path(path.data, "01_Dada2-AGP/out2.rds"))
+saveRDS(err,         file.path(path.data, "01_Dada2-AGP/err.rds"))
+saveRDS(seq_infered, file.path(path.data, "01_Dada2-AGP/seq_infered.rds"))
+
+# Taxa & Phyloseq object (before removing bloom sequences)
+saveRDS(taxa,   file.path(path.data, "01_Dada2-AGP/taxa_agp_with_bloom.rds"))
+saveRDS(physeq, file.path(path.data, "01_Dada2-AGP/physeq_agp_with_bloom.rds")) # phyloseq object
+
+# Taxa & Phyloseq object (after removing bloom sequences => final)
+saveRDS(tax_table(physeq.filt), file.path(path.root, "data/preprocessing/analysis-individual/CLUSTER/taxonomy/output/taxa_agp.rds"))
+saveRDS(physeq.filt, file.path(path.root, "data/preprocessing/analysis-individual/CLUSTER/phylotree/input/physeq_agp.rds"))
 ```

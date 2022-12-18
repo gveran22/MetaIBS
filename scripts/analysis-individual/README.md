@@ -14,4 +14,6 @@ Within each sub-directory, you will find:
 
 
 # Important links
-Silva taxonomic reference database formatted for assigning taxonomy with DADA2: https://benjjneb.github.io/dada2/training.html
+**Make sure to download Silva's reference fastas** and put it in the [silva-taxonomic-ref directory](../../data/preprocessing/silva-taxonomic-ref/) to be able to do taxonomic alignment of infered ASVs:
+- to reproduce results of the paper, download the fasta files from our zenodo link (ADD LINK), where we used Silva v138
+- to have the latest Silva version, download the reference fastas DADA2-formatted from [the DADA2 website](https://benjjneb.github.io/dada2/training.html)
