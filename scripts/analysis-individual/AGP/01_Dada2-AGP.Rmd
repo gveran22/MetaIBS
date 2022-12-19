@@ -526,3 +526,15 @@ saveRDS(physeq, file.path(path.data, "01_Dada2-AGP/physeq_agp_with_bloom.rds")) 
 saveRDS(tax_table(physeq.filt), file.path(path.root, "data/preprocessing/analysis-individual/CLUSTER/taxonomy/output/taxa_agp.rds"))
 saveRDS(physeq.filt, file.path(path.root, "data/preprocessing/analysis-individual/CLUSTER/phylotree/input/physeq_agp.rds"))
 ```
+
+
+
+
+******************
+# 10. SESSION INFO
+******************
+
+```{r session-info}
+sessionInfo()
+```
+

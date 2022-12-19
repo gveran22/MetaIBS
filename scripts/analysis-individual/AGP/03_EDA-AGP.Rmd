@@ -445,3 +445,14 @@ plotHeatmaps <- function(dlist, fontsize){
 # Get the heatmaps
 heatmp.agp <- plotHeatmaps(dlist = dist.agp, fontsize = 8)
 ```
+
+
+
+
+******************
+# 7. SESSION INFO
+******************
+
+```{r session-info}
+sessionInfo()
+```

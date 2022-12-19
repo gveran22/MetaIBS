@@ -12,7 +12,7 @@
 
 library(tidyverse)
 
-path <- "~/Projects/IBS_Meta-analysis_16S"
+path <- "~/Projects/MetaIBS"
 
 
 
@@ -23,10 +23,12 @@ path <- "~/Projects/IBS_Meta-analysis_16S"
 # This csv file was downloaded from the SRA
 # with the accession number PRJEB11419
 sradf <- read.csv(file.path(path, "scripts/analysis-individual/AGP/00_Metadata-AGP/SraRunTable.csv"))
+# head(sradf)
 
 # This tsv file was downloaded from the figshare
 # link shared by the paper from McDonald et al., 2018
-paperdf <- read_tsv(file.path(path, "scripts/analysis-individual/AGP/00_Metadata_AGP/correctedt2.tsv"))
+paperdf <- read_tsv(file.path(path, "scripts/analysis-individual/AGP/00_Metadata-AGP/correctedt2.tsv"))
+# head(paperdf)
 
 # Compare two tables
 dim(sradf) # 34,552 samples
