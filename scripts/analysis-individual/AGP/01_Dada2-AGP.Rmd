@@ -247,7 +247,7 @@ for(sampl in sample.names_filt) {
 ```
 
 ```{r}
-# Inspect the infered sequence variants from sample 1:5
+# Inspect the inferred sequence variants from sample 1:5
 for (i in 1:5){
   print(seq_infered[[i]])
   print("________________")
@@ -343,6 +343,19 @@ saveRDS(nb.reads, file.path(path.root, "data/preprocessing/dada2-filt/nbreads_ag
 *******************
 
 Extensions: The dada2 package also implements a method to make species level assignments based on exact matching between ASVs and sequenced reference strains. Recent analysis suggests that exact matching (or 100% identity) is the only appropriate way to assign species to 16S gene fragments. Currently, species-assignment training fastas are available for the Silva and RDP 16S databases (you can download them from the DADA2 website).
+
+```{r assign-taxonomy-on-cluster, eval=FALSE, echo=FALSE, include=FALSE}
+# In case you prefer to assign taxonomy on a computer cluster (in other words run this chunk on a computer cluster), you can export the ASV table
+# saveRDS(seqtable.nochim, file.path(path.root, "data/preprocessing/analysis-individual/CLUSTER/taxonomy/input/seqtablenochim_agp.rds"))
+
+# then you can :
+# 1. copy the "data/preprocessing/analysis-individual/CLUSTER/taxonomy/" directory to your cluster (where there is the input data & R scripts to assign taxonomy)
+# 2. run the R scripts on the cluster (they will output the taxonomic tables in the "output/" subdirectory)
+# 3. copy the "taxonomy/output/" subdirectory back to your personal computer
+# 4. import the taxonomic table below (in that case you don't need to run the next code chunk "assign-taxonomy"):
+# taxa <- readRDS(file.path(path.root, "data/preprocessing/analysis-individual/CLUSTER/taxonomy/output/taxa_agp.rds"))
+```
+
 
 ```{r assign-taxonomy, eval = FALSE}
 # Assign taxonomy (with silva v138)
@@ -523,7 +536,7 @@ saveRDS(taxa,   file.path(path.data, "01_Dada2-AGP/taxa_agp_with_bloom.rds"))
 saveRDS(physeq, file.path(path.data, "01_Dada2-AGP/physeq_agp_with_bloom.rds")) # phyloseq object
 
 # Taxa & Phyloseq object (after removing bloom sequences => final)
-saveRDS(tax_table(physeq.filt), file.path(path.root, "data/preprocessing/analysis-individual/CLUSTER/taxonomy/output/taxa_agp.rds"))
+saveRDS(tax_table(physeq.filt), file.path(path.data, "01_Dada2-AGP/taxa_agp_without_bloom.rds"))
 saveRDS(physeq.filt, file.path(path.root, "data/preprocessing/analysis-individual/CLUSTER/phylotree/input/physeq_agp.rds"))
 ```
 
