@@ -16,6 +16,7 @@ path <- "~/Projects/MetaIBS"
 
 
 
+
 ###################
 # IMPORT METADATA #
 ###################
@@ -41,11 +42,19 @@ table(str_sub(sradf$ENA.FIRST.PUBLIC..run., end=4)) # latest sample from SRA met
 # => We will extract sample Runs from SRA metadata
 
 
+
+
 ####################
 # CLEANUP METADATA #
 ####################
 
 # For simplicity purposes, we will keep only samples and columns of interest
+
+# Check different types of sample type & organisms
+table(sradf$SAMPLE_TYPE, useNA="ifany")
+table(sradf$Organism, useNA="ifany")
+# Check different types of seq technologies
+table(sradf$target_gene..exp., useNA="ifany")
 
 # Keep only gut metadata
 sradf <- sradf %>%
@@ -60,8 +69,8 @@ sradf <- sradf %>%
 # - no diabetes
 sradf %>%
   # SUBSET_HEALTHY
-  filter(subset_healthy == TRUE) %>%
-  # SAME SUBSET
+  # filter(subset_healthy == TRUE) %>%
+  # SAME SUBSET (theoretically)
   # filter(subset_age == TRUE) %>%
   # filter(bmi_cat %in% c("Normal", "Overweight")) %>%
   # filter(diabetes == "I do not have this condition") %>%
@@ -69,6 +78,8 @@ sradf %>%
   # filter(antibiotic_history == "I have not taken antibiotics in the past year.") %>%
   dim
 # 8,379 people labeled as 'healthy'
+# 8,353 people that are btw 20-69yo, BMI btw 18.5-30, no ATB, IBD, diabetes
+# => Not the same number of people, so we'll manually select individuals to keep
 
 
 # Reformat AGE & BMI columns
@@ -232,7 +243,7 @@ metadata <- bind_rows(healthyDF, ibsDF) %>%
 ########
 
 # Export the list of Runs to download
-write.table(metadata$Run, "./scripts/analysis-individual/AGP/download-samples/list_files.txt", sep="\t",
+write.table(metadata$Run, "./scripts/analysis-individual/AGP/download-AGP-samples/list_files.txt", sep="\t",
             row.names=FALSE, col.names=FALSE, quote=FALSE)
 
 # Export the metadata table
