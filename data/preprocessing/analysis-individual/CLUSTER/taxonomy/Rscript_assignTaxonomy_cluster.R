@@ -11,9 +11,6 @@ cluster.wd <- "~/MetaIBS/Dada2/taxonomy"
 input.data <- file.path(cluster.wd, "input")
 output.data <- file.path(cluster.wd, "output")
 
-input.data <- "~/Projects/MetaIBS/data_local/analysis-individual/CLUSTER/Taxonomy/input"
-list.files(input.data)
-
 
 #____________________________________________________________________
 # IMPORT LIBRARIES
@@ -32,32 +29,9 @@ print("... Importing ASV tables into list...")
 datasets  <- list.files(input.data)
 seqtables <- sapply(datasets, function(x) readRDS(file.path(input.data, x)), USE.NAMES=T, simplify=F)
 
-# seqtable_ringel <- readRDS("~/IBS/Dada2/seqtable_ringel.rds")
-# seqtable_labus <- readRDS("~/IBS/Dada2/seqtable_labus.rds")
-# seqtable_lopresti <- readRDS("~/IBS/Dada2/seqtable_lopresti.rds")
-# seqtable_zhuang <- readRDS("~/IBS/Dada2/seqtable_zhuang.rds")
-# seqtable_zhu <- readRDS("~/IBS/Dada2/seqtable_zhu.rds")
-# seqtable_nagel <- readRDS("~/IBS/Dada2/seqtable_nagel.rds")
-# 
-# # Create a vector
-# print("... Putting ASV tables into vector ...")
-# datasets <- c("ringel", "labus", "lopresti", "zhuang", "zhu", "nagel")
-# 
-# seqtables <- vector("list", length(datasets))
-# names(seqtables) <- datasets
-# 
-# seqtables[[1]] <- seqtable_ringel
-# seqtables[[2]] <- seqtable_labus
-# seqtables[[3]] <- seqtable_lopresti
-# seqtables[[4]] <- seqtable_zhuang
-# seqtables[[5]] <- seqtable_zhu
-# seqtables[[6]] <- seqtable_nagel
-
 
 #____________________________________________________________________
 # ASSIGN TAXONOMY WITH SILVA v138
-
-# Save path to save taxonomic table
 
 for(i in 1:length(seqtables)){
   # Print current dataset
