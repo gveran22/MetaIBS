@@ -6,20 +6,20 @@
 
 
 
-####################
-# IMPORT LIBRARIES #
-####################
+# **************************
+# ---- IMPORT LIBRARIES ----
+# **************************
 
 library(tidyverse)
 
 path <- "~/Projects/MetaIBS"
 
 
+# ----
 
-
-###################
-# IMPORT METADATA #
-###################
+# *************************
+# ---- IMPORT METADATA ----
+# *************************
 
 # This csv file was downloaded from the SRA
 # with the accession number PRJEB11419
@@ -42,11 +42,11 @@ table(str_sub(sradf$ENA.FIRST.PUBLIC..run., end=4)) # latest sample from SRA met
 # => We will extract sample Runs from SRA metadata
 
 
+# ----
 
-
-####################
-# CLEANUP METADATA #
-####################
+# **************************
+# ---- CLEANUP METADATA ----
+# **************************
 
 # For simplicity purposes, we will keep only samples and columns of interest
 
@@ -159,10 +159,11 @@ subsetdf <- subsetdf %>%
   select(all_of(keep_columns))
 
 
+# ----
 
-###########################
-# SELECT IBS & HC SAMPLES #
-###########################
+# *********************************
+# ---- SELECT IBS & HC SAMPLES ----
+# *********************************
 
 # Split healthy & IBS samples
 healthyDF <- subsetdf %>%
@@ -235,12 +236,13 @@ metadata <- bind_rows(healthyDF, ibsDF) %>%
   # Remove useless columns
   select(-c(ibs, subset_healthy)) %>%
   relocate(host_disease, .before=host_age)
+
   
+# ----
 
-
-########
-# SAVE #
-########
+# **************
+# ---- SAVE ----
+# **************
 
 # Export the list of Runs to download
 write.table(metadata$Run, "./scripts/analysis-individual/AGP/download-AGP-samples/list_files.txt", sep="\t",
