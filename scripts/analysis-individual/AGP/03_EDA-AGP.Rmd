@@ -42,7 +42,7 @@ library(pheatmap) # for heatmap
 ```{r import-data}
 # Set path
 path.root <- "~/Projects/MetaIBS"
-path.agp <- file.path(path.root, "data/preprocessing/analysis-individual/AGP/02_EDA-AGP")
+path.agp <- file.path(path.root, "data/preprocessing/analysis-individual/AGP/03_EDA-AGP")
 
 # Import phyloseq object
 physeq.agp <- readRDS(file.path(path.root, "data/phyloseq-objects/physeq_agp.rds"))
