@@ -339,7 +339,7 @@ saveRDS(nb.reads, file.path(path.root, "data/preprocessing/dada2-filt/nbreads_ag
 
 
 *******************
-# 8.ASSIGN TAXONOMY
+# 8. ASSIGN TAXONOMY
 *******************
 
 Extensions: The dada2 package also implements a method to make species level assignments based on exact matching between ASVs and sequenced reference strains. Recent analysis suggests that exact matching (or 100% identity) is the only appropriate way to assign species to 16S gene fragments. Currently, species-assignment training fastas are available for the Silva and RDP 16S databases (you can download them from the DADA2 website).
