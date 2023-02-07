@@ -1,3 +1,10 @@
+##########################
+# Purpose: Add phylogenetic tree to AGP phyloseq object
+# Date: January 2023
+# Author: Salomé Carcy
+##########################
+
+
 #____________________________________________________________________
 # IMPORT LIBRARIES
 library(phyloseq)
@@ -8,7 +15,7 @@ library(stats)
 library(Biostrings)
 library(base)
 
-# CHANGE THIS PATH (for your cluster)
+# CHANGE THIS PATH (for your cluster or your local computer)
 path.root <- "/grid/wsbs/home_norepl/scarcy/IBS/PhyloTree"
 
 
