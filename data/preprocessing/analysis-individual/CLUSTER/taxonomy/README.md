@@ -10,7 +10,7 @@ This directory is to assign taxonomy to your list of ASVs inferred from each stu
 
 <br/>
 
-<img src="/images/output/video1.gif" width="250" height="250"/>
+<img src="https://www.amoebasisters.com/uploads/2/1/9/0/21902384/taxonomy-levels-gif_orig.gif" width="100" height="100"/>
 
 <br/>
 
