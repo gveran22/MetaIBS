@@ -1,6 +1,6 @@
 # AGP preprocessing
 
-This folder will auto-populate when you run the [01_Dada2-AGP.Rmd](../../../../scripts/analysis-individual/AGP/01_Dada2-AGP.Rmd) script.
+This folder will auto-populate when you run the [01_Dada2-AGP.Rmd](../../../../scripts/analysis-individual/AGP/01_Dada2-AGP.Rmd) and 03_EDA-AGP.Rmd](../../../../scripts/analysis-individual/AGP/03_EDA-AGP.Rmd) scripts.
 - `01_Dada2-AGP/` will contain .rds files saved as checkpoints & also for a quicker html output of the 01_Dada2-AGP.Rmd notebook;
 - `03_EDA-AGP/` will contain .rds files saved as checkpoints & also for a quicker html output of the 03_EDA-AGP.Rmd notebook;
 - `filtered_fastq/` will contain the .fastq files generated from quality filtering;
