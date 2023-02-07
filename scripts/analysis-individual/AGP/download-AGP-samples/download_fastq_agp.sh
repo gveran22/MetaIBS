@@ -3,7 +3,7 @@
 #Author: Salome Carcy June.2021
 #--------------------------------------
 
-INPUT=list_files.txt
+INPUT=list_files_agp.txt
 
 for FILE in $(cat list_files.txt )
 do
