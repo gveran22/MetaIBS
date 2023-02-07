@@ -12,4 +12,6 @@ We follow the [bioconductor workflow for microbiome data analysis](https://f1000
 
 <br/>
 
-<img src="https://matthewkling.github.io/img/images/tree_metrics.gif" height="500"/>
+<p align="center">
+	<img src="https://matthewkling.github.io/img/images/tree_metrics.gif" height="500"/>
+</p>
