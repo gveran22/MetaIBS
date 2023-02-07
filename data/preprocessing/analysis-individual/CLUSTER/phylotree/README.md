@@ -10,5 +10,6 @@ We follow the [bioconductor workflow for microbiome data analysis](https://f1000
 3. **R script** to compute phylogenetic trees on all datasets present in the `input/` subdirectory => `Rscript_phylotree_cluster.R` is already provided in this directory, but _make sure to change the file paths at the top of the R script!!_ You can also modify this R script to compute the phylogenetic trees only on datasets of interest (change the `for()` loop at bottom of script).
 4. **Bash script** to execute the [R script](./Rscript_phylotree_cluster.R) on your computer cluster (recommended to provide at least XXXXX of virtual memory!). Make sure to modify the [bash script](./bash_phylotree_cluster.sh) provided in this directory to fit your cluster.
 
+<br/>
 
 ![gif](https://matthewkling.github.io/img/images/tree_metrics.gif)

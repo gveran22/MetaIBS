@@ -8,4 +8,10 @@ This directory is to assign taxonomy to your list of ASVs inferred from each stu
 3. **R script** to assign taxonomy on all datasets present in the `input/` subdirectory => `Rscript_assignTaxonomy_cluster.R` is already provided in this directory, but _make sure to change the file paths at the top of the R script!!_
 4. **Bash script** to execute the [R script](./Rscript_assignTaxonomy_cluster.R) on your computer cluster (recommended to provide at least XXXXX of virtual memory!). Make sure to modify the [bash script](./bash_assignTaxonomy_cluster.sh) provided in this directory to fit your cluster.
 
+<br/>
+
+<img src="/images/output/video1.gif" width="250" height="250"/>
+
+<br/>
+
 ![gif](https://www.amoebasisters.com/uploads/2/1/9/0/21902384/taxonomy-levels-gif_orig.gif)
