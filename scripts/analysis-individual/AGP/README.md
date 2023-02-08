@@ -1,4 +1,4 @@
-# Dataset
+# AGP dataset
 American Gut Project (_mSystems_, 2018) - [American Gut: an Open Platform for Citizen Science Microbiome Research][1]
 
 [1]: https://journals.asm.org/doi/full/10.1128/mSystems.00031-18#DC1
