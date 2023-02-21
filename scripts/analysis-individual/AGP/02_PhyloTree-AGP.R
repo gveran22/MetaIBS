@@ -65,7 +65,7 @@ physeq <- merge_phyloseq(physeq, phy_tree(fitGTR$tree))
 dna <- DNAStringSet(taxa_names(physeq)) # get the sequence variants (ASVs)
 names(dna) <- taxa_names(physeq)
 physeq <- merge_phyloseq(physeq, dna) # store the dna sequences in the refseq of the phyloseq object
-taxa_names(physeq) <- paste0("ASV", seq(ntaxa(physeq))) # replace the whole dna sequences in the taxa_names by a surname ASV1, ASV2, etc.
+taxa_names(physeq) <- paste0("ASV_agp_", seq(ntaxa(physeq))) # replace the whole dna sequences in the taxa_names by a surname ASV_agp_1, ASV_agp_2, etc.
 
 # Save physeq object
 saveRDS(physeq, file.path(path.root, "output/physeq_agp.rds"))
