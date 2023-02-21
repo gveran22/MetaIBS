@@ -10,7 +10,7 @@ output:
 
 ```{r, include=FALSE}
 knitr::opts_chunk$set(fig.width = 15, fig.height = 5, warning=FALSE, message=FALSE,
-                      root.dir = "~/Projects/IBS_Meta-analysis_16S/analysis-individual/AGP/")
+                      root.dir = "~/Projects/MetaIBS/analysis-individual/AGP/")
 ```
 
 
@@ -212,6 +212,7 @@ wilcox.test(ratio.FB[ratio.FB$host_disease == "IBS","logRatioFB"],
 # Sanity check no sample with less than 500 total count
 table(sample_sums(physeq.agp)<500) # all FALSE
 
+
 #____________________________________________________________________
 # PHYLOSEQ OBJECT WITH NON-ZERO COMPOSITIONS
 physeq.NZcomp <- physeq.agp
@@ -228,6 +229,7 @@ table(rowSums(otu_table(physeq.NZcomp))) # check if there is any row not summing
 # Save object
 saveRDS(physeq.NZcomp, file.path(path.agp, "physeq_NZcomp.rds"))
 
+
 #____________________________________________________________________
 # PHYLOSEQ OBJECT WITH RELATIVE COUNT (BETWEEN 0 AND 1)
 physeq.rel <- physeq.agp
@@ -242,6 +244,7 @@ table(rowSums(otu_table(physeq.rel))) # check if there is any row not summing to
 
 # save the physeq.rel object
 saveRDS(physeq.rel, file.path(path.agp, "physeq_relative.rds"))
+
 
 #____________________________________________________________________
 # PHYLOSEQ OBJECT WITH COMMON-SCALE NORMALIZATION
