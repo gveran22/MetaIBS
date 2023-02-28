@@ -4,53 +4,60 @@ output:
   html_document:
     df_print: paged
     toc: true
+    toc_float: true
 ---
 
 ```{r, include=FALSE}
 knitr::opts_chunk$set(warning=FALSE, message=FALSE,
-                      root.dir = "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Hugerth-2019/00_Metadata-Hugerth/")
+                      root.dir = "~/Projects/MetaIBS/scripts/analysis-individual/Hugerth-2019")
 ```
 
-##########
-# IMPORT #
-##########
 
-## 1. Libraries
+
+
+***********
+# 1. IMPORT
+***********
+
+## 1.1. Libraries
 ```{r import-libraries}
-#install.packages("readxl")
 library("readxl")
 library(data.table)
 library(tidyverse)
 ```
 
-## 2. Data
+
+## 1.2. Data
 ```{r import-data}
-path <- "~/Projects/IBS_Meta-analysis_16S"
+# ROOT DIRECTORY (to modify on your computer)
+path.root <- "~/Projects/MetaIBS"
+path.metadata <- file.path(path.root, "scripts/analysis-individual/Hugerth-2019/00_Metadata-Hugerth")
 
 # Metadata table downloaded from the SRA
-sra_metadata <- read.csv(file.path(path, "data/analysis-individual/Hugerth-2019/HugerthSraRunTable.txt"), header=TRUE, sep = ",")
+sra_metadata <- read.csv(file.path(path.metadata, "HugerthSraRunTable.txt"), header=TRUE, sep = ",")
 head(sra_metadata)
 
 # Import the supplementary ASV table from the paper
-paper_supp <- read_excel(file.path(path, "data/analysis-individual/Hugerth-2019/00_Metadata-Hugerth/Paper_Samples/ASV_table_PAPER.xlsx"))
+paper_supp <- read_excel(file.path(path.metadata, "Paper_Samples/ASV_table_PAPER.xlsx"))
 head(paper_supp)
 
 # Import the "suggested" runs from the paper (samples ERS3379832-ERS3380418)
-paper_runs <- read.csv(file.path(path, "data/analysis-individual/Hugerth-2019/00_Metadata-Hugerth/paper_suggested.csv"), header=TRUE, sep = ",")
+paper_runs <- read.csv(file.path(path.metadata, "paper_suggested.csv"), header=TRUE, sep = ",")
 head(paper_runs)
 ```
 
 
-##################
-# CLEANUP TABLES #
-##################
 
-## 1. SRA metadata table
 
+*******************
+# 2. CLEANUP TABLES
+*******************
+
+## 2.1. SRA metadata table
 The SRA metadata table was downloaded from the SRA with the accession number PRJEB31817.
 
 ```{r sra-metadata}
-########
+#_________________________________________________
 # Keep only relevant columns
 col <- c("Run", "Collection_Date", "environment_.biome.", "host_body_product", "Host_Age", "host_body.mass_index", "host_subject_ID", "sample_storage_duration", "sequencing_run", "Extraction_Plate", "host_disease_status", "host_sex", "gastrointestinal_tract_disorder")
 
@@ -79,7 +86,7 @@ head(sraDF)
 
 
 
-#######
+#_________________________________________________
 # Create a new dataframe with only ibs/hc samples
 sraDF.ibs <- sraDF %>%
   filter(host_disease == "Healthy" | host_disease == "IBS")
@@ -90,8 +97,7 @@ table(sraDF.ibs$host_disease) # sanity check (hc 467 - ibs 140)
 Even though the paper reported to have 95 IBS samples and 466 healthy samples (Table 2), on the SRA there is a different number of IBS/healthy samples... Let's try to figure out which samples were included in the paper.
 
 
-## 2. Paper supplementary
-
+## 2.2. Paper supplementary
 The supplementary material with the ASV table of the authors was downloaded directly from the paper's website https://gut.bmj.com/content/69/6/1076
 
 ```{r paper-supplementary}
@@ -125,7 +131,7 @@ head(paperDF)
 Now let's assign host_disease of the samples included in the paper. We have information on the sample_type, extraction_plate, sequencing_run and individual ID, which should be enough to identify the samples in the sraDF.
 
 ```{r paper-supplementary-2}
-#####################################
+#____________________________________
 # CROSS-REFERENCE WITH SRA METADATA #
 
 # Add SRA columns to paperDF
@@ -157,9 +163,7 @@ paperDF %>%
 ```
 
 
-
-## 3. Samples to download as indicated in paper
-
+## 2.3. Samples to download as indicated in paper
 Another way to verify which samples were included in the analysis of the paper, is that *the paper indicates to download samples ERS3379832-ERS3380418*. That's a total of 587 samples. Considering that there are 26 control samples, that would mean there are 561 IBS or healthy samples (which matches the number of samples analyzed in the paper).
 
 Now, the _SraRunInfo.csv_ file for samples ERS3379832-ERS3380418 was downloaded on the SRA database. Let's import it, and compare the Run numbers from that file, with the Run numbers we indirectly obtained from the supplementary ASV table.
@@ -190,7 +194,8 @@ paperRuns.DF <- paper_runs %>%
 paperRuns.DF %>%
   count(host_disease)
 
-######
+
+#_________________________________________________
 # Compare the samples from the supplementary ASV table, and the "suggested" samples to download
 table(paperDF$Run %in% paperRuns.DF$Run)
 # What are those Runs that don't match?
@@ -212,9 +217,10 @@ These 561 samples have the following gastrointestinal disorders: <br/>
 
 
 
-############################################
-# IDENTIFY INCONSISTENCIES IN SRA METADATA #
-############################################
+
+*********************************************
+# 3. IDENTIFY INCONSISTENCIES IN SRA METADATA
+*********************************************
 
 To keep the original SRA metadata table "intact", we will duplicate it. We will rename a few diseases to avoid confusions (i.e Hyperplastic_polyp & hyperplastic_polyp). Also, as for some samples the _day_ of the collection date is not always provided, we will create new columns to store the information of year, month, and day.
 
@@ -249,8 +255,7 @@ metadata <- sraDF %>%
 ```
 
 
-## 1. Inconsistencies in disease phenotype
-
+## 3.1. Inconsistencies in disease phenotype
 More than 100 samples with same host_ID have different disease phenotype (below). They also have completely different demographics (BMI, age, ...), which suggests the host_ID isn't always reliable to identify samples coming from the same individual.
 
 ```{r disease-inconsistencies-1}
@@ -277,8 +282,7 @@ metadata %>%
 ```
 
 
-## 2. Inconsistencies in gender
-
+## 3.2. Inconsistencies in gender
 Other inconsistencies happen in the gender column. As expected, more than 300 samples with the same host_ID have different gender (on top of a different disease phenotype, age, and BMI...).
 
 ```{r gender-inconsistencies-1}
@@ -321,7 +325,7 @@ metadata %>%
 ```
 
 
-## 3. Inconsistencies in psychological disorder
+## 3.3. Inconsistencies in psychological disorder
 
 Other inconsistencies happen in the host_psy column, even by using the BMI, age, collection date (year + month) and host_disease as proxies for sample identifiers. More than 200 samples have inconsistent host_psy, often due to missing data.
 
@@ -342,9 +346,9 @@ We will need to take into account the missing data in the host_psy column. We co
 
 
 
-##########################################
-# REMOVE INCONSISTENCIES IN SRA METADATA #
-##########################################
+*******************************************
+# 4. REMOVE INCONSISTENCIES IN SRA METADATA
+*******************************************
 
 We need to identify samples belonging to the same individual based on their demographic characteristics, and assign them the same ID. We will perform two types of filtering:  <br/>
 - **stringent filtering**: samples belong to the same individual if they have the same BMI, age, disease, collection_date (y-m) AND gender.  <br/>
@@ -439,16 +443,18 @@ clean.df %>%
 ```
 
 
-#################
-# SAVE METADATA #
-#################
+
+******************
+# 5. SAVE METADATA
+******************
 
 ```{r save-data, echo=TRUE, eval=FALSE}
 # Save the metadata
-write.table(clean.df, file.path(path, "data/analysis-individual/Hugerth-2019/00_Metadata-Hugerth/modif_metadata(R).csv"))
+# write.table(clean.df, file.path(path.root, "data_local/analysis-individual/Hugerth-2019/00_Metadata-Hugerth/modif_metadata(R).csv"))
+write.table(clean.df, file.path(path.metadata, "Metadata-Hugerth.csv"))
 
 # Export the list of Runs to download
-write.table(clean.df$Run, file.path(path, "data/analysis-individual/Hugerth-2019/original/list_files.txt"),
+write.table(clean.df$Run, file.path(path.root, "scripts/analysis-individual/Hugerth-2019/download-Hugerth-samples/list_files_hugerth.txt"),
             sep="\t", row.names=FALSE, col.names=FALSE, quote=FALSE)
 ```
 
