@@ -8,14 +8,14 @@ American Gut Project (_mSystems_, 2018) - [American Gut: an Open Platform for Ci
 
 The AGP dataset is a repository with more than 30,000 microbiome samples. We are only interested in samples from healthy and IBS individuals, so first we identified the list of samples to download in the [00_Metadata-AGP.R](00_Metadata-AGP.R) script.
 The outputs of this R script are:
-- a [list of runs](download-samples/list_files.txt) (e.g. ERR2313945, ERR2092276, ...) to download with the SRA toolkit;
+- a [list of runs](download-samples/list_files_agp.txt) (e.g. ERR2313945, ERR2092276, ...) to download with the SRA toolkit;
 - a metadata dataframe exported as a .csv file (in the [00_Metadata-AGP](00_Metadata-AGP/) directory, as "Metadata-AGP.csv").
 
 
 ## Download samples
 
 To download samples, you can either:
-- from your terminal, go into the [download-AGP-samples](download-AGP-samples/) directory and execute the [download_fastq_agp.sh](download-samples/download_fastq_agp.sh) file;
+- from your terminal, go into the [download-AGP-samples](download-AGP-samples/) directory and execute the [download_fastq_agp.sh](download-AGP-samples/download_fastq_agp.sh) file;
 - download directly the fastq files we have deposited on Zenodo (ADD LINK)
 
 
