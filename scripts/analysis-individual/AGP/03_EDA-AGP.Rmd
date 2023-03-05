@@ -287,9 +287,9 @@ First, let's look at these four distances of interest.
 getDistances <- function(){
   set.seed(123) # for unifrac, need to set a seed
   glom.UniF <- UniFrac(physeq.rel, weighted=TRUE, normalized=TRUE) # weighted unifrac
-  glom.ait <- phyloseq::distance(physeq.clr, method = 'euclidean') # aitchison
+  glom.ait  <- phyloseq::distance(physeq.clr, method = 'euclidean') # aitchison
   glom.bray <- phyloseq::distance(physeq.CSN, method = "bray") # bray-curtis
-  glom.can <- phyloseq::distance(physeq.NZcomp, method = "canberra") # canberra
+  glom.can  <- phyloseq::distance(physeq.NZcomp, method = "canberra") # canberra
   dist.list <- list("UniF" = glom.UniF, "Ait" = glom.ait, "Canb" = glom.can, "Bray" = glom.bray)
   
   return(dist.list)
