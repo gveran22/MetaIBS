@@ -355,7 +355,7 @@ We need to identify samples belonging to the same individual based on their demo
 - **less stringent**: samples belong to the same individual if they have the same BMI, age, disease, collection_date (y-m-d). For the few samples with inconsistent gender, we will check if we have more than 2 samples and thus we can infer the most likely gender (_most frequent gender reported_), or if we should replace by _NA_ values.
 <br/>
 <br/>
-![Schematic representation of the filtering process](../../data/analysis-individual/Hugerth-2019/00_Metadata-Hugerth/Metadata_Strategy.jpeg)
+![Schematic representation of the filtering process](./00_Metadata-Hugerth/Metadata_Strategy.jpeg)
 <br/>
 <br/>
 
@@ -456,5 +456,16 @@ write.table(clean.df, file.path(path.metadata, "Metadata-Hugerth.csv"))
 # Export the list of Runs to download
 write.table(clean.df$Run, file.path(path.root, "scripts/analysis-individual/Hugerth-2019/download-Hugerth-samples/list_files_hugerth.txt"),
             sep="\t", row.names=FALSE, col.names=FALSE, quote=FALSE)
+```
+
+
+
+
+*****************
+# 6. SESSION INFO
+*****************
+
+```{r session-info}
+sessionInfo()
 ```
 

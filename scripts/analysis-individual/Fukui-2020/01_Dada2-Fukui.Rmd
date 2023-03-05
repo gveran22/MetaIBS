@@ -183,8 +183,8 @@ Then, we perform a quality filtering of the reads.
 
 ```{r filter-trim, eval = FALSE, echo = TRUE}
 # Place filtered files in a filtered/ subdirectory
-FWD.filt2_samples <- file.path(path, "filtered_fastq", paste0(sample.names, "_1_filt.fastq.gz")) # FWD reads
-REV.filt2_samples <- file.path(path, "filtered_fastq", paste0(sample.names, "_2_filt.fastq.gz")) # REV reads
+FWD.filt2_samples <- file.path(path.fukui, "filtered_fastq", paste0(sample.names, "_1_filt.fastq.gz")) # FWD reads
+REV.filt2_samples <- file.path(path.fukui, "filtered_fastq", paste0(sample.names, "_2_filt.fastq.gz")) # REV reads
 # Assign names for the filtered fastq.gz files
 names(FWD.filt2_samples) <- sample.names
 names(REV.filt2_samples) <- sample.names
@@ -198,7 +198,6 @@ out2 <- filterAndTrim(fwd = fnFs, filt = FWD.filt2_samples,
                       minLen = 150, # Discard reads shorter than 150 bp. This is done after trimming and truncation.
                       compress=TRUE, multithread = TRUE, verbose=TRUE)
 ```
-
 
 Let's look at the output filtered fastq files as sanity check.
 
