@@ -50,8 +50,8 @@ path.data   <- file.path(path.root, "data/preprocessing/analysis-individual/Fuku
 
 raw_stats         <- readRDS(file.path(path.data, "01_Dada2-Fukui/raw_stats.rds")) # seq depth
 out2              <- readRDS(file.path(path.data, "01_Dada2-Fukui/out2.rds")) # out process
-FWD.filt2_samples <- sort(list.files(file.path(path, "filtered_fastq"), pattern="_1_filt.fastq.gz", full.names = TRUE)) # quality profiles
-REV.filt2_samples <- sort(list.files(file.path(path, "filtered_fastq"), pattern="_2_filt.fastq.gz", full.names = TRUE)) # quality profiles
+FWD.filt2_samples <- sort(list.files(file.path(path.data, "filtered_fastq"), pattern="_1_filt.fastq.gz", full.names = TRUE)) # quality-filtered reads
+REV.filt2_samples <- sort(list.files(file.path(path.data, "filtered_fastq"), pattern="_2_filt.fastq.gz", full.names = TRUE)) # quality-filtered reads
 errF              <- readRDS(file.path(path.data, "01_Dada2-Fukui/errF.rds")) # error rates
 errR              <- readRDS(file.path(path.data, "01_Dada2-Fukui/errR.rds")) # error rates
 dadaFs            <- readRDS(file.path(path.data, "01_Dada2-Fukui/infered_seq_F.rds")) # inferred ASVs
@@ -183,8 +183,8 @@ Then, we perform a quality filtering of the reads.
 
 ```{r filter-trim, eval = FALSE, echo = TRUE}
 # Place filtered files in a filtered/ subdirectory
-FWD.filt2_samples <- file.path(path.fukui, "filtered_fastq", paste0(sample.names, "_1_filt.fastq.gz")) # FWD reads
-REV.filt2_samples <- file.path(path.fukui, "filtered_fastq", paste0(sample.names, "_2_filt.fastq.gz")) # REV reads
+FWD.filt2_samples <- file.path(path.data, "filtered_fastq", paste0(sample.names, "_1_filt.fastq.gz")) # FWD reads
+REV.filt2_samples <- file.path(path.data, "filtered_fastq", paste0(sample.names, "_2_filt.fastq.gz")) # REV reads
 # Assign names for the filtered fastq.gz files
 names(FWD.filt2_samples) <- sample.names
 names(REV.filt2_samples) <- sample.names

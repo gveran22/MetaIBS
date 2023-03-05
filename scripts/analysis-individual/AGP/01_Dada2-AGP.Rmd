@@ -50,7 +50,7 @@ path.data <- file.path(path.root, "data/preprocessing/analysis-individual/AGP")
 
 raw_stats     <- readRDS(file.path(path.data, "01_Dada2-AGP/raw_stats.rds")) # seq depth
 out2          <- readRDS(file.path(path.data, "01_Dada2-AGP/out2.rds")) # out process
-filt2_samples <- sort(list.files(file.path(path.data, "filtered_fastq"), pattern=".fastq.gz", full.names = TRUE)) # quality profiles
+filt2_samples <- sort(list.files(file.path(path.data, "filtered_fastq"), pattern=".fastq.gz", full.names = TRUE)) # quality-filtered reads
 err           <- readRDS(file.path(path.data, "01_Dada2-AGP/err.rds")) # error rates
 seq_infered   <- readRDS(file.path(path.data, "01_Dada2-AGP/seq_infered.rds")) # inferred ASVs
 taxa          <- readRDS(file.path(path.data, "01_Dada2-AGP/taxa_agp_with_bloom.rds")) # taxa
