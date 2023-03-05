@@ -10,7 +10,7 @@ output:
 
 ```{r, include=FALSE}
 knitr::opts_chunk$set(fig.width = 15, fig.height = 5, warning=FALSE, message=FALSE,
-                      root.dir = "~/Projects/MetaIBS/analysis-individual/Hugerth-2019/")
+                      root.dir = "~/Projects/MetaIBS/scripts/analysis-individual/Hugerth-2019/")
 ```
 
 
@@ -328,7 +328,6 @@ saveRDS(physeq.clr, file.path(path.hugerth, "physeq_clr.rds"))
 **********************
 
 ## 5.1. UniFrac, Aitchison, Bray-Curtis and Canberra
-
 First, let's look at these four distances of interest.
 
 ```{r dist-functions, fig.width = 15, fig.height = 4}
@@ -483,10 +482,7 @@ ggpubr::ggarrange(p1,p2, nrow=2)
 ```
 
 
-
-
 ## 5.2. Plot in 3D
-
 For better visualization, we will also take a glance at reduction to 3D.
 
 ```{r 3D-function, eval = TRUE, echo = TRUE}

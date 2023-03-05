@@ -10,7 +10,7 @@ output:
 
 ```{r, include=FALSE}
 knitr::opts_chunk$set(fig.width = 15, fig.height = 5, warning=FALSE, message=FALSE,
-                      root.dir = "~/Projects/MetaIBS/analysis-individual/Fukui-2020/")
+                      root.dir = "~/Projects/MetaIBS/scripts/analysis-individual/Fukui-2020/")
 ```
 
 
