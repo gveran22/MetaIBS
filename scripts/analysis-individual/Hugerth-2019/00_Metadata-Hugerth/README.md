@@ -1,0 +1,5 @@
+This directory contains metadata for the Hugerth dataset.
+- `ASV_table_PAPER.xlsx` contains the ASV table that the authors provided in the supplementaries of their [paper](https://gut.bmj.com/content/69/6/1076);
+- `HugerthSraRunTable.csv`: metadata table downloaded from the [SRA Run Selector](https://www.ncbi.nlm.nih.gov/Traces/study/?acc=PRJEB31817&o=acc_s%3Aa) (accession number PRJEB31817);
+- `Metadata-Hugerth.csv`: table output from the [00_Metadata-Hugerth.R](../00_Metadata-Hugerth.R) script, used at the end of [01_Dada2-Hugerth.Rmd](../01_Dada2-Hugerth.Rmd) for the phyloseq object;
+- `paper_suggested.csv`: metadata table downloaded from the [SRA Run Selector](https://www.ncbi.nlm.nih.gov/Traces/study/?acc=PRJEB31817&o=acc_s%3Aa) (accession number PRJEB31817), but only for samples "ERS3379832-ERS3380418" (total of 587 samples), indicated by the paper to be the IBS and healthy samples.
