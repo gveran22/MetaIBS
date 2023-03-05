@@ -183,8 +183,8 @@ The reads indeed contain the forward primer in the forward reads, and the revers
 ```{r primer-filter, eval = FALSE, echo = TRUE}
 # KEEP READS WITH PRIMER AND REMOVE PRIMER+BARCODE
 # Place filtered files in a filtered1/ subdirectory
-FWD.filt1_samples <- file.path(path.hugerth, "filtered1", paste0(sample.names, "_1_filt.fastq.gz")) # FWD reads
-REV.filt1_samples <- file.path(path.hugerth, "filtered1", paste0(sample.names, "_2_filt.fastq.gz")) # REV reads
+FWD.filt1_samples <- file.path(path.data, "filtered1", paste0(sample.names, "_1_filt.fastq.gz")) # FWD reads
+REV.filt1_samples <- file.path(path.data, "filtered1", paste0(sample.names, "_2_filt.fastq.gz")) # REV reads
 # Assign names for the filtered fastq.gz files
 names(FWD.filt1_samples) <- sample.names
 names(REV.filt1_samples) <- sample.names
@@ -236,8 +236,8 @@ Then, we perform a quality filtering of the reads.
 
 ```{r filter-trim, eval = FALSE, echo = TRUE}
 # Place filtered files in a filtered/ subdirectory
-FWD.filt2_samples <- file.path(path.hugerth, "filtered2", paste0(sample.names, "_1_filt.fastq.gz")) # FWD reads
-REV.filt2_samples <- file.path(path.hugerth, "filtered2", paste0(sample.names, "_2_filt.fastq.gz")) # REV reads
+FWD.filt2_samples <- file.path(path.data, "filtered2", paste0(sample.names, "_1_filt.fastq.gz")) # FWD reads
+REV.filt2_samples <- file.path(path.data, "filtered2", paste0(sample.names, "_2_filt.fastq.gz")) # REV reads
 # Assign names for the filtered fastq.gz files
 names(FWD.filt2_samples) <- sample.names
 names(REV.filt2_samples) <- sample.names
@@ -338,7 +338,6 @@ derepR <- derepFastq(fnR.qc) # reverse
 # Infer sequence variants
 dadaFs <- dada(derepF, err=errF, multithread=TRUE) # forward
 dadaRs <- dada(derepR, err=errR, multithread=TRUE) # reverse
-
 ```
 
 ```{r}
