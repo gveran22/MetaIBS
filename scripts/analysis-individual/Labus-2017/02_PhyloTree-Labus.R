@@ -1,21 +1,33 @@
+##########################
+# Purpose: Add phylogenetic tree to Labus phyloseq object
+# Date: February 2023
+# Author: Salomé Carcy
+##########################
+
+
 #____________________________________________________________________
 # IMPORT LIBRARIES
 
-library(phyloseq, lib.loc = "~/R/x86_64-pc-linux-gnu-library/3.6/")
-library(dada2, lib.loc = "~/R/x86_64-pc-linux-gnu-library/3.6/")
-library(DECIPHER, lib.loc = "~/R/x86_64-pc-linux-gnu-library/3.6/")
+library(phyloseq)
+library(dada2)
+library(DECIPHER)
 library(phangorn)
 library(stats)
 library(Biostrings)
 library(base)
 
+# CHANGE THIS PATH (for your cluster or your local computer)
+path.root <- "/grid/wsbs/home_norepl/scarcy/IBS/PhyloTree"
+
+
 #____________________________________________________________________
 # IMPORT DATA
-physeq <- readRDS("~/IBS/PhyloTree/input/physeq_labus.rds")
+physeq <- readRDS(file.path(path.root, "input/physeq_labus.rds"))
 seqtable.nochim <- as.matrix(as.data.frame(otu_table(physeq)))
 
 # Sanity check
 print(dim(seqtable.nochim))
+
 
 #____________________________________________________________________
 # PHYLOGENETIC TREE
@@ -46,6 +58,7 @@ fitGTR <- optim.pml(fitGTR, model="GTR", optInv=TRUE, optGamma=TRUE, # gamma rat
 print("-- Add to phyloseq object --")
 physeq <- merge_phyloseq(physeq, phy_tree(fitGTR$tree))
 
+
 #____________________________________________________________________
 # GIVE SURNAMES TO OTUs
 
@@ -53,7 +66,7 @@ physeq <- merge_phyloseq(physeq, phy_tree(fitGTR$tree))
 dna <- DNAStringSet(taxa_names(physeq)) # get the sequence variants (ASVs)
 names(dna) <- taxa_names(physeq)
 physeq <- merge_phyloseq(physeq, dna) # store the dna sequences in the refseq of the phyloseq object
-taxa_names(physeq) <- paste0("ASV", seq(ntaxa(physeq))) # replace the whole dna sequences in the taxa_names by a surname ASV1, ASV2, etc.
+taxa_names(physeq) <- paste0("ASV_labus_", seq(ntaxa(physeq))) # replace the whole dna sequences in the taxa_names by a surname ASV_labus_1, ASV_labus_2, etc.
 
 # Save physeq object
-saveRDS(physeq, "~/IBS/PhyloTree/output/physeq_labus.rds")
+saveRDS(physeq, file.path(path.root, "output/physeq_labus.rds"))
