@@ -54,7 +54,6 @@ physeq.labus
 
 
 Phylogenetic tree was computed with the package `phangorn`, and the script was run on a cluster. Let's check we have correctly generated a phylogenetic tree.
-
 ```{r plot-tree, fig.height = 6, fig.width = 10}
 # Look at the tree
 plot_tree(physeq.labus, color = "Phylum", ladderize="left")
@@ -67,10 +66,10 @@ plot_tree(physeq.labus, color = "Phylum", ladderize="left")
 #__________________________________________________________________________
 
 # Import phyloseq objects for computing distances
-physeq.rel    <- readRDS(file.path(path.labus, "03_EDA-Labus/physeq_relative.rds"))
-physeq.clr    <- readRDS(file.path(path.labus, "03_EDA-Labus/physeq_clr.rds"))
-physeq.CSN    <- readRDS(file.path(path.labus, "03_EDA-Labus/physeq_CSN.rds"))
-physeq.NZcomp <- readRDS(file.path(path.labus, "03_EDA-Labus/physeq_NZcomp.rds"))
+physeq.rel    <- readRDS(file.path(path.labus, "physeq_relative.rds"))
+physeq.clr    <- readRDS(file.path(path.labus, "physeq_clr.rds"))
+physeq.CSN    <- readRDS(file.path(path.labus, "physeq_CSN.rds"))
+physeq.NZcomp <- readRDS(file.path(path.labus, "physeq_NZcomp.rds"))
 ```
 
 
@@ -140,7 +139,6 @@ plot_bar(physeq.labus, fill = "Class")+ facet_wrap("host_disease", scales="free"
 
 
 ### 3.2. Relative abundances
-
 ```{r plot-relative-abundances, fig.width=10, fig.height = 5, message=FALSE}
 # Agglomerate to phylum & class levels
 phylum.table <- physeq.labus %>%
@@ -260,7 +258,7 @@ physeq.NZcomp <- transform_sample_counts(physeq.NZcomp, function(x) x / sum(x) )
 table(rowSums(otu_table(physeq.NZcomp))) # check if there is any row not summing to 1
 
 # Save object
-saveRDS(physeq.NZcomp, file.path(path.labus, "03_EDA-Labus/physeq_NZcomp.rds"))
+saveRDS(physeq.NZcomp, file.path(path.labus, "physeq_NZcomp.rds"))
 
 #____________________________________________________________________
 # PHYLOSEQ OBJECT WITH RELATIVE COUNT (BETWEEN 0 AND 1)
@@ -275,7 +273,7 @@ physeq.rel <- transform_sample_counts(physeq.rel, function(x) x / sum(x) )
 table(rowSums(otu_table(physeq.rel))) # check if there is any row not summing to 1
 
 # save the physeq.rel object
-saveRDS(physeq.rel, file.path(path.labus, "03_EDA-Labus/physeq_relative.rds"))
+saveRDS(physeq.rel, file.path(path.labus, "physeq_relative.rds"))
 
 #____________________________________________________________________
 # PHYLOSEQ OBJECT WITH COMMON-SCALE NORMALIZATION
@@ -286,7 +284,7 @@ physeq.CSN <- transform_sample_counts(physeq.CSN, function(x) (x*min(sample_sums
 table(rowSums(otu_table(physeq.CSN))) # check that all rows are summing to the same total
 
 # save the physeq.CSN object
-saveRDS(physeq.CSN, file.path(path.labus, "03_EDA-Labus/physeq_CSN.rds"))
+saveRDS(physeq.CSN, file.path(path.labus, "physeq_CSN.rds"))
 
 
 #____________________________________________________________________
@@ -299,7 +297,7 @@ otu_table(physeq.labus)[1:5, 1:5] # should contain absolute counts
 otu_table(physeq.clr)[1:5, 1:5] # should all be relative
 
 # save the physeq.rel object
-saveRDS(physeq.clr, file.path(path.labus, "03_EDA-Labus/physeq_clr.rds"))
+saveRDS(physeq.clr, file.path(path.labus, "physeq_clr.rds"))
 ```
 
 
