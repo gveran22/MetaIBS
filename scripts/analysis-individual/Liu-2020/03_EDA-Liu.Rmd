@@ -4,22 +4,23 @@ output:
   html_document:
     df_print: paged
     toc: true
+    toc_float: true
   pdf_document: default
 ---
 
 ```{r, include=FALSE}
 knitr::opts_chunk$set(fig.width = 15, fig.height = 5, warning=FALSE, message=FALSE,
-                      root.dir = "~/Projects/IBS_Meta-analysis_16S/analysis-individual/Liu-2020/")
+                      root.dir = "~/Projects/MetaIBS/analysis-individual/Liu-2020/")
 ```
 
 
 
-############
-## IMPORT ##
-############
 
-## 1.Librairies
+***********
+# 1. IMPORT
+***********
 
+### 1.1. Librairies
 ```{r library-import}
 library(phyloseq) # for phyloseq object
 library(ggplot2)
@@ -38,46 +39,44 @@ library(pheatmap) # for heatmap
 ```
 
 
-## 2.Data
-
+### 1.2.Data
 ```{r import-data}
 # Set path
-path <- "~/Projects/IBS_Meta-analysis_16S"
-path.plots <- file.path(path, "data/analysis-individual/PLOTS/plots-Liu-EDA")
+path.root <- "~/Projects/MetaIBS"
+path.liu <- file.path(path.root, "data/preprocessing/analysis-individual/Liu-2020/03_EDA-Liu")
 
 # Import phyloseq object
-physeq.liu <- readRDS(file.path(path, "phyloseq-objects/physeq_liu.rds"))
+physeq.liu <- readRDS(file.path(path.root, "data/phyloseq-objects/physeq_liu.rds"))
 
 # Sanity check
 physeq.liu
 ```
 
 Phylogenetic tree was computed with the package `phangorn`, and the script was run on a cluster. Let's check we have correctly generated a phylogenetic tree.
-
 ```{r plot-tree, echo=TRUE, fig.height = 6, fig.width = 10}
 # Look at the tree
 plot_tree(physeq.liu, color = "Phylum", ladderize="left")
 ```
 
 
-```{r import-for-pdf, echo = FALSE}
+```{r import-for-html, echo = FALSE}
 #__________________________________________________________________________
 #____________ THIS IS ONLY FOR (quicker) PDF/HTML OUTPUT __________________
 #__________________________________________________________________________
 
 # Import phyloseq objects for computing distances
-physeq.rel <- readRDS(file.path(path, "data/analysis-individual/Liu-2020/02_EDA-Liu/physeq_relative.rds"))
-physeq.clr <- readRDS(file.path(path, "data/analysis-individual/Liu-2020/02_EDA-Liu/physeq_clr.rds"))
-physeq.CSN <- readRDS(file.path(path, "data/analysis-individual/Liu-2020/02_EDA-Liu/physeq_CSN.rds"))
-physeq.NZcomp <- readRDS(file.path(path, "data/analysis-individual/Liu-2020/02_EDA-Liu/physeq_NZcomp.rds"))
+physeq.rel    <- readRDS(file.path(path.liu, "physeq_relative.rds"))
+physeq.clr    <- readRDS(file.path(path.liu, "physeq_clr.rds"))
+physeq.CSN    <- readRDS(file.path(path.liu, "physeq_CSN.rds"))
+physeq.NZcomp <- readRDS(file.path(path.liu, "physeq_NZcomp.rds"))
 ```
 
 
 
 
-##################
-## DEMOGRAPHICS ##
-##################
+*****************
+# 2. DEMOGRAPHICS
+*****************
 
 This dataset has several covariates (gender, age, bmi). We will check whether there is the same distribution of these covariates between healthy and IBS patients.
 
@@ -111,12 +110,11 @@ wilcox.test(metadata[metadata$host_disease == "IBS",]$host_bmi,
 
 
 
+***************
+# 3. ABUNDANCES
+***************
 
-################
-## ABUNDANCES ##
-################
-
-### 1. Absolute abundances
+### 3.1. Absolute abundances
 
 ```{r plot-absolute-abundance, fig.width=10, fig.height = 5}
 # Plot Phylum
@@ -126,7 +124,7 @@ plot_bar(physeq.liu, fill = "Phylum") + facet_wrap("host_subtype", scales="free_
         legend.key.size = unit(0.2, "cm"))+
   labs(x = "Samples", y = "Absolute abundance", title = "Liu dataset (2020)")+
   guides(fill=guide_legend(ncol=2))
-# ggsave(file.path(path.plots, "absAbundance_phylum.jpg"), width=13, height=5)
+# ggsave(file.path(path.liu, "absAbundance_phylum.jpg"), width=13, height=5)
 
 # Plot Class
 plot_bar(physeq.liu, fill = "Class")+ facet_wrap("host_subtype", scales="free_x") +
@@ -143,8 +141,7 @@ plot_bar(physeq.liu, fill = "Class")+ facet_wrap("host_subtype", scales="free_x"
 - maximum of `r max(sample_sums(physeq.liu))` total count per sample  
 
 
-### 2. Relative abundances
-
+### 3.2. Relative abundances
 ```{r plot-relative-abundances, fig.width=10, fig.height = 5}
 # Agglomerate to phylum & class levels
 phylum.table <- physeq.liu %>%
@@ -167,7 +164,7 @@ ggplot(phylum.table, aes(x = reorder(Sample, Sample, function(x) mean(phylum.tab
         legend.key.size = unit(0.2, "cm"))+
   labs(x = "Samples", y = "Relative abundance", title = "Liu dataset (2020)")+
   guides(fill=guide_legend(ncol=2))
-# ggsave(file.path(path.plots, "relAbundance_phylum.jpg"), width=12, height=5)
+# ggsave(file.path(path.liu, "relAbundance_phylum.jpg"), width=12, height=5)
 
 ggplot(class.table, aes(x = reorder(Sample, Sample, function(x) mean(phylum.table[Sample == x & Phylum == 'Firmicutes', 'Abundance'])),
                         y = Abundance, fill = Class))+
@@ -178,12 +175,11 @@ ggplot(class.table, aes(x = reorder(Sample, Sample, function(x) mean(phylum.tabl
         legend.key.size = unit(0.2, "cm"))+
   labs(x = "Samples", y = "Relative abundance", title = "Liu dataset (2020)")+
   guides(fill=guide_legend(ncol=3))
-# ggsave(file.path(path.plots, "relAbundance_class.jpg"), width=12, height=5)
+# ggsave(file.path(path.liu, "relAbundance_class.jpg"), width=12, height=5)
 ```
 
 
-### 3. Firmicutes/Bacteroidota ratio
-
+### 2.3. Firmicutes/Bacteroidota ratio
 ```{r plot-log-ratio, fig.height = 5, fig.width=5}
 relevant.covariates <- c('Sample', 'Abundance', 'host_subtype', 'Phylum', 'Bristol', 'IBS_SSS', "host_sex")
 
@@ -224,7 +220,7 @@ ggplot(ratio.FB, aes(x = host_subtype, y = logRatioFB))+
   labs(x = "",  y = 'Log2(Firmicutes/Bacteroidota)', title = "Firmicutes:Bacteroidota ratio")+
   theme_cowplot()+
   theme(legend.position="none")
-# ggsave(file.path(path.plots, "ratioFB.jpg"), width=4, height=6)
+# ggsave(file.path(path.liu, "ratioFB.jpg"), width=4, height=6)
 # Statistical test
 wilcox.test(ratio.FB[ratio.FB$host_subtype == "IBS-D","logRatioFB"],
             ratio.FB[ratio.FB$host_subtype == "HC","logRatioFB"]) # p=0.14
@@ -237,7 +233,7 @@ ggplot(ratio.FB, aes(x = Bristol, y = logRatioFB))+
   scale_color_manual(values=c("blue", "red"))+
   labs(x = "",  y = 'Log2(Firmicutes/Bacteroidota)', title = "Firmicutes:Bacteroidota ratio")+
   theme_cowplot()
-# ggsave(file.path(path.plots, "ratioFB_Bristol.jpg"), width=5, height=5)
+# ggsave(file.path(path.liu, "ratioFB_Bristol.jpg"), width=5, height=5)
 
 
 # Plot by IBS symptom severity score (mild IBS < 175; moderate < 300; severe >300)
@@ -246,7 +242,7 @@ ggplot(ratio.FB, aes(x = IBS_SSS, y = logRatioFB))+
   scale_color_manual(values=c("blue", "red"))+
   labs(x = "IBS SSS",  y = 'Log2(Firmicutes/Bacteroidota)')+
   theme_cowplot()
-# ggsave(file.path(path.plots, "ratioFB_IBS-SSS.jpg"), width=5, height=5)
+# ggsave(file.path(path.liu, "ratioFB_IBS-SSS.jpg"), width=5, height=5)
 
 
 # Plot by gender
@@ -261,9 +257,9 @@ ggplot(ratio.FB, aes(x = host_sex, y = logRatioFB))+
 
 
 
-####################
-## NORMALIZE DATA ##
-####################
+*******************
+# 4. NORMALIZE DATA
+*******************
 
 ```{r normalize-data, eval = FALSE, echo = TRUE}
 # Sanity check no sample with less than 500 total count
@@ -284,7 +280,7 @@ physeq.NZcomp <- transform_sample_counts(physeq.NZcomp, function(x) x / sum(x) )
 table(rowSums(otu_table(physeq.NZcomp))) # check if there is any row not summing to 1
 
 # Save object
-saveRDS(physeq.NZcomp, file.path(path, "data/analysis-individual/Liu-2020/02_EDA-Liu/physeq_NZcomp.rds"))
+saveRDS(physeq.NZcomp, file.path(path.liu, "physeq_NZcomp.rds"))
 
 
 #____________________________________________________________________
@@ -300,7 +296,7 @@ physeq.rel <- transform_sample_counts(physeq.rel, function(x) x / sum(x) ) # div
 table(rowSums(otu_table(physeq.rel))) # check if there is any row not summing to 1
 
 # save the physeq.rel object
-saveRDS(physeq.rel, file.path(path, "data/analysis-individual/Liu-2020/02_EDA-Liu/physeq_relative.rds"))
+saveRDS(physeq.rel, file.path(path.liu, "physeq_relative.rds"))
 
 
 #____________________________________________________________________
@@ -312,7 +308,7 @@ physeq.CSN <- transform_sample_counts(physeq.CSN, function(x) (x*min(sample_sums
 table(rowSums(otu_table(physeq.CSN))) # check that all rows are summing to the same total
 
 # save the physeq.CSN object
-saveRDS(physeq.CSN, file.path(path, "data/analysis-individual/Liu-2020/02_EDA-Liu/physeq_CSN.rds"))
+saveRDS(physeq.CSN, file.path(path.liu, "physeq_CSN.rds"))
 
 
 #____________________________________________________________________
@@ -325,18 +321,17 @@ physeq.clr <- microbiome::transform(physeq.liu, "clr") # the function adds pseud
 # otu_table(physeq.clr)[1:5, 1:5] # should all be relative
 
 # save the physeq.rel object
-saveRDS(physeq.clr, file.path(path, "data/analysis-individual/Liu-2020/02_EDA-Liu/physeq_clr.rds"))
+saveRDS(physeq.clr, file.path(path.liu, "physeq_clr.rds"))
 ```
 
 
 
 
-#######################
-## COMPUTE DISTANCES ##
-#######################
+**********************
+# 5. COMPUTE DISTANCES
+**********************
 
-### 1. UniFrac, Aitchison, Bray-Curtis and Canberra
-
+### 5.1. UniFrac, Aitchison, Bray-Curtis and Canberra
 First, let's look at these four distances of interest.
 
 ```{r dist-functions, fig.width = 15, fig.height = 4}
@@ -345,9 +340,9 @@ First, let's look at these four distances of interest.
 getDistances <- function(){
   set.seed(123) # for unifrac, need to set a seed
   glom.UniF <- UniFrac(physeq.rel, weighted=TRUE, normalized=TRUE) # weighted unifrac
-  glom.ait <- phyloseq::distance(physeq.clr, method = 'euclidean') # aitchison
+  glom.ait  <- phyloseq::distance(physeq.clr, method = 'euclidean') # aitchison
   glom.bray <- phyloseq::distance(physeq.CSN, method = "bray") # bray-curtis
-  glom.can <- phyloseq::distance(physeq.NZcomp, method = "canberra") # canberra
+  glom.can  <- phyloseq::distance(physeq.NZcomp, method = "canberra") # canberra
   dist.list <- list("UniF" = glom.UniF, "Ait" = glom.ait, "Canb" = glom.can, "Bray" = glom.bray)
   
   return(dist.list)
@@ -393,7 +388,6 @@ plotDistances2D <- function(dlist, ordination="MDS"){
 }
 ```
 
-
 Now let's plot!
 
 ```{r dist-run}
@@ -409,12 +403,11 @@ ggplot(plot.df, aes(Axis.1, Axis.2, color=host_subtype))+
   theme(strip.text.x = element_text(size=20))+
   labs(color="Disease")
 
-# ggsave(file.path(path.plots, "distances4_MDS.jpg"), height = 4, width = 15)
+# ggsave(file.path(path.liu, "distances4_MDS.jpg"), height = 4, width = 15)
 ```
 
 
-### 2. Plot in 3D
-
+### 5.2. Plot in 3D
 For better visualization, we will also take a glance at reduction to 3D.
 
 ```{r 3D-function, eval = TRUE, echo = TRUE}
@@ -441,7 +434,6 @@ plotDistances3D <- function(d, name_dist){
 }
 ```
 
-
 Now let's plot!
 
 ```{r 3D-plot, fig.width = 8, fig.height = 5}
@@ -454,9 +446,9 @@ plotDistances3D(dist.liu$Bray, "Bray-Curtis")
 
 
 
-#############################
-## HIERARCHICAL CLUSTERING ##
-#############################
+****************************
+# 6. HIERARCHICAL CLUSTERING
+****************************
 
 ```{r hierarchical-clust, fig.width = 25, fig.width = 7}
 # For heatmaps: have group color
@@ -502,12 +494,11 @@ heatmp.liu <- plotHeatmaps(dlist = dist.liu, fontsize = 8)
 
 
 
-################################
-## REPRODUCE PLOTS FROM PAPER ##
-################################
+*******************************
+# 7. REPRODUCE PLOTS FROM PAPER
+*******************************
 
-### 1. Alpha-Diversity analysis
-
+### 7.1. Alpha-Diversity analysis
 Reproduce fig1A: due to DADA2 algorithm that does not call singletons, we cannot estimate the Chao or Ace richness.
 
 ```{r fig1A, fig.height = 5, fig.width=5}
@@ -517,13 +508,12 @@ plot_richness(physeq.liu, x="host_subtype", measures="Simpson", color="host_subt
   theme_bw() +
   labs(x="", y="Simpson")
 ```
-![(A-C) Simpson, Ace and Chao index of IBS-D and HC groups. Welch's test. Means ± SD](/Users/scarcy/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Liu-2020/02_EDA-Liu/fig1A.png){width=30%}
+![(A-C) Simpson, Ace and Chao index of IBS-D and HC groups. Welch's test. Means ± SD](/Users/scarcy/Projects/MetaIBS/data/preprocessing/analysis-individual/Liu-2020/03_EDA-Liu/fig1A.png){width=30%}
 
 <br/>
 
 
-### 2. PCoA on Bray-Curtis distance
-
+### 7.2. PCoA on Bray-Curtis distance
 Reproduce fig 1D
 
 ```{r fig1D, fig.height = 6, fig.width=8}
@@ -542,12 +532,11 @@ plot_ordination(physeq.CSN, pcoa, color="host_subtype")+
   labs(color="Disease")
 
 ```
-![(D) PCoA of fecal microbiota composition in IBS-D and HC groups based on bray-curtis distance.](/Users/scarcy/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Liu-2020/02_EDA-Liu/fig1D.png){width=40%}
+![(D) PCoA of fecal microbiota composition in IBS-D and HC groups based on bray-curtis distance.](/Users/scarcy/Projects/MetaIBS/data/preprocessing/analysis-individual/Liu-2020/03_EDA-Liu/fig1D.png){width=40%}
 
 <br/>
 
-### 3. Hierarchical clustering
-
+### 7.3. Hierarchical clustering
 Reproduce fig 1E
 
 ```{r fig1E, fig.height = 8, fig.width=7}
@@ -574,12 +563,11 @@ ggplot(segment(dend.average))+
   theme_bw()
 ```
 
-![(E) Hierarchical clustering of fecal microbiota composition in IBS-D and HC groups based on bray-curtis distance.](/Users/scarcy/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Liu-2020/02_EDA-Liu/fig1E.png){width=30%}
+![(E) Hierarchical clustering of fecal microbiota composition in IBS-D and HC groups based on bray-curtis distance.](/Users/scarcy/Projects/MetaIBS/data/preprocessing/analysis-individual/Liu-2020/03_EDA-Liu/fig1E.png){width=30%}
 
 <br/>
 
-### 4. Relative abundance
-
+### 7.4. Relative abundance
 Reproduce fig 2A
 
 ```{r fig2A, fig.height = 4, fig.width=7}
@@ -602,7 +590,15 @@ ggplot(phylum.table.main, aes(x = host_subtype, y = Abundance, fill = Phylum))+
 ```
 
 
-![(A) Relative taxonomic abundances at the level of phylum are shown in bar charts.](/Users/scarcy/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Liu-2020/02_EDA-Liu/fig2A.png){width=40%}
+![(A) Relative taxonomic abundances at the level of phylum are shown in bar charts.](/Users/scarcy/Projects/MetaIBS/data/preprocessing/analysis-individual/Liu-2020/03_EDA-Liu/fig2A.png){width=40%}
 
 
 
+
+******************
+# 8. SESSION INFO
+******************
+
+```{r session-info}
+sessionInfo()
+```
