@@ -67,6 +67,7 @@ physeq            <- readRDS(file.path(path.root, "data/preprocessing/analysis-i
 # 2. QUALITY CHECK
 ******************
 
+### 2.1. Fastq quality profiles
 First, we import the fastq files containing the raw reads. The samples were downloaded from the ENA database with the accession number 
 PRJNA637763.
 
@@ -116,13 +117,7 @@ plot_read_content(rcR) + labs(title = "Per base sequence content - Reverse read"
 ```
 
 
-
-
-
-**********************
-# 3.  LOOK FOR PRIMERS
-**********************
-
+### 2.2. Look for primers
 Now, we will look whether the reads still contain the primers. Primer sequences were provided in the methods section of the paper. The sequences provided in the paper were long, so only the relevant part of the sequences were kept (the part of the sequences corresponding to 27F and 338R)
 
 ```{r primer-check, eval = TRUE, message=FALSE}
@@ -168,17 +163,17 @@ for (i in 1:3){
 
 
 ********************
-# 4. FILTER AND TRIM
+# 3. FILTER AND TRIM
 ********************
 
-### 4.1. Primer removal
+### 3.1. Primer removal
 The vast majority of the reads contain their respective primers (>95% of reads). After looking at the fastq files, the primers are located at the very beginning of the reads, as expected.
 Ideally, to follow the standardized pipeline, we should (1) filter out reads not containing any primer and (2) trim the primers. However, the fastq files deposited on the SRA/ENA databases do not contain Illumina headers. Thus, during the merging step of paired reads later on, the Dada2 package won't be able to match paired-reads.
 
 We will simply perform a quality filtering of the reads, and trim the first 25bp of the reads.
 
 
-### 4.2. Quality filtering
+### 3.2. Quality filtering
 Then, we perform a quality filtering of the reads. 
 
 ```{r filter-trim, eval = FALSE, echo = TRUE}
@@ -214,10 +209,11 @@ for (i in 1:3){
 
 
 
-**********************
-# 5. LEARN ERROR RATES
-**********************
+************************
+# 4. CONSTRUCT ASV TABLE
+************************
 
+### 4.1. Learn error rates
 Now we will build the parametric error model, to be able to infer amplicon sequence variants (ASVs) later on.
 
 ```{r error-rate-estimate, eval = FALSE}
@@ -233,13 +229,7 @@ plotErrors(errR, nominalQ = TRUE) # Reverse reads
 ```
 
 
-
-
-*****************************
-# 6. CONSTRUCT SEQUENCE TABLE
-*****************************
-
-### 6.1. Infer sample composition
+### 4.2. Infer sample composition
 The _dada()_ algorithm infers sequence variants based on estimated errors (previous step). Firstly, we de-replicate the reads in each sample, to reduce the computation time.
 De-replication is a common step in almost all modern ASV inference (or OTU picking) pipelines, but a unique feature of derepFastq is that it maintains a summary of the quality information for each dereplicated sequence in $quals.
 
@@ -263,7 +253,7 @@ for (i in 1:2){
 ```
 
 
-### 6.2. Merge paired-end reads
+### 4.3. Merge paired-end reads
 ```{r merge-paired-end, eval = FALSE}
 mergers <- mergePairs(dadaFs, derepF, dadaRs, derepR, verbose=TRUE)
 ```
@@ -273,7 +263,7 @@ head(mergers[[1]])
 ```
 
 
-### 6.3. Construct ASV table
+### 4.4. Construct ASV table
 We can now construct an amplicon sequence variant table (ASV) table, a higher-resolution version of the OTU table produced by traditional methods.
 
 ```{r build-seq-table, fig.height=3, fig.width=4}
@@ -297,7 +287,7 @@ sum(seqtable.new)/sum(seqtable)
 ```
 
 
-### 6.4. Remove chimeras
+### 4.5. Remove chimeras
 The core dada method corrects substitution and indel errors, but chimeras remain. Fortunately, the accuracy of sequence variants after denoising makes identifying chimeric ASVs simpler than when dealing with fuzzy OTUs. Chimeric sequences are identified if they can be exactly reconstructed by combining a left-segment and a right-segment from two more abundant “parent” sequences.
 
 ```{r remove-chimeras}
@@ -314,11 +304,10 @@ sum(seqtable.nochim)/sum(seqtable)
 
 
 *****************************************
-# 7. LOOK AT READS COUNT THROUGH PIPELINE
+# 5. LOOK AT READS COUNT THROUGH PIPELINE
 *****************************************
 
 Sanity check before assigning taxonomy.
-
 ```{r reads-filtered-sanity-check, echo=TRUE}
 # Function that counts nb of reads
 getN <- function(x) sum(getUniques(x))
@@ -345,7 +334,6 @@ rownames(track) <- rownames(seqtable.nochim)
 track
 ```
 
-
 ```{r seqdepth, echo=FALSE, eval=FALSE, include=FALSE}
 # Save nb of reads per sample before / after dada2 pipeline
 nb.reads <- data.frame("before" = raw_stats$reads,
@@ -369,7 +357,7 @@ saveRDS(nb.reads, file.path(path.root, "data/preprocessing/dada2-filt/nbreads_fu
 
 
 ********************
-# 8. ASSIGN TAXONOMY
+# 6. TAXONOMIC TABLE
 ********************
 
 Extensions: The dada2 package also implements a method to make species level assignments based on exact matching between ASVs and sequenced reference strains. Recent analysis suggests that exact matching (or 100% identity) is the only appropriate way to assign species to 16S gene fragments. Currently, species-assignment training fastas are available for the Silva and RDP 16S databases. To follow the optional species addition step, download the silva_species_assignment_v132.fa.gz file, and place it in the directory with the fastq files.
@@ -411,12 +399,12 @@ table(is.na(taxa.print[,2])) # is there any NA phyla?
 
 
 ***********************
-# 9. LAST PREPROCESSING
+# 7. LAST PREPROCESSING
 ***********************
 
 We will remove any sample with less than 500 reads from further analysis, and also any ASVs with unassigned phyla.
 
-### 9.1. Create phyloseq object
+### 7.1. Create phyloseq object
 The preprocessing will be easier to do with ASV, taxonomic and metadata tables combined in a phyloseq object.
 
 ```{r phyloseq-preprocess, echo=TRUE, eval=TRUE}
@@ -464,7 +452,7 @@ physeq <- prune_taxa(taxa_sums(physeq)>0, physeq)
 ```
 
 
-### 9.2. Quick peek at data analysis
+### 7.2. Quick peek at data analysis
 ```{r plot, fig.width = 10, fig.height = 4}
 # Absolute abundance
 plot_bar(physeq, fill = "Phylum")+ facet_wrap("host_disease", scales="free_x") + theme(axis.text.x = element_blank())
@@ -484,7 +472,7 @@ ggplot(phylum.table, aes(x = reorder(Sample, Sample, function(x) mean(phylum.tab
 ```
 
 
-### 9.3. Save to disk
+### 7.3. Save to disk
 ```{r save-data, eval=FALSE}
 # Save to disk
 saveRDS(raw_stats, file.path(path.data, "01_Dada2-Fukui/raw_stats.rds"))
@@ -503,9 +491,9 @@ saveRDS(physeq, file.path(path.root, "data/preprocessing/analysis-individual/CLU
 
 
 
-******************
-# 10. SESSION INFO
-******************
+*****************
+# 8. SESSION INFO
+*****************
 
 ```{r session-info}
 sessionInfo()

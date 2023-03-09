@@ -64,6 +64,7 @@ physeq        <- readRDS(file.path(path.data, "01_Dada2-AGP/physeq_agp_with_bloo
 # 2. QUALITY CHECK
 ******************
 
+### 2.1. Fastq quality profiles
 First, we import the fastq files containing the raw reads. The samples were downloaded from the SRA database with the accession number PRJEB11419. IBS and healthy samples were selected out of the thousands of samples as described in [00_Metadata-AGP.R](00_Metadata-AGP.R).
 
 ```{r quality-check, echo=TRUE}
@@ -105,12 +106,7 @@ plot_read_content(rc) + xlim(0,50) + labs(title = "Per base sequence content")
 ```
 
 
-
-
-**********************
-# 3.  LOOK FOR PRIMERS
-**********************
-
+### 2.2. Look for primers
 Now, we will look whether the reads still contain the primers.
 
 ```{r primer-check, eval = TRUE, message=FALSE}
@@ -159,14 +155,14 @@ for (i in 1:4){ # 1:length(FNs)
 
 
 ********************
-# 4. FILTER AND TRIM
+# 3. FILTER AND TRIM
 ********************
 
-### 4.1. Primer removal
+### 3.1. Primer removal
 The reads do not contain any primer. We will go forward directly with the quality filtering.
 
 
-### 4.2. Quality filtering
+### 3.2. Quality filtering
 Then, we perform a quality filtering of the reads.
 
 ```{r quality-filter, eval = FALSE, echo = TRUE}
@@ -191,9 +187,7 @@ names(FNs_filt) <- sample.names_filt
 
 ```
 
-
 About ~35 samples had a large number of reads but none of them passed the quality filter. Let's inspect quickly the quality profile of some of them.
-
 ```{r quality-filter-plots}
 for (i in 195:234){ # printing 2 samples before & after the "abnormal samples", that actually passed the quality filter (as comparison)
   show(plotQualityProfile(FNs[i]))
@@ -205,10 +199,11 @@ The quality profile of these discarded samples show some abnormalities, and read
 
 
 
-**********************
-# 5. LEARN ERROR RATES
-**********************
+************************
+# 4. CONSTRUCT ASV TABLE
+************************
 
+### 4.1. Learn error rates
 Now we will build the parametric error model, to be able to infer amplicon sequence variants (ASVs) later on.
 
 ```{r error-rate-estimate, eval = FALSE}
@@ -223,13 +218,7 @@ plotErrors(err, nominalQ = TRUE)
 ```
 
 
-
-
-*****************************
-# 6. CONSTRUCT SEQUENCE TABLE
-*****************************
-
-### 6.1. Infer sample composition
+### 4.2. Infer sample composition
 The _dada()_ algorithm infers sequence variants based on estimated errors (previous step). Firstly, we de-replicate the reads in each sample, to reduce the computation time.
 De-replication is a common step in almost all modern ASV inference (or OTU picking) pipelines, but a unique feature of derepFastq is that it maintains a summary of the quality information for each dereplicated sequence in $quals.
 
@@ -255,7 +244,7 @@ for (i in 1:5){
 ```
 
 
-### 6.2. Construct ASV table
+### 4.3. Construct ASV table
 We can now construct an amplicon sequence variant table (ASV) table, a higher-resolution version of the OTU table produced by traditional methods.
 
 ```{r build-seq-table, fig.height=3, fig.width=4}
@@ -270,7 +259,7 @@ hist(nchar(getSequences(seqtable)), breaks = 100, xlab = "ASV length", ylab = "N
 ```
 
 
-### 6.3. Remove chimeras
+### 4.4. Remove chimeras
 The core dada method corrects substitution and indel errors, but chimeras remain. Fortunately, the accuracy of sequence variants after denoising makes identifying chimeric ASVs simpler than when dealing with fuzzy OTUs. Chimeric sequences are identified if they can be exactly reconstructed by combining a left-segment and a right-segment from two more abundant “parent” sequences.
 
 ```{r remove-chimeras}
@@ -287,7 +276,7 @@ sum(seqtable.nochim)/sum(seqtable)
 
 
 *****************************************
-# 7. LOOK AT READS COUNT THROUGH PIPELINE
+# 5. LOOK AT READS COUNT THROUGH PIPELINE
 *****************************************
 
 Sanity check before assigning taxonomy.
@@ -339,7 +328,7 @@ saveRDS(nb.reads, file.path(path.root, "data/preprocessing/dada2-filt/nbreads_ag
 
 
 ********************
-# 8. ASSIGN TAXONOMY
+# 6. TAXONOMIC TABLE
 ********************
 
 Extensions: The dada2 package also implements a method to make species level assignments based on exact matching between ASVs and sequenced reference strains. Recent analysis suggests that exact matching (or 100% identity) is the only appropriate way to assign species to 16S gene fragments. Currently, species-assignment training fastas are available for the Silva and RDP 16S databases (you can download them from the DADA2 website).
@@ -383,12 +372,12 @@ table(is.na(taxa.print[,2])) # is there any NA phyla?
 
 
 ***********************
-# 9. LAST PREPROCESSING
+# 7. LAST PREPROCESSING
 ***********************
 
 We will remove any sample with less than 500 reads from further analysis, and also any ASVs with unassigned phyla.
 
-### 9.1. Create phyloseq object
+### 7.1. Create phyloseq object
 The preprocessing will be easier to do with ASV, taxonomic and metadata tables combined in a phyloseq object.
 
 ```{r phyloseq-preprocess, echo=TRUE, eval=FALSE}
@@ -427,8 +416,7 @@ physeq <- prune_taxa(taxa_sums(physeq)>0, physeq)
 ```
 
 
-### 9.2. Quick peek at data analysis
-
+### 7.2. Quick peek at data analysis
 ```{r plot, fig.width = 10}
 # Absolute abundance
 # plot_bar(physeq, fill = "Phylum")+ facet_wrap("host_disease", scales="free") + theme(axis.text.x = element_blank()) # long to compute
@@ -451,7 +439,7 @@ ggplot(phylum.table, aes(x = reorder(Sample, Sample, function(x) mean(phylum.tab
 ```
 
 
-### 9.3. Remove bloom sequences
+### 7.3. Remove bloom sequences
 Looking at it more closely, there is a high proportion of Proteobacteria compared to other datasets. Considering that fecal samples were shipped from the participants' home at room temperature, there is evidence that some bacteria grow at room temperature, which would bias the microbial composition (https://journals.asm.org/doi/10.1128/mSystems.00199-16#B5). Authors from the AGP removed a selection of **bloom sequences** that were shared on their [github repository][1] in a FASTA file.
 
 [1]: https://github.com/knightlab-analyses/bloom-analyses
@@ -522,8 +510,7 @@ gridExtra::grid.arrange(a, b, ncol=2, widths=c(0.3,0.7))
 ```
 
 
-### 9.4. Save to disk
-
+### 7.4. Save to disk
 ```{r save, eval=FALSE}
 # Save to disk (for quicker html output)
 saveRDS(raw_stats,   file.path(path.data, "01_Dada2-AGP/raw_stats.rds"))
@@ -543,9 +530,9 @@ saveRDS(physeq.filt, file.path(path.root, "data/preprocessing/analysis-individua
 
 
 
-******************
-# 10. SESSION INFO
-******************
+*****************
+# 8. SESSION INFO
+*****************
 
 ```{r session-info}
 sessionInfo()

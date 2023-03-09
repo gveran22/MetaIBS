@@ -57,7 +57,7 @@ filt2_samples <- sort(list.files(file.path(path.data, "filtered2"), pattern=".fa
 err           <- readRDS(file.path(path.data, "01_Dada2-Labus/err.rds")) # error rates
 seq_infered   <- readRDS(file.path(path.data, "01_Dada2-Labus/seq_infered.rds")) # inferred ASVs
 taxa          <- readRDS(file.path(path.data, "01_Dada2-Labus/taxa_labus.rds")) # taxa
-physeq        <- readRDS(file.path(path.root, "data/analysis-individual/CLUSTER/PhyloTree/input/physeq_labus.rds")) # phyloseq object without phylogenetic tree
+physeq        <- readRDS(file.path(path.root, "data/preprocessing/analysis-individual/CLUSTER/PhyloTree/input/physeq_labus.rds")) # phyloseq object without phylogenetic tree
 ```
 
 
@@ -67,16 +67,17 @@ physeq        <- readRDS(file.path(path.root, "data/analysis-individual/CLUSTER/
 # 2. QUALITY CHECK
 ******************
 
+### 2.1. Fastq quality profiles
 First, we import the fastq files containing the raw reads. The samples were downloaded from the ENA database with the accession number PRJNA373876.
 
 ```{r quality-check, echo=TRUE, results="hide", message=FALSE}
 # Save the path to the directory containing the fastq zipped files
 path.fastq <- file.path(path.labus, "download-Labus-samples/")
-# list.files(path) # check we are in the right directory
+# list.files(path.fastq) # check we are in the right directory
 
 # fastq filenames have format: SAMPLENAME.fastq.gz
 # Saves the whole directory path to each file name
-FNs <- sort(list.files(file.path(path.fastq, "original"), pattern=".fastq.gz", full.names = TRUE))
+FNs <- sort(list.files(path.fastq, pattern=".fastq.gz", full.names = TRUE))
 show(FNs[1:5])
 
 # Extract sample names, assuming filenames have format: SAMPLENAME.fastq.gz
@@ -107,12 +108,7 @@ plot_read_content(rc) + xlim(0,50) + labs(title = "Per base sequence content")
 ```
 
 
-
-
-**********************
-# 3.  LOOK FOR PRIMERS
-**********************
-
+### 2.2. Look for primers
 Now, we will look whether the reads still contain the primers. In the paper, they describe using V3-V5 primers, as in the article _Evaluation of 16S rDNA-based community profiling for human microbiome research_ (Human Microbiome Project). Supplementary data in this article provides the primers sequences.
 
 ```{r primer-check, eval = TRUE, message=FALSE}
@@ -156,10 +152,10 @@ for (i in 1:5){
 
 
 ********************
-# 4. FILTER AND TRIM
+# 3. FILTER AND TRIM
 ********************
 
-### 4.1. Primer removal
+### 3.1. Primer removal
 The reads indeed contain the reverse primer. We will keep only reads containing the primer, and then remove the primer!
 
 ```{r primer-filter, eval = FALSE, echo = TRUE}
@@ -189,7 +185,7 @@ for (i in 1:4){
 ```
 
 
-### 4.2. Quality filtering
+### 3.2. Quality filtering
 Then, we perform a quality filtering of the reads.
 
 ```{r filter-trim, eval = FALSE, echo = TRUE}
@@ -222,10 +218,11 @@ for (i in 1:4){
 
 
 
-**********************
-# 5. LEARN ERROR RATES
-**********************
+************************
+# 4. CONSTRUCT ASV TABLE
+************************
 
+### 4.1. Learn error rates
 Now we will build the parametric error model, to be able to infer amplicon sequence variants (ASVs) later on.
 
 ```{r error-rate-estimate, eval = FALSE}
@@ -239,13 +236,7 @@ plotErrors(err, nominalQ = TRUE)
 ```
 
 
-
-
-*****************************
-# 6. CONSTRUCT SEQUENCE TABLE
-*****************************
-
-### 6.1. Infer sample composition
+### 4.2. Infer sample composition
 The _dada()_ algorithm infers sequence variants based on estimated errors (previous step). Firstly, we de-replicate the reads in each sample, to reduce the computation time.
 De-replication is a common step in almost all modern ASV inference (or OTU picking) pipelines, but a unique feature of derepFastq is that it maintains a summary of the quality information for each dereplicated sequence in $quals.
 
@@ -272,7 +263,7 @@ for (i in 1:5){
 ```
 
 
-### 6.2. Construct ASV table
+### 4.3. Construct ASV table
 We can now construct an amplicon sequence variant table (ASV) table, a higher-resolution version of the OTU table produced by traditional methods.
 
 ```{r build-seq-table, fig.height=3, fig.width=4}
@@ -287,7 +278,7 @@ hist(nchar(getSequences(seqtable)), breaks = 100, xlab = "ASV length", ylab = "N
 ```
 
 
-### 6.3. Remove chimeras
+### 4.4. Remove chimeras
 The core dada method corrects substitution and indel errors, but chimeras remain. Fortunately, the accuracy of sequence variants after denoising makes identifying chimeric ASVs simpler than when dealing with fuzzy OTUs. Chimeric sequences are identified if they can be exactly reconstructed by combining a left-segment and a right-segment from two more abundant “parent” sequences.
 
 ```{r remove-chimeras}
@@ -304,7 +295,7 @@ sum(seqtable.nochim)/sum(seqtable)
 
 
 *****************************************
-# 7. LOOK AT READS COUNT THROUGH PIPELINE
+# 5. LOOK AT READS COUNT THROUGH PIPELINE
 *****************************************
 
 Sanity check before assigning taxonomy.
@@ -327,7 +318,6 @@ rownames(track) <- sample.names
 # Show final table
 track
 ```
-
 
 ```{r seqdepth, echo=FALSE, eval=FALSE, include=FALSE}
 # Save nb of reads per sample before / after dada2 pipeline
@@ -352,7 +342,7 @@ saveRDS(nb.reads, file.path(path.root, "data/preprocessing/dada2-filt/nbreads_la
 
 
 ********************
-# 8. ASSIGN TAXONOMY
+# 6. TAXONOMIC TABLE
 ********************
 
 Extensions: The dada2 package also implements a method to make species level assignments based on exact matching between ASVs and sequenced reference strains. Recent analysis suggests that exact matching (or 100% identity) is the only appropriate way to assign species to 16S gene fragments. Currently, species-assignment training fastas are available for the Silva and RDP 16S databases. To follow the optional species addition step, download the silva_species_assignment_v138.fa.gz file, and place it in the directory with the fastq files.
@@ -393,12 +383,12 @@ table(is.na(taxa.print[,2])) # is there any NA phyla?
 
 
 ***********************
-# 9. LAST PREPROCESSING
+# 7. LAST PREPROCESSING
 ***********************
 
 We will remove any sample with less than 500 reads from further analysis, and also any ASVs with unassigned phyla.
 
-### 9.1. Create phyloseq object
+### 7.1. Create phyloseq object
 The preprocessing will be easier to do with ASV, taxonomic and metadata tables combined in a phyloseq object.
 
 ```{r phyloseq-preprocess, echo=TRUE, eval=FALSE}
@@ -434,7 +424,7 @@ physeq <- prune_taxa(taxa_sums(physeq)>0, physeq)
 ```
 
 
-### 9.2. Quick peek at data analysis
+### 7.2. Quick peek at data analysis
 ```{r plot, fig.width = 10, fig.height = 4}
 # Absolute abundance
 plot_bar(physeq, fill = "Phylum")+ facet_wrap("host_disease", scales="free_x") + theme(axis.text.x = element_blank())
@@ -453,7 +443,7 @@ ggplot(phylum.table, aes(x = Sample, y = Abundance, fill = Phylum))+
 ```
 
 
-### 9.3. Save to disk
+### 7.3. Save to disk
 ```{r save, eval=FALSE}
 # Save to disk
 saveRDS(raw_stats,   file.path(path.data, "01_Dada2-Labus/raw_stats.rds"))
@@ -464,14 +454,14 @@ saveRDS(seq_infered, file.path(path.data, "01_Dada2-Labus/seq_infered.rds"))
 
 # Taxa & Phyloseq object
 saveRDS(taxa,   file.path(path.data, "01_Dada2-Labus/taxa_labus.rds"))
-saveRDS(physeq, file.path(path.root, "data/analysis-individual/CLUSTER/PhyloTree/input/physeq_labus.rds"))
+saveRDS(physeq, file.path(path.root, "data/preprocessing/analysis-individual/CLUSTER/PhyloTree/input/physeq_labus.rds"))
 ```
 
 
 
 
 ******************
-# 10. SESSION INFO
+# 8. SESSION INFO
 ******************
 
 ```{r session-info}
