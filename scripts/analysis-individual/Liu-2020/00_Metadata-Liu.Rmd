@@ -4,37 +4,43 @@ output:
   html_document:
     df_print: paged
     toc: true
+    toc_float: true
 ---
 
 
 ```{r, include=FALSE}
 knitr::opts_chunk$set(warning=FALSE, message=FALSE,
-                      root.dir = "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Liu-2020/00_Metadata-Liu/")
+                      root.dir = "~/Projects/MetaIBS/data/analysis-individual/Liu-2020/00_Metadata-Liu/")
 ```
 
-##########
-# IMPORT #
-##########
 
-## 1. Libraries
+
+
+***********
+# 1. IMPORT
+***********
+
+## 1.1. Libraries
 ```{r import-libraries}
 library(data.table)
 library(tidyverse)
 ```
 
-## 2. Data
+## 1.2. Data
 ```{r import-data}
-path <- "~/Projects/IBS_Meta-analysis_16S"
+path <- "~/Projects/MetaIBS/scripts/analysis-individual/Liu-2020"
 
 # Metadata table downloaded from the SRA
-sra_metadata <- read.csv(file.path(path, "data/analysis-individual/Liu-2020/LiuSraRunTable.txt"), header=TRUE, sep = ",")
+sra_metadata <- read.csv(file.path(path, "00_Metadata-Liu/LiuSraRunTable.txt"), header=TRUE, sep = ",")
 head(sra_metadata)
 ```
 
 
-##################
-# CLEANUP TABLE #
-##################
+
+
+******************
+# 2. CLEANUP TABLE
+******************
 
 ```{r cleanup-metadata}
 clean.df <- sra_metadata %>%
@@ -55,15 +61,28 @@ head(clean.df)
 ```
 
 
-#################
-# SAVE METADATA #
-#################
+
+
+******************
+# 3. SAVE METADATA
+******************
 
 ```{r save-data, echo=TRUE, eval=FALSE}
 # Export metadata table
-write.csv(clean.df, file.path(path, "data/analysis-individual/Liu-2020/00_Metadata-Liu/modif_metadata(R).csv"))
+write.csv(clean.df, file.path(path, "00_Metadata-Liu/modif_metadata(R).csv"))
 
 # Export the list of Runs to download
-write.table(clean.df$Run, file.path(path, "data/analysis-individual/Liu-2020/original/list_files.txt"),
+write.table(clean.df$Run, file.path(path, "download-Liu-samples/list_files_liu.txt"),
             sep="\t", row.names=FALSE, col.names=FALSE, quote=FALSE)
+```
+
+
+
+
+*****************
+# 4. SESSION INFO
+*****************
+
+```{r session-info}
+sessionInfo()
 ```

@@ -1,0 +1,3 @@
+This directory contains metadata for the Liu dataset.
+- `LiuSraRunTable.csv`: metadata table downloaded from the [SRA Run Selector](https://www.ncbi.nlm.nih.gov/Traces/study/?acc=PRJNA544721&o=acc_s%3Aa) (accession number PRJNA544721)
+- `modif_metadata(R).csv`: metadata table with essential information, cleaned up from `LiuSraRunTable.csv` with the [00_Metadata-Liu.Rmd](../00_Metadata-Liu.Rmd) script.
