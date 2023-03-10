@@ -115,7 +115,6 @@ wilcox.test(metadata[metadata$host_disease == "IBS",]$host_bmi,
 ***************
 
 ### 3.1. Absolute abundances
-
 ```{r plot-absolute-abundance, fig.width=10, fig.height = 5}
 # Plot Phylum
 plot_bar(physeq.liu, fill = "Phylum") + facet_wrap("host_subtype", scales="free_x") +
