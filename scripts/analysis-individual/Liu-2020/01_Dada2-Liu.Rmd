@@ -44,9 +44,9 @@ path.data <- file.path(path.root, "data/preprocessing/analysis-individual/Liu-20
 
 
 ```{r html-import, echo = FALSE}
-#_____________________________________________________________________
+#__________________________________________________________________________
 #____________ THIS IS ONLY FOR (quicker) PDF/HTML OUTPUT __________________
-#_____________________________________________________________________
+#__________________________________________________________________________
 
 raw_stats     <- readRDS(file.path(path.data, "01_Dada2-Liu/raw_stats.rds")) # seq depth
 out1          <- readRDS(file.path(path.data, "01_Dada2-Liu/out1.rds")) # out process (primer removal)
@@ -504,10 +504,10 @@ ggplot(phylum.table, aes(x = Sample,
 ### 7.3. Save to disk
 ```{r save, eval=FALSE}
 # Save to disk
-saveRDS(raw_stats, file.path(path.data, "01_Dada2-Liu/raw_stats.rds"))
-saveRDS(out1, file.path(path.data, "01_Dada2-Liu/out1.rds"))
-saveRDS(out2, file.path(path.data, "01_Dada2-Liu/out2.rds"))
-saveRDS(err, file.path(path.data, "01_Dada2-Liu/err.rds"))
+saveRDS(raw_stats,   file.path(path.data, "01_Dada2-Liu/raw_stats.rds"))
+saveRDS(out1,        file.path(path.data, "01_Dada2-Liu/out1.rds"))
+saveRDS(out2,        file.path(path.data, "01_Dada2-Liu/out2.rds"))
+saveRDS(err,         file.path(path.data, "01_Dada2-Liu/err.rds"))
 saveRDS(seq_infered, file.path(path.data, "01_Dada2-Liu/seq_infered.rds"))
 
 # Taxa & Phyloseq object
