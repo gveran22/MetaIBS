@@ -4,22 +4,23 @@ output:
   html_document:
     df_print: paged
     toc: true
+    toc_float: true
   pdf_document: default
 ---
 
 ```{r, include=FALSE}
 knitr::opts_chunk$set(fig.width = 15, fig.height = 5, warning=FALSE, message=FALSE,
-                      root.dir = "~/Projects/IBS_Meta-analysis_16S/analysis-individual/LoPresti-2019")
+                      root.dir = "~/Projects/MetaIBS/analysis-individual/LoPresti-2019")
 ```
 
 
 
-############
-## IMPORT ##
-############
 
-### 1. Librairies
+***********
+# 1. IMPORT
+***********
 
+### 1.1. Librairies
 ```{r library-import}
 library(phyloseq) # for phyloseq object
 library(ggplot2)
@@ -34,23 +35,20 @@ library("vegan") # NMDS
 library(pheatmap) # for heatmap
 ```
 
-### 2. Data
-
+### 1.2. Data
 ```{r import-data}
 # Set path
-path <- "~/Projects/IBS_Meta-analysis_16S"
-path.plots <- file.path(path, "data/analysis-individual/PLOTS/plots-LoPresti-EDA")
+path.root <- "~/Projects/MetaIBS"
+path.lopresti <- file.path(path.root, "data/preprocessing/analysis-individual/LoPresti-2019/03_EDA-LoPresti")
 
 # Import phyloseq object
-physeq.lopresti <- readRDS(file.path(path, "phyloseq-objects/physeq_lopresti.rds"))
+physeq.lopresti <- readRDS(file.path(path.root, "data/phyloseq-objects/physeq_lopresti.rds"))
 
 # Sanity check
 physeq.lopresti
 ```
 
-
 Phylogenetic tree was computed with the package `phangorn`, and the script was run on a cluster. Let's check we have correctly generated a phylogenetic tree.
-
 ```{r plot-tree, fig.height = 6, fig.width = 10}
 # Look at the tree
 plot_tree(physeq.lopresti, color = "Phylum", ladderize="left")
@@ -64,17 +62,18 @@ plot_tree(physeq.lopresti, color = "Phylum", ladderize="left")
 #__________________________________________________________________________
 
 # Import phyloseq objects for computing distances
-physeq.rel <- readRDS(file.path(path, "data/analysis-individual/LoPresti-2019/02_EDA-LoPresti/physeq_relative.rds"))
-physeq.clr <- readRDS(file.path(path, "data/analysis-individual/LoPresti-2019/02_EDA-LoPresti/physeq_clr.rds"))
-physeq.CSN <- readRDS(file.path(path, "data/analysis-individual/LoPresti-2019/02_EDA-LoPresti/physeq_CSN.rds"))
-physeq.NZcomp <- readRDS(file.path(path, "data/analysis-individual/LoPresti-2019/02_EDA-LoPresti/physeq_NZcomp.rds"))
+physeq.rel    <- readRDS(file.path(path.lopresti, "physeq_relative.rds"))
+physeq.clr    <- readRDS(file.path(path.lopresti, "physeq_clr.rds"))
+physeq.CSN    <- readRDS(file.path(path.lopresti, "physeq_CSN.rds"))
+physeq.NZcomp <- readRDS(file.path(path.lopresti, "physeq_NZcomp.rds"))
 ```
 
 
 
-##################
-## DEMOGRAPHICS ##
-##################
+
+*****************
+# 2. DEMOGRAPHICS
+*****************
 
 This dataset has several covariates (gender, age, bmi, sample_storage_duration). We will check whether there is the same distribution of these covariates between healthy and IBS patients.
 
@@ -105,12 +104,11 @@ chisq.test(data.frame("Female" = c(12,17),
 
 
 
-################
-## ABUNDANCES ##
-################
+***************
+# 3. ABUNDANCES
+***************
 
-### 1. Absolute abundances
-
+### 3.1. Absolute abundances
 ```{r plot-absolute-abundance, fig.width=10, fig.height = 5}
 # Plot Phylum
 plot_bar(physeq.lopresti, fill = "Phylum") + facet_wrap("sample_type", scales="free_x") +
@@ -118,7 +116,7 @@ plot_bar(physeq.lopresti, fill = "Phylum") + facet_wrap("sample_type", scales="f
   labs(x = "Samples", y = "Absolute abundance", title = "Lo Presti dataset (2019)")+
   theme_cowplot()+
   theme(axis.text.x = element_text(size=6, angle=90))
-# ggsave(file.path(path.plots, "absAbundance_phylum.jpg"), width=13, height=5)
+# ggsave(file.path(path.lopresti, "absAbundance_phylum.jpg"), width=13, height=5)
 
 # Plot Class
 plot_bar(physeq.lopresti, fill = "Class")+ facet_wrap("sample_type", scales="free_x") +
@@ -134,9 +132,7 @@ plot_bar(physeq.lopresti, fill = "Class")+ facet_wrap("sample_type", scales="fre
 - maximum of `r max(sample_sums(physeq.lopresti))` total count per sample  
 
 
-
-### 2. Relative abundances
-
+### 3.2. Relative abundances
 ```{r plot-relative-abundances, fig.width=10, fig.height = 5, message=FALSE}
 # Agglomerate to phylum & class levels
 phylum.table <- physeq.lopresti %>%
@@ -157,7 +153,7 @@ ggplot(phylum.table, aes(x = reorder(Sample, Sample, function(x) mean(phylum.tab
   geom_bar(stat = "identity") +
   theme(axis.text.x = element_blank())+
   labs(x = "Samples", y = "Relative abundance", title = "Lo Presti dataset (2019)")
-# ggsave(file.path(path.plots, "relAbundance_phylum.jpg"), width=10, height=5)
+# ggsave(file.path(path.lopresti, "relAbundance_phylum.jpg"), width=10, height=5)
 
 ggplot(class.table, aes(x = reorder(Sample, Sample, function(x) mean(class.table[Sample == x & Phylum == 'Bacteroidota', 'Abundance'])),
                         y = Abundance, fill = Class))+
@@ -167,14 +163,11 @@ ggplot(class.table, aes(x = reorder(Sample, Sample, function(x) mean(class.table
         legend.key.size = unit(0.2, 'cm'),
         legend.text = element_text(size=8))+
   labs(x = "Samples", y = "Relative abundance", title = "Lo Presti dataset (2019)")
-# ggsave(file.path(path.plots, "relAbundance_class.jpg"), width=12, height=5)
+# ggsave(file.path(path.lopresti, "relAbundance_class.jpg"), width=12, height=5)
 ```
 
 
-
-
-### 3. Firmicutes/Bacteroidota ratio
-
+### 3.3. Firmicutes/Bacteroidota ratio
 ```{r plot-log-ratio, fig.height = 5, fig.width=5}
 # Extract abundance of only Bacteroidota and Firmicutes
 relevant.covariates <- c('Sample', 'Abundance', 'host_disease', 'host_subtype', 'Phylum', 'sample_type', 'host_ID', 'host_age', 'host_sex')
@@ -208,7 +201,7 @@ ggplot(ratio.FB, aes(x = host_disease, y = logRatioFB))+
   labs(x = "",  y = 'Log2(Firmicutes/Bacteroidota)', title = "Firmicutes:Bacteroidota ratio")+
   theme_cowplot()+
   theme(legend.position="none")
-# ggsave(file.path(path.plots, "ratioFB.jpg"), width=5, height=5)
+# ggsave(file.path(path.lopresti, "ratioFB.jpg"), width=5, height=5)
 
 # Statistical test sigmoid samples
 wilcox.test(ratio.FB[ratio.FB$sample_type == "sigmoid" & ratio.FB$host_disease == "IBS","logRatioFB"],
@@ -228,7 +221,7 @@ ggplot(ratio.FB %>% filter(sample_type == "stool"), aes(x = host_subtype, y = lo
   labs(x = "",  y = 'Log2(Firmicutes/Bacteroidota)', title = "Fecal samples")+
   theme_cowplot()+
   theme(legend.position="none")
-# ggsave(file.path(path.plots, "ratioFB_subtype.jpg"), width=5, height=5)
+# ggsave(file.path(path.lopresti, "ratioFB_subtype.jpg"), width=5, height=5)
 
 
 # Paired data
@@ -241,7 +234,7 @@ ggplot(ratio.FB, aes(x = sample_type, y = logRatioFB))+
   labs(x = "",  y = 'Log2(Firmicutes/Bacteroidota)', title = "Paired data") +
   theme_cowplot()+
   theme(legend.position="none")
-# ggsave(file.path(path.plots, "ratioFB_paired-data.jpg"), width=5, height=5)
+# ggsave(file.path(path.lopresti, "ratioFB_paired-data.jpg"), width=5, height=5)
 
 # Statistical test sigmoid vs stool samples
 wilcox.test(ratio.FB[ratio.FB$sample_type == "stool" & ratio.FB$host_disease == "Healthy","logRatioFB"],
@@ -253,9 +246,9 @@ wilcox.test(ratio.FB[ratio.FB$sample_type == "stool" & ratio.FB$host_disease == 
 
 
 
-####################
-## NORMALIZE DATA ##
-####################
+*******************
+# 4. NORMALIZE DATA
+*******************
 
 ```{r normalize-data, eval = FALSE, echo = TRUE}
 # Sanity check no sample with less than 500 total count
@@ -275,7 +268,7 @@ physeq.NZcomp <- transform_sample_counts(physeq.NZcomp, function(x) x / sum(x) )
 table(rowSums(otu_table(physeq.NZcomp))) # check if there is any row not summing to 1
 
 # Save object
-saveRDS(physeq.NZcomp, file.path(path, "data/analysis-individual/LoPresti-2019/02_EDA-LoPresti/physeq_NZcomp.rds"))
+saveRDS(physeq.NZcomp, file.path(path.lopresti, "physeq_NZcomp.rds"))
 
 #____________________________________________________________________
 # PHYLOSEQ OBJECT WITH RELATIVE COUNT (BETWEEN 0 AND 1)
@@ -290,7 +283,7 @@ physeq.rel <- transform_sample_counts(physeq.rel, function(x) x / sum(x) )
 table(rowSums(otu_table(physeq.rel))) # check if there is any row not summing to 1
 
 # save the physeq.rel object
-saveRDS(physeq.rel, file.path(path, "data/analysis-individual/LoPresti-2019/02_EDA-LoPresti/physeq_relative.rds"))
+saveRDS(physeq.rel, file.path(path.lopresti, "physeq_relative.rds"))
 
 #____________________________________________________________________
 # PHYLOSEQ OBJECT WITH COMMON-SCALE NORMALIZATION
@@ -301,7 +294,7 @@ physeq.CSN <- transform_sample_counts(physeq.CSN, function(x) (x*min(sample_sums
 table(rowSums(otu_table(physeq.CSN))) # check that all rows are summing to the same total
 
 # save the physeq.CSN object
-saveRDS(physeq.CSN, file.path(path, "data/analysis-individual/LoPresti-2019/02_EDA-LoPresti/physeq_CSN.rds"))
+saveRDS(physeq.CSN, file.path(path.lopresti, "physeq_CSN.rds"))
 
 
 #____________________________________________________________________
@@ -314,20 +307,17 @@ physeq.clr <- microbiome::transform(physeq.lopresti, "clr") # the function adds 
 # otu_table(physeq.clr)[1:5, 1:5] # should all be relative
 
 # save the physeq.rel object
-saveRDS(physeq.clr, file.path(path, "data/analysis-individual/LoPresti-2019/02_EDA-LoPresti/physeq_clr.rds"))
+saveRDS(physeq.clr, file.path(path.lopresti, "physeq_clr.rds"))
 ```
 
 
 
 
+**********************
+# 5. COMPUTE DISTANCES
+**********************
 
-
-#######################
-## COMPUTE DISTANCES ##
-#######################
-
-### 1. UniFrac, Aitchison, Bray-Curtis and Canberra
-
+### 5.1. UniFrac, Aitchison, Bray-Curtis and Canberra
 First, let's look at these four distances of interest.
 
 ```{r dist-functions, fig.width = 15, fig.height = 4}
@@ -345,11 +335,11 @@ getDistances <- function(relPhyseq=physeq.rel, clrPhyseq=physeq.clr, csnPhyseq=p
   set.seed(123) # for unifrac, need to set a seed
   glom.UniF <- UniFrac(relPhyseq, weighted=TRUE, normalized=TRUE) # weighted unifrac
   print("Aitchison...")
-  glom.ait <- phyloseq::distance(clrPhyseq, method = 'euclidean') # aitchison
+  glom.ait  <- phyloseq::distance(clrPhyseq, method = 'euclidean') # aitchison
   print("Bray des bois...")
   glom.bray <- phyloseq::distance(csnPhyseq, method = "bray") # bray-curtis
   print("Canberra <3...")
-  glom.can <- phyloseq::distance(nzcompPhyseq, method = "canberra") # canberra
+  glom.can  <- phyloseq::distance(nzcompPhyseq, method = "canberra") # canberra
   
   dist.list <- list("UniF" = glom.UniF, "Ait" = glom.ait, "Canb" = glom.can, "Bray" = glom.bray)
   
@@ -396,11 +386,9 @@ plotDistances2D <- function(dlist, ordination="MDS", relPhyseq=physeq.rel, clrPh
 }
 ```
 
-
 Now let's plot!
 
-
-#### a) Fecal samples
+#### 5.1.1. Fecal samples
 ```{r dist-run-fecal, warning=TRUE, message=TRUE}
 #________________
 # FECAL DATA
@@ -443,10 +431,11 @@ ggplot(plot.df.fecal, aes(Axis.1, Axis.2, color=host_disease))+
   theme_bw()+
   theme(strip.text.x = element_text(size=20))+
   labs(color="Disease", title="Fecal samples")
-# ggsave(file.path(path.plots, "distances4_MDS_stool.jpg"), height = 4, width = 15)
+# ggsave(file.path(path.lopresti, "distances4_MDS_stool.jpg"), height = 4, width = 15)
 ```
 
-#### b) Sigmoid samples
+
+#### 5.1.2. Sigmoid samples
 ```{r dist-run-sigmoid}
 #________________
 # SIGMOID DATA
@@ -470,10 +459,11 @@ ggplot(plot.df.sigmoid, aes(Axis.1, Axis.2, color=host_disease))+
   theme_bw()+
   theme(strip.text.x = element_text(size=20))+
   labs(color="Disease", title="Sigmoid samples")
-# ggsave(file.path(path.plots, "distances4_MDS_sigmoid.jpg"), height = 4, width = 15)
+# ggsave(file.path(path.lopresti, "distances4_MDS_sigmoid.jpg"), height = 4, width = 15)
 ```
 
-#### c) All samples
+
+#### 5.1.3. All samples
 ```{r dist-run-all, fig.width = 15, fig.height = 10}
 #________________
 # ALL DATA
@@ -499,14 +489,11 @@ p2 <- ggplot(plot.df, aes(Axis.1, Axis.2, color=sample_type))+
   theme(strip.text.x = element_blank())+
   labs(color="Sample type")
 ggpubr::ggarrange(p1,p2, nrow=2)
-# ggsave(file.path(path.plots, "distances4_MDS_all.jpg"), height = 8, width = 15)
+# ggsave(file.path(path.lopresti, "distances4_MDS_all.jpg"), height = 8, width = 15)
 ```
 
 
-
-
-### 2. Plot in 3D
-
+### 5.2. Plot in 3D
 For better visualization, we will also take a glance at reduction to 3D.
 
 ```{r 3D-function, eval = TRUE, echo = TRUE}
@@ -531,9 +518,7 @@ plotDistances3D <- function(d, name_dist, physeq=physeq.lopresti){
   
   return(fig.3D)
 }
-
 ```
-
 
 Now let's plot!
 
@@ -549,10 +534,9 @@ plotDistances3D(dist.lopresti.fecal$Bray, "Bray-Curtis", subset_samples(physeq.l
 
 
 
-
-#############################
-## HIERARCHICAL CLUSTERING ##
-#############################
+****************************
+# 6. HIERARCHICAL CLUSTERING
+****************************
 
 ```{r hierarchical-clust, fig.width = 25, fig.width = 7}
 # For heatmaps: have group color
@@ -600,9 +584,9 @@ heatmp.lopresti <- plotHeatmaps(dlist = dist.lopresti, fontsize = 8)
 
 
 
-################################
-## REPRODUCE PLOTS FROM PAPER ##
-################################
+*******************************
+# 7. REPRODUCE PLOTS FROM PAPER
+*******************************
 
 ### Figure 1B and 3B - Bar chart phyla relative abundances
 
@@ -619,6 +603,9 @@ ggplot(phylum.table, aes(x = host_disease, y = Abundance, fill = Phylum))+
         axis.title.x = element_blank())+
   labs(x = "Samples", y = "Relative abundance", title = "Stool samples")
 ```
+![Fecal samples](/Users/scarcy/Projects/MetaIBS/data/preprocessing/analysis-individual/LoPresti-2019/03_EDA-LoPresti/LoPrestiPaper_fig1_fecal.jpg){width=30%}
+![Sigmoid mucosa samples](/Users/scarcy/Projects/MetaIBS/data/preprocessing/analysis-individual/LoPresti-2019/03_EDA-LoPresti/LoPrestiPaper_fig1_mucosa.jpg){width=30%}
+
 <br />
 For the fecal samples, we get a very similar plot as in the original paper (_decrease Firmicutes in IBS, increase Bacteroidota, increase Verrucomicrobiota_). For the sigmoid samples, comparison with the original paper is limited, as we discarded most of the samples (only 11 sigmoid mucosa samples left).
 
@@ -645,3 +632,15 @@ ggplot(genus.table %>% filter(Genus %in% c("Bacteroides", "Parabacteroides", "Ps
   labs(x="", y="Relative abundance")
 ```
 
+![Sigmoid mucosa samples](/Users/scarcy/Projects/MetaIBS/data/preprocessing/analysis-individual/LoPresti-2019/03_EDA-LoPresti/LoPrestiPaper_figS8.jpg){width=30%}
+
+
+
+
+******************
+# 8. SESSION INFO
+******************
+
+```{r session-info}
+sessionInfo()
+```
