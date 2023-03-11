@@ -4,43 +4,49 @@ output:
   html_document:
     df_print: paged
     toc: true
+    toc_float: true
 ---
 
 
 ```{r, include=FALSE}
 knitr::opts_chunk$set(warning=FALSE, message=FALSE,
-                      root.dir = "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Mars-2020/00_Metadata-Mars/")
+                      root.dir = "~/Projects/MetaIBS/data/analysis-individual/Mars-2020/00_Metadata-Mars/")
 ```
 
-##########
-# IMPORT #
-##########
 
-## 1. Libraries
+
+
+***********
+# 1. IMPORT
+***********
+
+## 1.1. Libraries
 ```{r import-libraries}
 library("readxl")
 library(data.table)
 library(tidyverse)
 ```
 
-## 2. Data
+## 1.2. Data
 ```{r import-data}
-path <- "~/Projects/IBS_Meta-analysis_16S"
+path <- "~/Projects/MetaIBS/scripts/analysis-individual/Mars-2020"
 
 # Metadata table downloaded from the SRA
-sra_metadata <- read.csv(file.path(path, "data/analysis-individual/Mars-2020/MarsSraRunTable.txt"), header=TRUE, sep = ",")
+sra_metadata <- read.csv(file.path(path, "00_Metadata-Mars/MarsSraRunTable.txt"), header=TRUE, sep = ",")
 head(sra_metadata)
 
 # Import the supplementary ASV table from the paper
-paper_supp <- read_excel(file.path(path, "data/analysis-individual/Mars-2020/00_Metadata-Mars/1-s2.0-S0092867420309983-mmc1.xlsx"),
+paper_supp <- read_excel(file.path(path, "00_Metadata-Mars/1-s2.0-S0092867420309983-mmc1.xlsx"),
                          sheet=3) # import sheet with info on biopsy metadata
 head(paper_supp)
-
 ```
 
-##################
-# CLEANUP TABLES #
-##################
+
+
+
+******************
+# 2. CLEANUP TABLE
+******************
 
 Let's keep only the necessary information in the tables.
 
@@ -81,9 +87,10 @@ length(unique(suppDF$host_ID)) # 42 individuals (like indicated in the paper)
 
 
 
-################
-# MERGE TABLES #
-################
+
+*****************
+# 3. MERGE TABLES
+*****************
 
 Let's merge tables to get a metadata table we will use for downstream analyses.
 
@@ -113,17 +120,28 @@ dim(clean.df) # 72 samples
 ```
 
 
-#################
-# SAVE METADATA #
-#################
+
+
+******************
+# 4. SAVE METADATA
+******************
 
 ```{r save-data, echo=TRUE, eval=FALSE}
 # Export metadata table
-write.csv(clean.df, file.path(path, "data/analysis-individual/Mars-2020/00_Metadata-Mars/modif_metadata(R).csv"))
+write.csv(clean.df, file.path(path, "00_Metadata-Mars/modif_metadata(R).csv"))
 
 # Export the list of Runs to download
-write.table(clean.df$Run, file.path(path, "data/analysis-individual/Mars-2020/original/list_files.txt"),
+write.table(clean.df$Run, file.path(path, "download-Mars-samples/list_files_mars.txt"),
             sep="\t", row.names=FALSE, col.names=FALSE, quote=FALSE)
 ```
 
 
+
+
+*****************
+# 5. SESSION INFO
+*****************
+
+```{r session-info}
+sessionInfo()
+```
