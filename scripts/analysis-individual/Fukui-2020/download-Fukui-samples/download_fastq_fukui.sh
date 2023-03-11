@@ -5,7 +5,7 @@
 
 INPUT=list_files_fukui.txt
 
-for FILE in $(cat list_files.txt )
+for FILE in $(cat list_files_fukui.txt )
 do
 	echo "Run: $FILE"
 	#~/sra-toolkit/fastq-dump --origfmt -X 2 -Z $FILE

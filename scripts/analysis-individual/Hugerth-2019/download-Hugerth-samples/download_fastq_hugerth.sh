@@ -3,9 +3,9 @@
 #Author: Salome Carcy Sept.2020
 #--------------------------------------
 
-INPUT=list-samples.txt
+INPUT=list_files_hugerth.txt
 
-for FILE in $(cat list-samples.txt )
+for FILE in $(cat list_files_hugerth.txt )
 do
 	echo "Run: $FILE"
 	#~/sra-toolkit/fastq-dump --origfmt -X 2 -Z $FILE # print first 2 reads
