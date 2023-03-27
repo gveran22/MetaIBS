@@ -5,21 +5,20 @@
 ##########################
 
 
-##########
-# IMPORT #
-##########
+#____________________________________________________________________
+# IMPORT
 
 # Libraries
 library(tidyverse)
 
 # Data
-sraDF <- read.table("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Pozuelo-2015/PozueloSraRunTable.txt", header = TRUE, sep = ",")
-subtypeDF <- read.csv("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Pozuelo-2015/00_Metadata-Pozuelo/host_subtype.csv")
+path <- "~/Projects/MetaIBS/scripts/analysis-individual/Pozuelo-2015"
+sraDF <- read.table(file.path(path, "00_Metadata-Pozuelo/PozueloSraRunTable.txt"), header = TRUE, sep = ",")
+subtypeDF <- read.csv(file.path(path, "00_Metadata-Pozuelo/host_subtype.csv"))
 
 
-#####################
-# DATAFRAME CLEANUP #
-#####################
+#____________________________________________________________________
+# DATAFRAME CLEANUP
 
 # Keep relevant covariates
 sampledf <- sraDF[, c("Run", "Sample.Name", "Collection_Date")]
@@ -52,11 +51,18 @@ sampledf <- subtypeDF %>%
   left_join(sampledf, by="Run") %>%
   mutate(host_subtype = replace(host_subtype, !host_subtype %in% c("HC", "IBS-D", "IBS-C", "IBS-M"), "TO-DISCARD"),
          host_disease = replace(host_disease, !host_subtype %in% c("HC", "IBS-D", "IBS-C", "IBS-M"), "TO-DISCARD"))
+table(sampledf$host_disease) # sanity check
+
+# Keep only healthy/IBS samples
+sampledf <- sampledf %>%
+  filter(host_disease != "TO-DISCARD")
 
 
-##################
-# SAVE DATAFRAME #
-##################
+#____________________________________________________________________
+# SAVE DATAFRAME 
 
-write.csv(sampledf, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Pozuelo-2015/00_Metadata-Pozuelo/Pozuelo-Metadata.csv")
+write.csv(sampledf, file.path(path, "00_Metadata-Pozuelo/Pozuelo-Metadata.csv"))
 
+# Export list of files to download
+write.table(sampledf$Run, file.path(path, "download-Pozuelo-samples/list_files_pozuelo.txt"),
+            sep="\t", row.names=FALSE, col.names=FALSE, quote=FALSE)
