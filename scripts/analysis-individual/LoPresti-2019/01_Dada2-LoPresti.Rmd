@@ -201,7 +201,6 @@ out2 <- filterAndTrim(fwd = filt1_samples, filt = filt2_samples,
 ```
 
 Let's look at the output filtered fastq files as sanity check.
-
 ```{r quality-filter-check}
 out2[3:6,] # show how many reads were filtered in each file
 

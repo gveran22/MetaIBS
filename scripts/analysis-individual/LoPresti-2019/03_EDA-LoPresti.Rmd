@@ -10,7 +10,7 @@ output:
 
 ```{r, include=FALSE}
 knitr::opts_chunk$set(fig.width = 15, fig.height = 5, warning=FALSE, message=FALSE,
-                      root.dir = "~/Projects/MetaIBS/analysis-individual/LoPresti-2019")
+                      root.dir = "~/Projects/MetaIBS/scripts/analysis-individual/LoPresti-2019")
 ```
 
 
@@ -35,6 +35,7 @@ library("vegan") # NMDS
 library(pheatmap) # for heatmap
 ```
 
+
 ### 1.2. Data
 ```{r import-data}
 # Set path
@@ -53,7 +54,6 @@ Phylogenetic tree was computed with the package `phangorn`, and the script was r
 # Look at the tree
 plot_tree(physeq.lopresti, color = "Phylum", ladderize="left")
 ```
-
 
 
 ```{r import-for-html, echo = FALSE}
