@@ -4,22 +4,24 @@ output:
   html_document:
     df_print: paged
     toc: true
+    toc_float: true
   pdf_document: default
 ---
 
 
 ```{r, include=FALSE}
 knitr::opts_chunk$set(fig.width = 15, fig.height = 5, warning=FALSE, message=FALSE,
-                      root.dir = "~/Projects/IBS_Meta-analysis_16S/analysis-individual/Pozuelo-2015/")
+                      root.dir = "~/Projects/MetaIBS/scripts/analysis-individual/Pozuelo-2015/")
 ```
 
 
 
-############
-## IMPORT ##
-############
 
-### 1. Librairies
+***********
+# 1. IMPORT
+***********
+
+### 1.1. Librairies
 
 ```{r library-import}
 library(phyloseq) # for phyloseq object
@@ -37,20 +39,19 @@ library("vegan") # NMDS
 library(pheatmap) # for heatmap
 ```
 
-### 2. Data
 
+### 1.2. Data
 ```{r import-data}
 # Set path
-path <- "~/Projects/IBS_Meta-analysis_16S"
-path.plots <- file.path(path, "data/analysis-individual/PLOTS/plots-Pozuelo-EDA")
+path.root <- "~/Projects/MetaIBS"
+path.pozuelo <- file.path(path.root, "data/preprocessing/analysis-individual/Pozuelo-2015/03_Pozuelo-EDA")
 
 # Import phyloseq object
-physeq.pozuelo <- readRDS(file.path(path, "phyloseq-objects/physeq_pozuelo.rds"))
+physeq.pozuelo <- readRDS(file.path(path.root, "data/phyloseq-objects/physeq_pozuelo.rds"))
 
 # Sanity check
 physeq.pozuelo
 ```
-
 
 Phylogenetic tree was computed with the package `phangorn`, and the script was run on a cluster. Let's check we have correctly generated a phylogenetic tree.
 
@@ -66,18 +67,18 @@ plot_tree(physeq.pozuelo, color = "Phylum", ladderize="left")
 #__________________________________________________________________________
 
 # Import phyloseq objects for computing distances
-physeq.rel <- readRDS(file.path(path, "data/analysis-individual/Pozuelo-2015/02_EDA-Pozuelo/physeq_relative.rds"))
-physeq.clr <- readRDS(file.path(path, "data/analysis-individual/Pozuelo-2015/02_EDA-Pozuelo/physeq_clr.rds"))
-physeq.CSN <- readRDS(file.path(path, "data/analysis-individual/Pozuelo-2015/02_EDA-Pozuelo/physeq_CSN.rds"))
-physeq.NZcomp <- readRDS(file.path(path, "data/analysis-individual/Pozuelo-2015/02_EDA-Pozuelo/physeq_NZcomp.rds"))
+physeq.rel    <- readRDS(file.path(path.pozuelo, "physeq_relative.rds"))
+physeq.clr    <- readRDS(file.path(path.pozuelo, "physeq_clr.rds"))
+physeq.CSN    <- readRDS(file.path(path.pozuelo, "physeq_CSN.rds"))
+physeq.NZcomp <- readRDS(file.path(path.pozuelo, "physeq_NZcomp.rds"))
 ```
 
 
 
 
-##################
-## DEMOGRAPHICS ##
-##################
+*****************
+# 2. DEMOGRAPHICS
+*****************
 
 This dataset has covariates on collection date. Some individuals had two collection time points. Let's verify the distribution is similar between healthy & IBS groups.
 
@@ -108,19 +109,18 @@ metadata %>%
 
 
 
-################
-## ABUNDANCES ##
-################
+***************
+# 3. ABUNDANCES
+***************
 
-### 1. Absolute abundances
-
+### 3.1. Absolute abundances
 ```{r plot-absolute-abundance, fig.width=10, fig.height = 5}
 # Plot Phylum
 plot_bar(physeq.pozuelo, fill = "Phylum") + facet_wrap("host_disease", scales="free") +
   theme(axis.text.x = element_blank())+
   labs(x = "Samples", y = "Absolute abundance", title = "Pozuelo dataset (2015)") +
   ylim(0,80000)
-# ggsave(file.path(path.plots, "absAbundance_phylum.jpg"), width=13, height=5)
+# ggsave(file.path(path.pozuelo, "absAbundance_phylum.jpg"), width=13, height=5)
 
 # Plot Class
 plot_bar(physeq.pozuelo, fill = "Class")+ facet_wrap("host_disease", scales="free") +
@@ -135,8 +135,7 @@ plot_bar(physeq.pozuelo, fill = "Class")+ facet_wrap("host_disease", scales="fre
 - maximum of `r max(sample_sums(physeq.pozuelo))` total count per sample  
 
 
-### 2. Relative abundances
-
+### 3.2. Relative abundances
 ```{r plot-relative-abundances, fig.width=10, fig.height = 5, message=FALSE}
 # Agglomerate to phylum & class levels
 phylum.table <- physeq.pozuelo %>%
@@ -157,7 +156,7 @@ ggplot(phylum.table, aes(x = reorder(Sample, Sample, function(x) mean(phylum.tab
   geom_bar(stat = "identity", width=1) +
   theme(axis.text.x = element_blank())+
   labs(x = "Samples", y = "Relative abundance", title = "Pozuelo dataset (2015)")
-# ggsave(file.path(path.plots, "relAbundance_phylum.jpg"), width=10, height=5)
+# ggsave(file.path(path.pozuelo, "relAbundance_phylum.jpg"), width=10, height=5)
 
 ggplot(class.table, aes(x = reorder(Sample, Sample, function(x) mean(class.table[Sample == x & Phylum == 'Firmicutes', 'Abundance'])),
                         y = Abundance, fill = Class))+
@@ -165,7 +164,7 @@ ggplot(class.table, aes(x = reorder(Sample, Sample, function(x) mean(class.table
   geom_bar(stat = "identity", width=1) +
   theme(axis.text.x = element_blank())+
   labs(x = "Samples", y = "Relative abundance", title = "Pozuelo dataset (2015)")
-# ggsave(file.path(path.plots, "relAbundance_class.jpg"), width=12, height=5)
+# ggsave(file.path(path.pozuelo, "relAbundance_class.jpg"), width=12, height=5)
 ```
 
 ```{r plot-relative-abundances-2, fig.width=20, fig.height = 5, message=FALSE}
@@ -180,14 +179,11 @@ ggplot(phylum.table %>% group_by(host_ID) %>% filter(n_distinct(Run)>1),
         strip.text = element_text(angle=90),
         strip.background = element_rect(fill="white"))+
   labs(x = "Individual", y = "Relative abundance", title = "Relative abundance of phyla at both collection time points (left t0, right t0+1month)")
-# ggsave(file.path(path.plots, "relAbundance_phylum_collection-times.jpg"), width=19, height=7)
+# ggsave(file.path(path.pozuelo, "relAbundance_phylum_collection-times.jpg"), width=19, height=7)
 ```
 
 
-
-
-### 3. Firmicutes/Bacteroidota ratio
-
+### 3.3. Firmicutes/Bacteroidota ratio
 ```{r plot-log-ratio, fig.height = 5, fig.width=5}
 # Extract abundance of only Bacteroidota and Firmicutes
 bacter <- phylum.table %>%
@@ -219,7 +215,7 @@ ggplot(ratio.FB, aes(x = host_disease, y = logRatioFB))+
   labs(x = "",  y = 'Log2(Firmicutes/Bacteroidota)', title = "Both collection time points")+
   theme_cowplot()+
   theme(legend.position="none")
-# ggsave(file.path(path.plots, "ratioFB.jpg"), width=5, height=7)
+# ggsave(file.path(path.pozuelo, "ratioFB.jpg"), width=5, height=7)
 wilcox.test(ratio.FB[ratio.FB$host_disease == "IBS","logRatioFB"],
             ratio.FB[ratio.FB$host_disease == "Healthy","logRatioFB"]) # p = 0.0001
 
@@ -235,7 +231,7 @@ ggplot(ratio.FB, aes(x = host_subtype, y = logRatioFB))+
   labs(x = "",  y = 'Log2(Firmicutes/Bacteroidota)', title = "Data separated by collection time point")+
   theme_cowplot() +
   theme(legend.position="none")
-# ggsave(file.path(path.plots, "ratioFB_subtype.jpg"), width=6, height=6)
+# ggsave(file.path(path.pozuelo, "ratioFB_subtype.jpg"), width=6, height=6)
 
 # Statistical test HC vs IBS-C
 wilcox.test(ratio.FB[ratio.FB$Collection == "1st" & ratio.FB$host_subtype == "HC","logRatioFB"],
@@ -266,7 +262,7 @@ ggplot(ratio.FB, aes(x = Collection, y = logRatioFB))+
   labs(x = "Collection time point",  y = 'Log2(Firmicutes/Bacteroidota)', title = "Paired data") +
   theme_cowplot()+
   theme(legend.position="none")
-# ggsave(file.path(path.plots, "ratioFB_collection-time.jpg"), width=5, height=7)
+# ggsave(file.path(path.pozuelo, "ratioFB_collection-time.jpg"), width=5, height=7)
 
 ggplot(ratio.FB, aes(x = host_disease, y = logRatioFB))+
   geom_violin(aes(fill=host_disease))+
@@ -278,15 +274,15 @@ ggplot(ratio.FB, aes(x = host_disease, y = logRatioFB))+
   labs(x = "",  y = 'Log2(Firmicutes/Bacteroidota)', title = "Collection time point (t0, t0+1mo)") +
   theme_cowplot()+
   theme(legend.position="none")
-# ggsave(file.path(path.plots, "ratioFB_collection-time2.jpg"), width=5, height=7)
+# ggsave(file.path(path.pozuelo, "ratioFB_collection-time2.jpg"), width=5, height=7)
 ```
 
 
 
 
-####################
-## NORMALIZE DATA ##
-####################
+*******************
+# 4. NORMALIZE DATA
+*******************
 
 ```{r normalize-data, eval = FALSE, echo = TRUE}
 # Sanity check no sample with less than 500 total count
@@ -306,7 +302,8 @@ physeq.NZcomp <- transform_sample_counts(physeq.NZcomp, function(x) x / sum(x) )
 table(rowSums(otu_table(physeq.NZcomp))) # check if there is any row not summing to 1
 
 # Save object
-saveRDS(physeq.NZcomp, file.path(path, "data/analysis-individual/Pozuelo-2015/02_EDA-Pozuelo/physeq_NZcomp.rds"))
+saveRDS(physeq.NZcomp, file.path(path.pozuelo, "physeq_NZcomp.rds"))
+
 
 #____________________________________________________________________
 # PHYLOSEQ OBJECT WITH RELATIVE COUNT (BETWEEN 0 AND 1)
@@ -321,7 +318,8 @@ physeq.rel <- transform_sample_counts(physeq.rel, function(x) x / sum(x) )
 table(rowSums(otu_table(physeq.rel))) # check if there is any row not summing to 1
 
 # save the physeq.rel object
-saveRDS(physeq.rel, file.path(path, "data/analysis-individual/Pozuelo-2015/02_EDA-Pozuelo/physeq_relative.rds"))
+saveRDS(physeq.rel, file.path(path.pozuelo, "physeq_relative.rds"))
+
 
 #____________________________________________________________________
 # PHYLOSEQ OBJECT WITH COMMON-SCALE NORMALIZATION
@@ -332,7 +330,7 @@ physeq.CSN <- transform_sample_counts(physeq.CSN, function(x) (x*min(sample_sums
 table(rowSums(otu_table(physeq.CSN))) # check that all rows are summing to the same total
 
 # save the physeq.CSN object
-saveRDS(physeq.CSN, file.path(path, "data/analysis-individual/Pozuelo-2015/02_EDA-Pozuelo/physeq_CSN.rds"))
+saveRDS(physeq.CSN, file.path(path.pozuelo, "physeq_CSN.rds"))
 
 
 #____________________________________________________________________
@@ -345,19 +343,17 @@ otu_table(physeq.pozuelo)[1:5, 1:5] # should contain absolute counts
 otu_table(physeq.clr)[1:5, 1:5] # should all be relative
 
 # save the physeq.rel object
-saveRDS(physeq.clr, file.path(path, "data/analysis-individual/Pozuelo-2015/02_EDA-Pozuelo/physeq_clr.rds"))
+saveRDS(physeq.clr, file.path(path.pozuelo, "physeq_clr.rds"))
 ```
 
 
 
 
+**********************
+# 5. COMPUTE DISTANCES
+**********************
 
-#######################
-## COMPUTE DISTANCES ##
-#######################
-
-### 1. UniFrac, Aitchison, Bray-Curtis and Canberra
-
+### 5.1. UniFrac, Aitchison, Bray-Curtis and Canberra
 First, let's look at these four distances of interest.
 
 ```{r dist-functions, fig.width = 15, fig.height = 4}
@@ -375,11 +371,11 @@ getDistances <- function(relPhyseq=physeq.rel, clrPhyseq=physeq.clr, csnPhyseq=p
   set.seed(123) # for unifrac, need to set a seed
   glom.UniF <- UniFrac(relPhyseq, weighted=TRUE, normalized=TRUE) # weighted unifrac
   print("Aitchison...")
-  glom.ait <- phyloseq::distance(clrPhyseq, method = 'euclidean') # aitchison
+  glom.ait  <- phyloseq::distance(clrPhyseq, method = 'euclidean') # aitchison
   print("Bray des bois...")
   glom.bray <- phyloseq::distance(csnPhyseq, method = "bray") # bray-curtis
   print("Canberra <3...")
-  glom.can <- phyloseq::distance(nzcompPhyseq, method = "canberra") # canberra
+  glom.can  <- phyloseq::distance(nzcompPhyseq, method = "canberra") # canberra
   
   dist.list <- list("UniF" = glom.UniF, "Ait" = glom.ait, "Canb" = glom.can, "Bray" = glom.bray)
   
@@ -426,11 +422,9 @@ plotDistances2D <- function(dlist, ordination="MDS", relPhyseq=physeq.rel, clrPh
 }
 ```
 
-
 Now let's plot!
 
-
-#### a) All samples (both time points)
+#### 5.1.1. All samples (both time points)
 ```{r dist-run-all, fig.width = 15, fig.height = 14}
 # Get the distances (both collection time points) & the plot data
 dist.pozuelo <- getDistances()
@@ -461,11 +455,11 @@ c <- ggplot(plot.df, aes(Axis.1, Axis.2, color=host_subtype))+
 
 ggpubr::ggarrange(a,b,c, nrow=3)
 
-# ggsave(file.path(path.plots, "distances4_MDS_all.jpg"), height = 10, width = 15)
+# ggsave(file.path(path.pozuelo, "distances4_MDS_all.jpg"), height = 10, width = 15)
 ```
 
 
-#### b) Each time point separately
+#### 5.1.2. Each time point separately
 ```{r dist-run-timePoints, fig.width = 15, fig.height = 10}
 #######
 # 1st time point (n=179)
@@ -494,7 +488,7 @@ p2 <- ggplot(plot.df.1st, aes(Axis.1, Axis.2, color=host_subtype))+
 
 ggpubr::ggarrange(p1,p2, nrow=2)
 
-# ggsave(file.path(path.plots, "distances4_MDS_1stCollection.jpg"), height = 7, width = 15)
+# ggsave(file.path(path.pozuelo, "distances4_MDS_1stCollection.jpg"), height = 7, width = 15)
 
 
 #######
@@ -526,14 +520,12 @@ p4 <- ggplot(plot.df.2nd, aes(Axis.1, Axis.2, color=host_subtype))+
 
 ggpubr::ggarrange(p3,p4, nrow=2)
 
-# ggsave(file.path(path.plots, "distances4_MDS_2ndCollection.jpg"), height = 7, width = 15)
+# ggsave(file.path(path.pozuelo, "distances4_MDS_2ndCollection.jpg"), height = 7, width = 15)
 ```
 
 
 
-
-### 2. Plot in 3D
-
+### 5.2. Plot in 3D
 For better visualization, we will also take a glance at reduction to 3D.
 
 ```{r 3D-function, eval = TRUE, echo = TRUE}
@@ -558,9 +550,7 @@ plotDistances3D <- function(d, name_dist){
   
   return(fig.3D)
 }
-
 ```
-
 
 Now let's plot!
 
@@ -574,10 +564,9 @@ plotDistances3D(dist.pozuelo$Bray, "Bray-Curtis")
 
 
 
-
-#############################
-## HIERARCHICAL CLUSTERING ##
-#############################
+****************************
+# 6. HIERARCHICAL CLUSTERING
+****************************
 
 ```{r hierarchical-clust, fig.width = 25, fig.width = 7}
 # For heatmaps: have group color
@@ -625,13 +614,14 @@ heatmp.pozuelo <- plotHeatmaps(dlist = dist.pozuelo, fontsize = 8)
 
 
 
-################################
-## REPRODUCE PLOTS FROM PAPER ##
-################################
+*******************************
+# 7. REPRODUCE PLOTS FROM PAPER
+*******************************
 
 From the methods section of the Pozuelo et al. paper: "To calculate between-sample diversity, weighted and unweighted Unifrac metrics were applied to build phylogenetic distance matrices, which were then used to construct hierarchical cluster trees using unweighted pair group method with arithmetic mean (UPGMA) and PCoA representations. Finally, distance-based redundancy analyses were performed using the eigenvalues obtained in the PCoA."
 
-### Figure 1 - Redundancy analysis on unweighted UniFrac data
+### 7.1. Figure 1
+Redundancy analysis on unweighted UniFrac data
 
 ```{r fig1, fig.width=10, fig.height = 4}
 # Run PCoA
@@ -671,7 +661,8 @@ ggdraw() +
 
 
 
-### Figure 2 - Higher relative abundance of Bacteroidetes
+### 7.2. Figure 2
+Higher relative abundance of Bacteroidetes
 
 ```{r fig2, fig.width=10, fig.height = 6}
 ggplot(phylum.table %>% filter(Phylum %in% c("Firmicutes", "Bacteroidota"), Collection=="1st"),
@@ -683,12 +674,11 @@ ggplot(phylum.table %>% filter(Phylum %in% c("Firmicutes", "Bacteroidota"), Coll
   theme_cowplot()+
   theme(axis.text.x = element_text(size=4, angle=90))+
   labs(x = "Samples", y = "Relative abundance", title = "Figure 2")
-
-
 ```
 
 
-### Figure 3 - Higher relative abundance of two bacterial families
+### 7.3. Figure 3
+Higher relative abundance of two bacterial families
 
 ```{r fig3, fig.height = 3, fig.width=4}
 #_____________________________________
@@ -714,11 +704,11 @@ ggplot(family.table[family.table[,"Family"] == "Ruminococcaceae",],
   geom_jitter(width = 0.1)+
   labs(x = "",  y = 'Relative Abundance', title = 'Ruminococcaceae family')+
   theme_classic()
-
 ```
 
 
-### Figure 4 - Dysbiosis at the family and genus level in IBS subtypes
+### 7.4. Figure 4
+Dysbiosis at the family and genus level in IBS subtypes
 
 ```{r fig4, fig.height = 5, fig.width=4}
 #_____________________________________
@@ -756,3 +746,12 @@ ggplot(family.table %>%
 ```
 
 
+
+
+******************
+# 8. SESSION INFO
+******************
+
+```{r session-info}
+sessionInfo()
+```
