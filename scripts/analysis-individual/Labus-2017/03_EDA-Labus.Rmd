@@ -39,7 +39,6 @@ library(pheatmap) # for heatmap
 
 
 ### 1.2. Data
-
 ```{r import-data}
 # Set path
 path.root <- "~/Projects/MetaIBS"
@@ -172,7 +171,6 @@ ggplot(class.table, aes(x = reorder(Sample, Sample, function(x) mean(class.table
 
 
 ### 3.3. Firmicutes/Bacteroidota ratio
-
 ```{r plot-log-ratio, fig.height = 5, fig.width=3}
 # Extract abundance of only Bacteroidota and Firmicutes
 bacter <- phylum.table %>%
@@ -244,6 +242,7 @@ wilcox.test(ratio.FB[ratio.FB$host_subtype == "HC","logRatioFB"],
 # Sanity check no sample with less than 500 total count
 table(sample_sums(physeq.labus)<500) # all FALSE
 
+
 #____________________________________________________________________
 # PHYLOSEQ OBJECT WITH NON-ZERO COMPOSITIONS
 physeq.NZcomp <- physeq.labus
@@ -260,6 +259,7 @@ table(rowSums(otu_table(physeq.NZcomp))) # check if there is any row not summing
 # Save object
 saveRDS(physeq.NZcomp, file.path(path.labus, "physeq_NZcomp.rds"))
 
+
 #____________________________________________________________________
 # PHYLOSEQ OBJECT WITH RELATIVE COUNT (BETWEEN 0 AND 1)
 physeq.rel <- physeq.labus
@@ -274,6 +274,7 @@ table(rowSums(otu_table(physeq.rel))) # check if there is any row not summing to
 
 # save the physeq.rel object
 saveRDS(physeq.rel, file.path(path.labus, "physeq_relative.rds"))
+
 
 #____________________________________________________________________
 # PHYLOSEQ OBJECT WITH COMMON-SCALE NORMALIZATION
