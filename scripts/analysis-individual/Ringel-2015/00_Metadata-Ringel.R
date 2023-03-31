@@ -13,7 +13,7 @@ library(tidyverse)
 
 # Data
 path <- "~/Projects/MetaIBS/scripts/analysis-individual/Ringel-2015"
-sraDF <- read.table(file.path(path, "00_Metadata-Pozuelo/RingelSraRunTable.txt"), header = TRUE, sep = ",")
+sraDF <- read.table(file.path(path, "00_Metadata-Ringel/RingelSraRunTable.txt"), header = TRUE, sep = ",")
 
 
 #____________________________________________________________________
