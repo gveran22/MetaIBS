@@ -11,7 +11,7 @@ output:
 
 ```{r, include=FALSE}
 knitr::opts_chunk$set(fig.width = 3.5, fig.height = 3, warning=FALSE, message=FALSE,
-                      root.dir = "~/Projects/MetaIBS/")
+                      root.dir = "~/Projects/MetaIBS/scripts/analysis-individual/Mars-2020")
 ```
 
 
@@ -57,7 +57,7 @@ dadaFs            <- readRDS(file.path(path.data, "01_Dada2-Mars/infered_seq_F.r
 dadaRs            <- readRDS(file.path(path.data, "01_Dada2-Mars/infered_seq_R.rds")) # infered ASVs R
 mergers           <- readRDS(file.path(path.data, "01_Dada2-Mars/mergers.rds")) # mergers
 taxa              <- readRDS(file.path(path.data, "01_Dada2-Mars/taxa_mars.rds")) # taxa
-physeq            <- readRDS(file.path(path.root, "data/analysis-individual/CLUSTER/PhyloTree/input/physeq_mars.rds")) # phyloseq object without phylogenetic tree
+physeq            <- readRDS(file.path(path.root, "data/preprocessing/analysis-individual/CLUSTER/PhyloTree/input/physeq_mars.rds")) # phyloseq object without phylogenetic tree
 ```
 
 
@@ -475,7 +475,7 @@ saveRDS(mergers,   file.path(path.data, "01_Dada2-Mars/mergers.rds"))
 
 # Taxa & Phyloseq object
 saveRDS(taxa,   file.path(path.data, "01_Dada2-Mars/taxa_mars.rds"))
-saveRDS(physeq, file.path(path.root, "data/analysis-individual/CLUSTER/PhyloTree/input/physeq_mars.rds"))
+saveRDS(physeq, file.path(path.root, "data/preprocessing/analysis-individual/CLUSTER/PhyloTree/input/physeq_mars.rds"))
 ```
 
 
