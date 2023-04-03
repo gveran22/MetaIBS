@@ -6,15 +6,21 @@ output:
   html_document:
     df_print: paged
     toc: true
+    toc_float: true
 ---
 
 ```{r, include=FALSE}
 knitr::opts_chunk$set(fig.width = 3.5, fig.height = 3, warning=FALSE, message=FALSE,
-                      root.dir = "~/Projects/IBS_Meta-analysis_16S/")
+                      root.dir = "~/Projects/MetaIBS/scripts/analysis-individual/Zhu-2019")
 ```
 
 
-# Import library
+
+
+***********
+# 1. IMPORT
+***********
+
 ```{r library-import}
 library(dada2)
 packageVersion("dada2") # check dada2 version
@@ -29,25 +35,53 @@ library(plyr)
 library(dplyr)
 library(qckitfastq) # per base sequence content
 library(stringr)
+
+# ROOT DIRECTORY (to modify on your computer)
+path.root <- "~/Projects/MetaIBS"
+path.zhu  <- file.path(path.root, "scripts/analysis-individual/Zhu-2019")
+path.data <- file.path(path.root, "data/preprocessing/analysis-individual/Zhu-2019")
+```
+
+
+```{r html-import, echo = FALSE}
+#__________________________________________________________________________
+#____________ THIS IS ONLY FOR (quicker) PDF/HTML OUTPUT __________________
+#__________________________________________________________________________
+
+raw_stats         <- readRDS(file.path(path.data, "01_Dada2-Zhu/raw_stats.rds")) # seq depth
+out2              <- readRDS(file.path(path.data, "01_Dada2-Zhu/out2.rds")) # out process (QC)
+FWD.filt2_samples <- file.path(path, "filtered2", paste0(sample.names, "_1_filt.fastq.gz")) # quality-filtered reads (FWD)
+REV.filt2_samples <- file.path(path, "filtered2", paste0(sample.names, "_2_filt.fastq.gz")) # quality-filtered reads (REV)
+errF              <- readRDS(file.path(path.data, "01_Dada2-Zhu/errF.rds")) # error rates F
+errR              <- readRDS(file.path(path.data, "01_Dada2-Zhu/errR.rds")) # error rates R
+dadaFs            <- readRDS(file.path(path.data, "01_Dada2-Zhu/infered_seq_F.rds")) # inferred ASVs F
+dadaRs            <- readRDS(file.path(path.data, "01_Dada2-Zhu/infered_seq_R.rds")) # inferred ASVs R
+mergers           <- readRDS(file.path(path.data, "01_Dada2-Zhu/mergers.rds")) # mergers
+taxa              <- readRDS(file.path(path.data, "01_Dada2-Zhu/taxa_zhu.rds")) # taxa
+taxa.small        <- readRDS(file.path(path.data, "01_Dada2-Zhu/taxa_zhu_shortASV.rds")) # taxa from trimmed ASVs
+physeq            <- readRDS(file.path(path.data, "01_Dada2-Zhu/physeq_zhu_longASV.rds")) # phyloseq object without phylogenetic tree
+physeq.small      <- readRDS(file.path(path.root, "data/preprocessing/analysis-individual/CLUSTER/PhyloTree/input/physeq_zhu.rds")) # phyloseq object without phylogenetic tree (and with trimmed ASVs)
 ```
 
 
 
-#####################
-##  QUALITY CHECK  ##
-#####################
 
+******************
+# 2. QUALITY CHECK
+******************
+
+### 2.1. Fastq quality profiles
 First, we import the fastq files containing the raw reads. The samples were downloaded from the ENA database with the accession number PRJNA566284.
 
 ```{r, quality-check, echo=TRUE, results="hide"}
 # Save the path to the directory containing the fastq zipped files
-path <- "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Zhu-2019"
-# list.files(path) # check we are in the right directory
+path.fastq <- file.path(path.zhu, "download-Zhu-samples")
+# list.files(path.fastq) # check we are in the right directory
 
 # fastq filenames have format: SAMPLENAME.fastq.gz
 # Saves the whole directory path to each file name
-fnFs <- sort(list.files(file.path(path, "original"), pattern="_1.fastq.gz", full.names = TRUE)) # FWD reads
-fnRs <- sort(list.files(file.path(path, "original"), pattern="_2.fastq.gz", full.names = TRUE)) # REV reads
+fnFs <- sort(list.files(path.fastq, pattern="_1.fastq.gz", full.names = TRUE)) # FWD reads
+fnRs <- sort(list.files(path.fastq, pattern="_2.fastq.gz", full.names = TRUE)) # REV reads
 show(fnFs[1:5])
 show(fnRs[1:5])
 
@@ -82,38 +116,8 @@ rcR1 <- read_content(fseqR1)
 plot_read_content(rcR1) + labs(title = "Per base sequence content - Reverse read")
 ```
 
-```{r pdf-import, echo = FALSE}
-#__________________________________________________________________________
-#____________ THIS IS ONLY FOR (quicker) PDF/HTML OUTPUT __________________
-#__________________________________________________________________________
 
-# out process
-raw_stats <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Zhu-2019/01_Dada2-Zhu/raw_stats.rds")
-out2 <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Zhu-2019/01_Dada2-Zhu/out2.rds")
-# quality profiles
-FWD.filt2_samples <- file.path(path, "filtered2", paste0(sample.names, "_1_filt.fastq.gz")) # FWD reads
-REV.filt2_samples <- file.path(path, "filtered2", paste0(sample.names, "_2_filt.fastq.gz")) # REV reads
-# error rates
-errF <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Zhu-2019/01_Dada2-Zhu/errF.rds")
-errR <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Zhu-2019/01_Dada2-Zhu/errR.rds")
-# infered sequences
-dadaFs <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Zhu-2019/01_Dada2-Zhu/infered_seq_F.rds")
-dadaRs <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Zhu-2019/01_Dada2-Zhu/infered_seq_R.rds")
-# mergers
-mergers <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Zhu-2019/01_Dada2-Zhu/mergers.rds")
-# taxa
-taxa <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/CLUSTER/Taxonomy/output/taxa_zhu.rds")
-taxa.small <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/CLUSTER/Taxonomy/output/taxa_zhu_shortASV.rds")
-# phyloseq object
-physeq <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/CLUSTER/PhyloTree/input/physeq_zhu.rds")
-physeq.small <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Zhu-2019/01_Dada2-Zhu/physeq_zhu_shortASV.rds")
-```
-
-
-########################
-##  LOOK FOR PRIMERS  ##
-########################
-
+### 2.2. Look for primers
 Now, we will look whether the reads still contain the primers. Primer sequences are given in the methods section of the paper.
 
 ```{r primer-check, eval = TRUE, message=FALSE}
@@ -158,37 +162,35 @@ for (i in 6:9){
 
 
 
-#####################
-## FILTER AND TRIM ##
-#####################
+********************
+# 3. FILTER AND TRIM
+********************
 
-### 1. Primer removal
-
+### 3.1. Primer removal
 The forward reads indeed contain the forward primer (in the middle of the reads), and the reverse reads contain the revcomp of the forward primer (which makes sense, it shows the forward primer is found at the *end* of the reverse reads).
 Ideally, to follow the standardized pipeline, we should (1) filter out reads not containing any primer and (2) trim the primers. However, the fastq files deposited on the SRA/ENA databases do not contain Illumina headers. Thus, during the merging step of paired reads later on, the Dada2 package won't be able to match paired-reads.
 
 We will simply perform a quality filtering of the reads.
 
 
-### 2. Quality filtering
-
+### 3.2. Quality filtering
 Then, we perform a quality filtering of the reads.
 
 ```{r filter-trim, eval = FALSE, echo = TRUE}
 # Place filtered files in a filtered/ subdirectory
-FWD.filt2_samples <- file.path(path, "filtered2", paste0(sample.names, "_1_filt.fastq.gz")) # FWD reads
-REV.filt2_samples <- file.path(path, "filtered2", paste0(sample.names, "_2_filt.fastq.gz")) # REV reads
+FWD.filt2_samples <- file.path(path.data, "filtered2", paste0(sample.names, "_1_filt.fastq.gz")) # FWD reads
+REV.filt2_samples <- file.path(path.data, "filtered2", paste0(sample.names, "_2_filt.fastq.gz")) # REV reads
 # Assign names for the filtered fastq.gz files
 names(FWD.filt2_samples) <- sample.names
 names(REV.filt2_samples) <- sample.names
 
 # Filter
 out2 <- filterAndTrim(fwd = fnFs, filt = FWD.filt2_samples,
-                     rev = fnRs, filt.rev = REV.filt2_samples,
-                     maxEE=3, # reads with more than 3 expected errors (sum(10e(-Q/10))) are discarded
-                     truncQ=10, # Truncate reads at the first instance of a quality score less than or equal to truncQ.
-                     minLen = 150, # Discard reads shorter than 150 bp. This is done after trimming and truncation.
-                     compress=TRUE, multithread = TRUE, verbose=TRUE)
+                      rev = fnRs, filt.rev = REV.filt2_samples,
+                      maxEE=3, # reads with more than 3 expected errors (sum(10e(-Q/10))) are discarded
+                      truncQ=10, # Truncate reads at the first instance of a quality score less than or equal to truncQ.
+                      minLen = 150, # Discard reads shorter than 150 bp. This is done after trimming and truncation.
+                      compress=TRUE, multithread = TRUE, verbose=TRUE)
 
 ```
 
@@ -207,10 +209,11 @@ for (i in 1:3){
 
 
 
-#######################
-## LEARN ERROR RATES ##
-#######################
+************************
+# 4. CONSTRUCT ASV TABLE
+************************
 
+### 4.1. Learn error rates
 Now we will build the parametric error model, to be able to infer amplicon sequence variants (ASVs) later on.
 
 ```{r error-rate-estimate, eval = FALSE}
@@ -226,14 +229,7 @@ plotErrors(errR, nominalQ = TRUE) # Reverse reads
 ```
 
 
-
-
-##############################
-## CONSTRUCT SEQUENCE TABLE ##
-##############################
-
-### 1. Infer sample composition
-
+### 4.2. Infer sample composition
 The _dada()_ algorithm infers sequence variants based on estimated errors (previous step). Firstly, we de-replicate the reads in each sample, to reduce the computation time.
 De-replication is a common step in almost all modern ASV inference (or OTU picking) pipelines, but a unique feature of derepFastq is that it maintains a summary of the quality information for each dereplicated sequence in $quals.
 
@@ -256,8 +252,8 @@ for (i in 1:3){
 }
 ```
 
-### 2. Merge paired-end reads
 
+### 4.3. Merge paired-end reads
 We now need to merge paired reads.
 
 ```{r merge-paired-end, eval = FALSE}
@@ -269,8 +265,7 @@ head(mergers[[1]])
 ```
 
 
-### 3. Construct ASV table
-
+### 4.4. Construct ASV table
 We can now construct an amplicon sequence variant table (ASV) table, a higher-resolution version of the OTU table produced by traditional methods.
 
 ```{r build-seq-table, fig.height=3, fig.width=4}
@@ -342,10 +337,7 @@ sum(seqtable.small.new)/sum(seqtable.small)
 ```
 
 
-
-
-### 4. Remove chimeras
-
+### 4.5. Remove chimeras
 The core dada method corrects substitution and indel errors, but chimeras remain. Fortunately, the accuracy of sequence variants after denoising makes identifying chimeric ASVs simpler than when dealing with fuzzy OTUs. Chimeric sequences are identified if they can be exactly reconstructed by combining a left-segment and a right-segment from two more abundant “parent” sequences.
 
 ```{r remove-chimeras}
@@ -365,9 +357,10 @@ sum(seqtable.small.nochim)/sum(seqtable.small.new)
 
 
 
-##########################################
-## LOOK AT READS COUNT THROUGH PIPELINE ##
-##########################################
+
+*****************************************
+# 5. LOOK AT READS COUNT THROUGH PIPELINE
+*****************************************
 
 Sanity check before assigning taxonomy.
 
@@ -396,36 +389,61 @@ track
 nb.reads <- data.frame("before" = raw_stats$reads,
                        "after" = rowSums(seqtable.nochim),
                        "dataset" = "Zhu")
-saveRDS(nb.reads, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/DADA2-FILT/seqdepth_zhu.rds")
+# better alternative? choose!!
+# nb.reads <- as.data.frame(rowSums(seqtable.nochim)) %>%
+#   rename("after"="rowSums(seqtable.nochim)") %>%
+#   mutate("Run"=names(rowSums(seqtable.nochim))) %>%
+#   right_join(raw_stats %>% rename(Run=sample, before=reads),
+#              by="Run") %>%
+#   relocate(before) %>%
+#   relocate(Run) %>%
+#   mutate(after = nafill(after, fill=0),
+#          "dataset" = "AGP")
+
+saveRDS(nb.reads, file.path(path.root, "data/preprocessing/dada2-filt/nbreads_zhu.rds"))
 ```
 
 
 
-#####################
-## ASSIGN TAXONOMY ##
-#####################
 
-### 1 - Assign taxonomy
+********************
+# 6. TAXONOMIC TABLE
+********************
 
+### 6.1. Assign taxonomy
 Extensions: The dada2 package also implements a method to make species level assignments based on exact matching between ASVs and sequenced reference strains. Recent analysis suggests that exact matching (or 100% identity) is the only appropriate way to assign species to 16S gene fragments. Currently, species-assignment training fastas are available for the Silva and RDP 16S databases. To follow the optional species addition step, download the silva_species_assignment_v132.fa.gz file, and place it in the directory with the fastq files.
 
+```{r assign-taxonomy-on-cluster, eval=FALSE, echo=FALSE, include=FALSE}
+# In case you prefer to assign taxonomy on a computer cluster (in other words run this chunk on a computer cluster), you can export the ASV table
+# saveRDS(seqtable.nochim, file.path(path.root, "data/preprocessing/analysis-individual/CLUSTER/taxonomy/input/seqtablenochim_zhu.rds"))
+
+# then you can :
+# 1. copy the "data/preprocessing/analysis-individual/CLUSTER/taxonomy/" directory to your cluster (where there is the input data & R scripts to assign taxonomy)
+# 2. run the R scripts on the cluster (they will output the taxonomic tables in the "output/" subdirectory)
+# 3. copy the "taxonomy/output/" subdirectory back to your personal computer
+# 4. import the taxonomic table below (in that case you don't need to run the next code chunk "assign-taxonomy"):
+# taxa <- readRDS(file.path(path.root, "data/preprocessing/analysis-individual/CLUSTER/taxonomy/output/taxa_zhu.rds"))
+```
+
 ```{r assign-taxonomy, eval = FALSE, echo = TRUE}
+path.silva <- file.path(path.root, "data/preprocessing/analysis-individual/CLUSTER/taxonomy/silva-taxonomic-ref")
+
 # Assign taxonomy (with silva v138)
-taxa <- assignTaxonomy(seqtable.nochim, "~/Projects/IBS_Meta-analysis_16S/data/silva_nr_v138_train_set.fa.gz",
+taxa <- assignTaxonomy(seqtable.nochim, file.path(path.silva, "silva_nr_v138_train_set.fa.gz"),
                        tryRC = TRUE, # try reverse complement of the sequences
                        multithread=TRUE, verbose = TRUE)
 
 # Add species assignment
-taxa <- addSpecies(taxa, "~/Projects/IBS_Meta-analysis_16S/data/silva_species_assignment_v138.fa.gz")
+taxa <- addSpecies(taxa, file.path(path.silva, "silva_species_assignment_v138.fa.gz"))
 
 # Same with our optimized seqtable
-taxa.small <- assignTaxonomy(seqtable.small.nochim, "~/Projects/IBS_Meta-analysis_16S/data/silva_nr_v138_train_set.fa.gz",
+taxa.small <- assignTaxonomy(seqtable.small.nochim, file.path(path.silva, "silva_nr_v138_train_set.fa.gz"),
                             tryRC = TRUE, # try reverse complement of the sequences
                             multithread=TRUE, verbose = TRUE)
-taxa.small <- addSpecies(taxa.small, "~/Projects/IBS_Meta-analysis_16S/data/silva_species_assignment_v138.fa.gz")
+taxa.small <- addSpecies(taxa.small, file.path(path.silva, "silva_species_assignment_v138.fa.gz"))
 ```
 
-```{r}
+```{r taxtable-check}
 # Check how the taxonomy table looks like
 taxa.print <- taxa
 rownames(taxa.print) <- NULL # Removing sequence rownames for display only
@@ -438,10 +456,10 @@ table(taxa.print[,2]) # Show the different phyla
 table(is.na(taxa.print[,2])) # is there any NA phyla?
 ```
 
-```{r}
-# Check how the taxonomy table looks like
+```{r taxtable-check2}
+# Check how the taxonomy table looks like (where we trimmed the ASV sequences)
 taxa.small.print <- taxa.small
-rownames(taxa.small.print) <- NULL # Removing sequence rownames for display only
+rownames(taxa.small.print) <- NULL
 head(taxa.small.print)
 
 table(taxa.small.print[,1]) # Show the different kingdoms (should be only bacteria)
@@ -452,8 +470,7 @@ table(is.na(taxa.small.print[,2])) # is there any NA phyla?
 
 
 
-### 2 - Compare taxonomic assignment with/without cutting reads
-
+### 6.2. Compare taxonomic assignment with/without cutting ASVs
 ```{r compare-tax-assignment, fig.width = 6, fig.height = 6}
 # taxa dataframes
 taxa.df <- data.frame(taxa)
@@ -499,7 +516,7 @@ ggplot(phylum.all,
   scale_fill_brewer(type = "qual", palette = "Set3") +
   theme_bw()+
   labs(x="", y="#ASVs", title="ASV taxonomic assignment (with/without cutting)", color='Different?')
-# ggsave("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Zhu-2019/01_Dada2-Zhu/pre-post-cut_taxAssignment_phylum.jpg", width=10, height=6)
+# ggsave(file.path(path.data, "01_Dada2-Zhu/pre-post-cut_taxAssignment_phylum.jpg"), width=10, height=6)
 
 
 # *********************
@@ -531,48 +548,29 @@ ggplot(genus.all,
         legend.key.size = unit(0.1, "cm"))+
   labs(x="", y="#ASVs", title="ASV taxonomic assignment (with/without cutting)", color='Different?')+
   guides(fill=guide_legend(ncol=3))
-# ggsave("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Zhu-2019/01_Dada2-Zhu/pre-post-cut_taxAssignment_genus.jpg", width=10, height=6)
+# ggsave(file.path(path.data, "01_Dada2-Zhu/pre-post-cut_taxAssignment_genus.jpg"), width=10, height=6)
 ```
 
 
 
-########################
-## LAST PREPROCESSING ##
-########################
+
+***********************
+# 7. LAST PREPROCESSING
+***********************
 
 We will remove any sample with less than 500 reads from further analysis, and also any ASVs with unassigned phyla.
 
-### 1. Create phyloseq object
+### 7.1. Create phyloseq object
 The preprocessing will be easier to do with ASV, taxonomic and metadata tables combined in a phyloseq object.
 
 ```{r phyloseq-object, echo=TRUE, eval=FALSE}
 #_________________________
 # Import metadata
-metadata_table <- read.table("~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/Zhu-2019/ZhuSraRunTable.txt", header = TRUE, sep = ",")
-colnames(metadata_table)
-
-# Keep relevant data
-sampledf <- metadata_table[, c("Run", "Sample.Name", "Age", "sex")]
-rownames(sampledf) <- paste(metadata_table$Run) # have the same sample.names
-colnames(sampledf) <- c("Run", "host_disease", "host_age", "host_sex")
-
-# Simplify data
-sampledf$host_disease <- as.character(sampledf$host_disease)
-sampledf$host_disease[substr(sampledf$host_disease, start = 1, stop = 2) == "N_"] <- "Healthy" # Replace with better names
-sampledf$host_disease[substr(sampledf$host_disease, start = 1, stop = 2) == "F_"] <- "IBS" # Replace with better names
-
-sampledf[sampledf$host_disease == "Healthy", "host_subtype"] <- "HC"
-sampledf[sampledf$host_disease == "IBS", "host_subtype"] <- "IBS-unspecified"
-
-sampledf$Collection <- "1st" # only 1 collection point per individual
-sampledf$sample_type <- "stool"
-sampledf$author <- "Zhu"
-sampledf$sequencing_tech <- "Illumina paired-end"
-sampledf$variable_region <- "V4"
+metadata_table <- read.csv(file.path(path.zhu, "00_Metadata-Zhu/Metadata-Zhu.csv"))
 
 #_________________________
 # Create phyloseq object
-physeq <- phyloseq(otu_table(seqtable.nochim, taxa_are_rows=FALSE), # by default, in otu_table the sequence variants are in rows
+physeq <- phyloseq(otu_table(seqtable.nochim, taxa_are_rows=FALSE), # by default, in otu_table the ASVs are in rows
                   sample_data(sampledf), 
                   tax_table(taxa))
 physeq.small <- phyloseq(otu_table(seqtable.small.nochim, taxa_are_rows=FALSE),
@@ -595,36 +593,7 @@ physeq.small <- prune_samples(sample_sums(physeq.small)>=500, physeq.small)
 ```
 
 
-
-### 2. Save to disk
-
-```{r, eval=FALSE}
-# Save to disk
-saveRDS(raw_stats, file.path(path, "01_Dada2-Zhu/raw_stats.rds"))
-saveRDS(out2, file.path(path, "01_Dada2-Zhu/out2.rds"))
-saveRDS(errF, file.path(path, "01_Dada2-Zhu/errF.rds"))
-saveRDS(errR, file.path(path, "01_Dada2-Zhu/errR.rds"))
-saveRDS(dadaFs, file.path(path, "01_Dada2-Zhu/infered_seq_F.rds"))
-saveRDS(dadaRs, file.path(path, "01_Dada2-Zhu/infered_seq_R.rds"))
-saveRDS(mergers, file.path(path, "01_Dada2-Zhu/mergers.rds"))
-
-saveRDS(otu_table(physeq), file.path(path, "01_Dada2-Zhu/ASVtable_final.rds")) # ASV table
-saveRDS(tax_table(physeq), file.path(path, "01_Dada2-Zhu/taxa_final.rds")) # taxa table
-saveRDS(sample_data(physeq), file.path(path, "01_Dada2-Zhu/metadata_final.rds")) # metadata table
-write.csv(sample_data(physeq), file.path(path, "01_Dada2-Zhu/ZhuMetadata.csv"))
-
-# Taxa & Phyloseq object
-saveRDS(taxa, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/CLUSTER/Taxonomy/output/taxa_zhu.rds")
-saveRDS(taxa.small, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/CLUSTER/Taxonomy/output/taxa_zhu_shortASV.rds")
-
-saveRDS(physeq, "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/CLUSTER/PhyloTree/input/physeq_zhu.rds")
-saveRDS(physeq.small, file.path(path, "01_Dada2-Zhu/physeq_zhu_shortASV.rds")) # phyloseq object with shorter ASVs
-```
-
-
-
-### 3. Quick peek at data analysis
-
+### 7.2. Quick peek at data analysis
 ```{r plot, fig.width = 10, fig.height = 5}
 # Absolute abundance
 plot_bar(physeq, fill = "Phylum")+ facet_wrap("host_disease", scales="free_x") + theme(axis.text.x = element_blank())
@@ -660,3 +629,35 @@ ggplot(phylum.table, aes(x = Sample, y = Abundance, fill = Phylum))+
 ```
 
 For any further analysis, we will be doing it on the _physeq_shortASV_ object, as the ASVs sequences better reflect the V4 **variable** region.
+
+
+### 7.3. Save to disk
+```{r, eval=FALSE}
+# Save to disk
+saveRDS(raw_stats, file.path(path.data, "01_Dada2-Zhu/raw_stats.rds"))
+saveRDS(out2,      file.path(path.data, "01_Dada2-Zhu/out2.rds"))
+saveRDS(errF,      file.path(path.data, "01_Dada2-Zhu/errF.rds"))
+saveRDS(errR,      file.path(path.data, "01_Dada2-Zhu/errR.rds"))
+saveRDS(dadaFs,    file.path(path.data, "01_Dada2-Zhu/infered_seq_F.rds"))
+saveRDS(dadaRs,    file.path(path.data, "01_Dada2-Zhu/infered_seq_R.rds"))
+saveRDS(mergers,   file.path(path.data, "01_Dada2-Zhu/mergers.rds"))
+
+
+# Taxa & Phyloseq object
+saveRDS(taxa,       file.path(path.data, "01_Dada2-Zhu/taxa_zhu.rds"))
+saveRDS(taxa.small, file.path(path.data, "01_Dada2-Zhu/taxa_zhu_shortASV.rds")
+
+saveRDS(physeq,       file.path(path, "01_Dada2-Zhu/physeq_zhu_longASV.rds"))
+saveRDS(physeq.small, file.path(path.root, "data/preprocessing/analysis-individual/CLUSTER/PhyloTree/input/physeq_zhu.rds") # phyloseq object with shorter ASVs
+```
+
+
+
+
+******************
+# 8. SESSION INFO
+******************
+
+```{r session-info}
+sessionInfo()
+```
