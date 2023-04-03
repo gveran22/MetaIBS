@@ -1,11 +1,10 @@
 ---
 title: "Zeber2016_DataAnalysis"
 output:
-  html_document:
+  html_document: default
     df_print: paged
     toc: true
     toc_float: true
-  pdf_document: default
 ---
 
 ```{r, include=FALSE}
@@ -21,7 +20,6 @@ knitr::opts_chunk$set(fig.width = 15, fig.height = 5, warning=FALSE, message=FAL
 ***********
 
 ### 1.1. Librairies
-
 ```{r library-import}
 library(phyloseq) # for phyloseq object
 library(ggplot2)
