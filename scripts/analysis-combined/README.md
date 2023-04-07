@@ -15,3 +15,8 @@ This repository contains `scripts` to perform statistical analyses on combined d
 | [`07_RelativAbund.R`](./07_RelativAbund.R)                               | FigS3         | Plot relative abundance of 5 main phyla across datasets |
 | [`08_AlphaDiversity.R`](./08_AlphaDiversity.R)                           | FigS4         | Shannon and Simpson &alpha;-diversity indexes in healthy vs IBS samples |
 | [`09_PCoA-BrayCurtis-BigDatasets.R`](./09_PCoA-BrayCurtis-BigDatasets.R) | FigS7         | Compute Bray-Curtis dissimilarity in AGP, Pozuelo and Hugerth datasets (3 biggest datasets) and perform PCoA |
+
+
+<br/>
+
+![gif](https://media.tenor.com/TcSYAlWSHC0AAAAd/bioinformatics-market.gif)
