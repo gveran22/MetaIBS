@@ -19,4 +19,6 @@ This repository contains `scripts` to perform statistical analyses on combined d
 
 <br/>
 
-![gif](https://media.tenor.com/TcSYAlWSHC0AAAAd/bioinformatics-market.gif)
+<p align="center">
+	<img src="https://media.tenor.com/TcSYAlWSHC0AAAAd/bioinformatics-market.gif" height="300"/>
+</p>
