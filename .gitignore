@@ -4,7 +4,6 @@ data_local/
 standard-RAxML-master/
 .Rproj.user/
 *.Rproj
-scripts/analysis-combined/*.nb.html
 scripts/analysis-combined/plots/
 scripts/analysis-individual/AGP/*.nb.html
 scripts/analysis-individual/Pozuelo-2015/.ipynb_checkpoints/
