@@ -1,15 +1,17 @@
-##########################
+# ************************************
 # Purpose: Plotting annotated heatmaps
 # Date: August 2021
 # Author: Salomé Carcy
-##########################
+# ************************************
 
 
-##########
-# IMPORT #
-##########
 
-# Libraries
+
+# **************
+# 1. IMPORT ####
+# **************
+
+## 1.1. Libraries ####
 library(phyloseq)
 library(ggplot2)
 library(tidyverse)
@@ -18,45 +20,35 @@ library(pheatmap)
 library(RColorBrewer)
 library(pals)
 
-# Data
-path.phy <- "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/CLUSTER/PhyloTree/input"
-physeq.labus    <- readRDS(file.path(path.phy, "physeq_labus.rds"))
-physeq.lopresti <- readRDS(file.path(path.phy, "physeq_lopresti.rds"))
-physeq.ringel   <- readRDS(file.path(path.phy, "physeq_ringel.rds"))
-physeq.agp      <- readRDS(file.path(path.phy, "physeq_agp.rds"))
-physeq.liu      <- readRDS(file.path(path.phy, "physeq_liu.rds"))
-physeq.pozuelo  <- readRDS(file.path(path.phy, "physeq_pozuelo.rds"))
-physeq.fukui    <- readRDS(file.path(path.phy, "physeq_fukui.rds"))
-physeq.hugerth  <- readRDS(file.path(path.phy, "physeq_hugerth.rds"))
-physeq.mars     <- readRDS(file.path(path.phy, "physeq_mars.rds"))
-physeq.zhu      <- readRDS(file.path(path.phy, "physeq_zhu.rds"))
-physeq.zhuang   <- readRDS(file.path(path.phy, "physeq_zhuang.rds"))
-physeq.nagel    <- readRDS(file.path(path.phy, "physeq_nagel.rds"))
-physeq.zeber    <- readRDS(file.path(path.phy, "physeq_zeber.rds"))
+
+## 1.2. Data ####
+path.root <- "~/Projects/MetaIBS" # CHANGE THIS ROOT DIRECTORY ON YOUR COMPUTER
+path.data <- file.path(path.root, "data/analysis-combined/03_Heatmaps")
+
+path.phylobj    <- file.path(path.root, "data/phyloseq-objects/phyloseq-without-phylotree")
+datasets        <- list.files(path.phylobj)
+phyloseqobjects <- sapply(datasets, function(x) readRDS(file.path(path.phylobj, x)), USE.NAMES=T, simplify=F)
+# names(phyloseqobjects) # sanity check
 
 
 
 
-###################
-# PREPROCESS DATA #
-###################
+# ***********************
+# 2. PREPROCESS DATA ####
+# ***********************
 
-# Merge phyloseq objects
-physeq <- merge_phyloseq(physeq.labus,
-                         physeq.lopresti,
-                         physeq.ringel,
-                         physeq.agp,
-                         physeq.liu,
-                         physeq.pozuelo,
-                         physeq.fukui,
-                         physeq.hugerth,
-                         physeq.mars,
-                         physeq.zhu,
-                         physeq.zhuang,
-                         physeq.nagel,
-                         physeq.zeber)
+## 2.1. Merge phyloseq objects ####
+physeq.all <- merge_phyloseq(phyloseqobjects[[1]], phyloseqobjects[[2]]) # Merge first two phyloseq objects in the list
+# if there are more than 2 phyloseq objects, merge the rest of them
+if(length(phyloseqobjects)>2){
+  for (i in 3:length(phyloseqobjects)){
+    print(paste0("merging with phyloseq object #", i))
+    physeq.all <- merge_phyloseq(physeq.all, phyloseqobjects[[i]])
+  }
+}
 
-# Separate fecal & sigmoid samples
+
+## 2.2. Separate fecal & sigmoid samples ####
 physeq.fecal <- subset_samples(physeq, sample_type == 'stool') # 2,220 samples
 physeq.fecal <- prune_taxa(taxa_sums(physeq.fecal)>0, physeq.fecal) # remove ASVs that are not present anymore
 cat("Nb of fecal samples:", nsamples(physeq.fecal))
@@ -66,7 +58,7 @@ physeq.sigmoid <- prune_taxa(taxa_sums(physeq.sigmoid)>0, physeq.sigmoid) # remo
 cat("\nNb of sigmoid samples:", nsamples(physeq.sigmoid))
 
 
-# Covariates for heatmap labels
+## 2.3. Covariates for heatmap labels ####
 color.df <- data.frame(disease = sample_data(physeq.fecal)[,'host_disease'],
                        seq_tech = sample_data(physeq.fecal)[,'sequencing_tech'],
                        author = sample_data(physeq.fecal)[,'author'])
@@ -94,9 +86,9 @@ annotationCol <- list(host_disease = c(Healthy = '#08519c', IBS = '#ef3b2c', "NA
 
 
 
-#########################
-# HEATMAP PHYLA AS ROWS #
-#########################
+# *****************************
+# 3. HEATMAP PHYLA AS ROWS ####
+# *****************************
 
 # # Agglomerate to Phylum level, keeping only ASVs present in at least 2 samples
 # phylum.agg <- physeq.fecal %>%
@@ -145,7 +137,7 @@ annotationCol <- list(host_disease = c(Healthy = '#08519c', IBS = '#ef3b2c', "NA
 # # Reorder samples
 # phylumTable <- phylumTable[,sample.order] # reorder samples
 # 
-# jpeg("~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/09_Heatmaps/phylum_heatmp.jpg", height = 3000, width = 4000, res = 300)
+# jpeg(file.path(path.data, "phylum_heatmp.jpg"), height = 3000, width = 4000, res = 300)
 # pheatmap(log10(phylumTable),
 #          color = colorRampPalette(rev(brewer.pal(n = 7, name = "RdYlBu")))(100),
 #          show_rownames = T,
@@ -164,17 +156,18 @@ annotationCol <- list(host_disease = c(Healthy = '#08519c', IBS = '#ef3b2c', "NA
 
 
 
-############################
-# HEATMAP FAMILIES AS ROWS #
-############################
+# ********************************
+# 4. HEATMAP FAMILIES AS ROWS ####
+# ********************************
 
-# Agglomerate to Family level
+##___________________________
+## 4.1. Agglomerate to Family level ####
 family.agg <- physeq.fecal %>%
   tax_glom(taxrank = "Family") %>%
   transform_sample_counts(function(x) {x/sum(x)} ) %>%
   psmelt()
-# saveRDS(family.agg, "~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/09_Heatmaps/famGlom_fecal.rds")
-# family.agg <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/09_Heatmaps/famGlom_fecal.rds")
+# saveRDS(family.agg, file.path(path.data, "famGlom_fecal.rds"))  # recommend to save it as takes a while to compute
+# family.agg <- readRDS(file.path(path.data, "famGlom_fecal.rds"))
 
 
 # Identify families present in at least 3 datasets
@@ -209,10 +202,13 @@ table(rowSums(familyTable) == 0)
 # min(familyTable[familyTable>0]) # min is 6e-6
 familyTable[familyTable == 0] <- 1e-7
 
+
+##___________________________
+## 4.2. Plot heatmap ####
 # Reorder samples
 familyTable <- familyTable[,sample.order] # reorder samples
 
-jpeg("~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/09_Heatmaps/family_heatmp_ordered.jpg", height = 4000, width = 4000, res = 300)
+jpeg(file.path(path.data, "family_heatmp_ordered.jpg"), height = 4000, width = 4000, res = 300)
 pheatmap(log10(familyTable),
          color = colorRampPalette(rev(brewer.pal(n = 7, name = "RdYlBu")))(50),
          show_rownames = T,
@@ -229,20 +225,14 @@ pheatmap(log10(familyTable),
 dev.off()
 
 
-# Try heatmap with ggplot?
-# ggplot(family.agg %>% filter(Family %in% list.family),
-#        aes(Sample, Family, fill=Abundance)) + 
-#   geom_tile()
 
 
+# **************************************************
+# 5. HEATMAP FAMILIES AS ROWS (SIGMOID SAMPLES) ####
+# **************************************************
 
-
-
-##############################################
-# HEATMAP FAMILIES AS ROWS (SIGMOID SAMPLES) #
-##############################################
-
-# Agglomerate to Family level
+##___________________________
+## 5.1. Agglomerate to Family level ####
 family.agg.sigmoid <- physeq.sigmoid %>%
   tax_glom(taxrank = "Family") %>%
   transform_sample_counts(function(x) {x/sum(x)} ) %>%
@@ -281,11 +271,14 @@ annotationCol.sigmoid <- list(host_disease = c(Healthy='#08519c', IBS='#ef3b2c')
                               author = setNames(c("#1F78B4", "#FF7F00", "#dfc27d"), levels(color.sigmoid$author)))
 
 
+##___________________________
+## 5.2. Plot heatmap ####
+
 # Reorder samples
 familyTable.sigmoid <- familyTable.sigmoid[,sample.order.sigmoid] # reorder samples
 
 # Plot
-jpeg("~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/09_Heatmaps/sigmoid/family_heatmp_ordered.jpg", height = 4000, width = 4000, res = 400)
+jpeg(file.path(path.data, "family_heatmp_ordered.jpg"), height = 4000, width = 4000, res = 400)
 pheatmap(log10(familyTable.sigmoid),
          color = colorRampPalette(rev(brewer.pal(n = 7, name = "RdYlBu")))(50),
          show_rownames = T,
