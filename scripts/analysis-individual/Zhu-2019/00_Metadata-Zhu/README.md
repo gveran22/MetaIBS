@@ -1,0 +1,3 @@
+This directory contains metadata for the Zhu dataset.
+- `Metadata-Zhu.csv`: final metadata table with essential information, cleaned up from `ZhuSraRunTable.txt` using the [00_Metadata-Zhu.R](../00_Metadata-Zhu.R) script;
+- `ZhuSraRunTable.txt`: metadata table downloaded from the [SRA Run Selector](https://www.ncbi.nlm.nih.gov/Traces/study/?acc=PRJNA566284&o=acc_s%3Aa) (accession number PRJNA566284).

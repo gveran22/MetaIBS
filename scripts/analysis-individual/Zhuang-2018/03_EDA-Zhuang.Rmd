@@ -1,0 +1,520 @@
+---
+title: "Zhuang2018_DataAnalysis"
+output:
+  html_document: default
+    df_print: paged
+    toc: true
+    toc_float: true
+---
+
+```{r, include=FALSE}
+knitr::opts_chunk$set(fig.width = 15, fig.height = 5, warning=FALSE, message=FALSE,
+                      root.dir = "~/Projects/MetaIBS/scripts/analysis-individual/Zhuang-2018/")
+```
+
+
+
+
+***********
+# 1. IMPORT
+***********
+
+### 1.1. Librairies
+```{r library-import}
+library(phyloseq) # for phyloseq object
+library(ggplot2)
+library(ggsignif)
+library(RColorBrewer)
+library(cowplot)
+library(plyr)
+library(dplyr)
+library("plotly") # plot 3D
+library("microbiome") # for centered log-ratio
+library("coda") # Aitchison distance
+library("coda.base") # Aitchison distance
+library("vegan") # NMDS
+library(pheatmap) # for heatmap
+```
+
+
+### 1.2. Data
+```{r import-data}
+# Set path
+path.root <- "~/Projects/MetaIBS"
+path.zhuang <- file.path(path.zoot, "data/preprocessing/analysis-individual/Zhuang-2018/03_EDA-Zhuang")
+
+# Import phyloseq object
+physeq.zhuang <- readRDS(file.path(path.root, "data/phyloseq-objects/physeq_zhuang.rds"))
+
+# Sanity check
+physeq.zhuang
+```
+
+Phylogenetic tree was computed with the package `phangorn`, and the script was run on a cluster. Let's check we have correctly generated a phylogenetic tree.
+
+```{r plot-tree, fig.height = 6, fig.width = 10}
+# Look at the tree
+plot_tree(physeq.zhuang, color = "Phylum", ladderize="left")
+```
+
+
+```{r import-for-pdf, echo = FALSE}
+#__________________________________________________________________________
+#____________ THIS IS ONLY FOR (quicker) PDF/HTML OUTPUT __________________
+#__________________________________________________________________________
+
+# Import phyloseq objects for computing distances
+physeq.rel <- readRDS(file.path(path.zhuang, "physeq_relative.rds"))
+physeq.clr <- readRDS(file.path(path.zhuang, "physeq_clr.rds"))
+physeq.CSN <- readRDS(file.path(path.zhuang, "physeq_CSN.rds"))
+physeq.NZcomp <- readRDS(file.path(path.zhuang, "physeq_NZcomp.rds"))
+```
+
+
+
+
+*****************
+# 2. DEMOGRAPHICS
+*****************
+
+This dataset doesn't have any covariates publicly available.
+
+
+
+
+***************
+# 3. ABUNDANCES
+***************
+
+### 3.1. Absolute abundances
+```{r plot-absolute-abundance, fig.width=10, fig.height = 5}
+# Plot Phylum
+plot_bar(physeq.zhuang, fill = "Phylum") + facet_wrap("host_subtype", scales="free_x") +
+  theme(axis.text.x = element_text(size = 8))+
+  labs(x = "Samples", y = "Absolute abundance", title = "Zhuang dataset (2018)")
+# ggsave(file.path(path.zhuang, "absAbundance_phylum.jpg"), width=13, height=5)
+
+# Plot Class
+plot_bar(physeq.zhuang, fill = "Class")+ facet_wrap("host_subtype", scales="free_x") +
+  theme(axis.text.x = element_text(size = 8))+
+  labs(x = "Samples", y = "Absolute abundance", title = "Zhuang dataset (2018)")
+```
+
+**Sequencing depth** characteristics of the Zhuang dataset:  
+- minimum of `r min(sample_sums(physeq.zhuang))` total count per sample  
+- median: `r median(sample_sums(physeq.zhuang))` total count per sample  
+- maximum of `r max(sample_sums(physeq.zhuang))` total count per sample  
+
+
+### 3.2. Relative abundances
+```{r plot-relative-abundances, fig.width=10, fig.height = 5}
+# Agglomerate to phylum & class levels
+phylum.table <- physeq.zhuang %>%
+  tax_glom(taxrank = "Phylum") %>%                     # agglomerate at phylum level
+  transform_sample_counts(function(x) {x/sum(x)} ) %>% # Transform to rel. abundance
+  psmelt()                                             # Melt to long format
+
+class.table <- physeq.zhuang %>%
+  tax_glom(taxrank = "Class") %>%
+  transform_sample_counts(function(x) {x/sum(x)} ) %>%
+  psmelt()
+
+
+# Plot relative abundances
+ggplot(phylum.table, aes(x = reorder(Sample, Sample, function(x) mean(phylum.table[Sample == x & Phylum == 'Firmicutes', 'Abundance'])),
+                         y = Abundance, fill = Phylum))+
+  facet_wrap(~ host_subtype, scales = "free") + # scales = "free" removes empty lines
+  geom_bar(stat = "identity", width=0.95) +
+  theme(axis.text.x = element_text(size = 6, angle = -90))+
+  labs(x = "Samples", y = "Relative abundance", title = "Zhuang dataset (2018)")
+# ggsave(file.path(path.zhuang, "relAbundance_phylum.jpg"), width=10, height=5)
+
+ggplot(class.table, aes(x = reorder(Sample, Sample, function(x) mean(phylum.table[Sample == x & Phylum == 'Firmicutes', 'Abundance'])),
+                        y = Abundance, fill = Class))+
+  facet_wrap(~ host_subtype, scales = "free") + # scales = "free" removes empty lines
+  geom_bar(stat = "identity", width=0.95) +
+  theme(axis.text.x = element_text(size = 6, angle = -90))+
+  labs(x = "Samples", y = "Relative abundance", title = "Zhuang dataset (2018)")
+# ggsave(file.path(path.zhuang, "relAbundance_class.jpg"), width=10, height=5)
+```
+
+
+### 3.3. Firmicutes/Bacteroidota ratio
+```{r plot-log-ratio, fig.height = 5, fig.width=3}
+# Extract abundance of only Bacteroidota and Firmicutes
+bacter <- phylum.table %>%
+  filter(Phylum == "Bacteroidota") %>%
+  select(c('Sample', 'Abundance', 'host_subtype', 'Phylum')) %>%
+  arrange(Sample)
+
+firmi <- phylum.table %>%
+  filter(Phylum == "Firmicutes") %>%
+  select(c('Sample', 'Abundance', 'host_subtype', 'Phylum')) %>%
+  arrange(Sample)
+
+# Calculate log2 ratio Firmicutes/Bacteroidota
+ratio.FB <- data.frame('Sample' = bacter$Sample,
+                       'host_subtype' = bacter$host_subtype,
+                       'Bacteroidota' = bacter$Abundance,
+                       'Firmicutes' = firmi$Abundance)
+ratio.FB$logRatioFB <- log2(ratio.FB$Firmicutes / ratio.FB$Bacteroidota)
+
+# Plot log2 ratio Firmicutes/Bacteroidota
+ggplot(ratio.FB, aes(x = host_subtype, y = logRatioFB))+
+  geom_violin(aes(fill=host_subtype))+
+  scale_fill_manual(values=scales::alpha(c("blue", "red"), .3))+
+  geom_jitter(width=0.1)+
+  geom_signif(comparisons = list(c("HC", "IBS-D")), map_signif_level = TRUE, test="wilcox.test") +
+  labs(x = "",  y = 'Log2(Firmicutes/Bacteroidota)', title = "Firmicutes:Bacteroidota ratio")+
+  theme_cowplot()+
+  theme(legend.position="none")
+# ggsave(file.path(path.zhuang, "ratioFB.jpg"), width=4, height=6)
+
+# Statistical test
+wilcox.test(ratio.FB[ratio.FB$host_subtype == "IBS-D","logRatioFB"],
+            ratio.FB[ratio.FB$host_subtype == "HC","logRatioFB"]) # p = 0.59
+```
+
+
+
+
+*******************
+# 4. NORMALIZE DATA
+*******************
+
+```{r normalize-data, eval = FALSE, echo = TRUE}
+# Sanity check no sample with less than 500 total count
+table(sample_sums(physeq.zhuang)<500) # all FALSE
+
+
+#____________________________________________________________________
+# PHYLOSEQ OBJECT WITH NON-ZERO COMPOSITIONS
+physeq.NZcomp <- physeq.zhuang
+otu_table(physeq.NZcomp)[otu_table(physeq.NZcomp) == 0] <- 0.5 # pseudocounts
+
+# Sanity check that 0 values have been replaced
+# otu_table(physeq.zhuang)[1:5,1:5]
+# otu_table(physeq.NZcomp)[1:5,1:5]
+
+# transform into compositions
+physeq.NZcomp <- transform_sample_counts(physeq.NZcomp, function(x) x / sum(x) )
+table(rowSums(otu_table(physeq.NZcomp))) # check if there is any row not summing to 1
+
+# Save object
+saveRDS(physeq.NZcomp, file.path(path.zhuang, "physeq_NZcomp.rds"))
+
+
+#____________________________________________________________________
+# PHYLOSEQ OBJECT WITH RELATIVE COUNT (BETWEEN 0 AND 1)
+physeq.rel <- physeq.zhuang
+physeq.rel <- transform_sample_counts(physeq.rel, function(x) x / sum(x) ) # divide each count by the total number of counts (per sample)
+
+# check the counts are all relative
+# otu_table(physeq.zhuang)[1:5, 1:5]
+# otu_table(physeq.rel)[1:5, 1:5]
+
+# sanity check
+table(rowSums(otu_table(physeq.rel))) # check if there is any row not summing to 1
+
+# save the physeq.rel object
+saveRDS(physeq.rel, file.path(path.zhuang, "physeq_relative.rds"))
+
+
+#____________________________________________________________________
+# PHYLOSEQ OBJECT WITH COMMON-SCALE NORMALIZATION
+physeq.CSN <- physeq.zhuang
+physeq.CSN <- transform_sample_counts(physeq.CSN, function(x) (x*min(sample_sums(physeq.CSN))) / sum(x) )
+
+# sanity check
+table(rowSums(otu_table(physeq.CSN))) # check that all rows are summing to the same total
+
+# save the physeq.CSN object
+saveRDS(physeq.CSN, file.path(path.zhuang, "physeq_CSN.rds"))
+
+
+#____________________________________________________________________
+# PHYLOSEQ OBJECT WITH CENTERED LOG RATIO COUNT
+physeq.clr <- physeq.zhuang
+physeq.clr <- microbiome::transform(physeq.zhuang, "clr") # the function adds pseudocounts itself
+
+# Compare the otu tables in the original phyloseq object and the new one after CLR transformation
+otu_table(physeq.zhuang)[1:5, 1:5] # should contain absolute counts
+otu_table(physeq.clr)[1:5, 1:5] # should all be relative
+
+# save the physeq.rel object
+saveRDS(physeq.clr, file.path(path.zhuang, "physeq_clr.rds"))
+```
+
+
+
+
+**********************
+# 5. COMPUTE DISTANCES
+**********************
+
+### 5.1. UniFrac, Aitchison, Bray-Curtis and Canberra
+First, let's look at these four distances of interest.
+
+```{r dist-functions}
+#____________________________________________________________________________________
+# Measure distances
+getDistances <- function(){
+  set.seed(123) # for unifrac, need to set a seed
+  glom.UniF <- UniFrac(physeq.rel, weighted=TRUE, normalized=TRUE)    # weighted unifrac
+  glom.ait  <- phyloseq::distance(physeq.clr, method = 'euclidean')   # aitchison
+  glom.bray <- phyloseq::distance(physeq.CSN, method = "bray")        # bray-curtis
+  glom.can  <- phyloseq::distance(physeq.NZcomp, method = "canberra") # canberra
+  dist.list <- list("UniF" = glom.UniF, "Ait" = glom.ait, "Canb" = glom.can, "Bray" = glom.bray)
+  
+  return(dist.list)
+}
+
+
+#____________________________________________________________________________________
+# Plot in 2D the distances
+plotDistances2D <- function(dlist, ordination="MDS"){
+  plist <- NULL
+  plist <- vector("list", 4)
+  names(plist) <- c("Weighted Unifrac", "Aitchison", "Bray-Curtis", "Canberra")
+  
+  print("Unifrac")
+  # Weighted UniFrac
+  set.seed(123)
+  iMDS.UniF <- ordinate(physeq.rel, ordination, distance=dlist$UniF)
+  plist[[1]] <- plot_ordination(physeq.rel, iMDS.UniF, color="host_disease")
+  
+  print("Aitchison")
+  # Aitchison
+  set.seed(123)
+  iMDS.Ait <- ordinate(physeq.clr, ordination, distance=dlist$Ait)
+  plist[[2]] <- plot_ordination(physeq.clr, iMDS.Ait, color="host_disease")
+  
+  print("Bray")
+  # Bray-Curtis
+  set.seed(123)
+  iMDS.Bray <- ordinate(physeq.CSN, ordination, distance=dlist$Bray)
+  plist[[3]] <- plot_ordination(physeq.CSN, iMDS.Bray, color="host_disease")
+  
+  print("Canberra")
+  # Canberra
+  set.seed(123)
+  iMDS.Can <- ordinate(physeq.NZcomp, ordination, distance=dlist$Can)
+  plist[[4]] <- plot_ordination(physeq.NZcomp, iMDS.Can, color="host_disease")
+  
+  # Creating a dataframe to plot everything
+  plot.df = ldply(plist, function(x) x$data)
+  names(plot.df)[1] <- "distance"
+  
+  return(plot.df)
+}
+```
+
+Now let's plot!
+
+```{r dist-run, fig.width = 15, fig.height = 4}
+# Get the distances & the plot data
+dist.zhuang <- getDistances()
+plot.df <- plotDistances2D(dist.zhuang)
+
+# Plot
+ggplot(plot.df, aes(Axis.1, Axis.2, color=host_subtype))+
+  geom_point(size=6, alpha=0.5)  + scale_color_manual(values = c('blue', 'red'))+
+  facet_wrap(distance~., scales='free', nrow=1)+
+  theme_bw()+
+  theme(strip.text.x = element_text(size=20))+
+  labs(color="Disease")
+# ggsave(file.path(path.zhuang, "distances4_MDS.jpg"), height = 4, width = 15)
+```
+
+
+### 5.2. Plot in 3D
+For better visualization, we will also take a glance at reduction to 3D.
+
+```{r 3D-function, eval = TRUE, echo = TRUE}
+#____________________________________________________________________________________
+# Plot 3D ordination
+plotDistances3D <- function(d, name_dist){
+  
+  # Reset parameters
+  mds.3D <- NULL
+  xyz <- NULL
+  fig.3D <- NULL
+  
+  # Reduce distance matrix to 3 dimensions
+  set.seed(123)
+  mds.3D <- metaMDS(d, method="MDS", k=3, trace = 0)
+  xyz <- scores(mds.3D, display="sites") # pull out the (x,y,z) coordinates
+  
+  # Plot
+  fig.3D <- plot_ly(x=xyz[,1], y=xyz[,2], z=xyz[,3], type="scatter3d", mode="markers",
+                    color=sample_data(physeq.zhuang)$host_subtype, colors = c("blue", "red"))%>%
+    layout(title = paste('MDS in 3D with', name_dist, 'distance', sep = ' '))
+  
+  return(fig.3D)
+}
+```
+
+Now let's plot!
+
+```{r 3D-plot, fig.width = 8, fig.height = 5}
+plotDistances3D(dist.zhuang$UniF, "UniFrac")
+plotDistances3D(dist.zhuang$Ait, "Aitchison")
+plotDistances3D(dist.zhuang$Canb, "Canberra")
+plotDistances3D(dist.zhuang$Bray, "Bray-Curtis")
+```
+
+
+
+
+****************************
+# 6. HIERARCHICAL CLUSTERING
+****************************
+
+```{r hierarchical-clust, fig.width = 25, fig.width = 7}
+# For heatmaps: have group color
+matcol <- data.frame(group = sample_data(physeq.zhuang)[,"host_subtype"])
+
+
+# Function to get heatmap from the distances computed
+plotHeatmaps <- function(dlist, fontsize){
+  
+  # Initialize variables
+  i=1
+  plist <- vector("list", 4)
+  names(plist) <- names(dlist)
+  
+  # Loop through distances
+  for(d in dlist){
+    plist[[i]] <- pheatmap(as.matrix(d), 
+                          clustering_distance_rows = d,
+                          clustering_distance_cols = d,
+                          fontsize = fontsize,
+                          fontsize_col = fontsize-5,
+                          fontsize_row = fontsize-5,
+                          annotation_col = matcol,
+                          annotation_row = matcol,
+                          annotation_colors = list(host_subtype = c('HC' = 'blue', 'IBS-D' = 'red')),
+                          cluster_rows = T,
+                          cluster_cols = T,
+                          clustering_method = 'complete', # hc method
+                          main = names(dlist)[i]) # have name of distance as title
+    i <- i+1
+  }
+  
+  return(plist)
+}
+
+
+# Get the heatmaps
+heatmp.zhuang <- plotHeatmaps(dlist = dist.zhuang, fontsize = 8)
+```
+
+
+
+
+*******************************
+# 7. REPRODUCE PLOTS FROM PAPER
+*******************************
+
+### 7.1. Figure 1A
+First, let's reproduce figure 1A. They performed a hierarchical clustering with UPGMA on the bray-curtis distance.
+
+```{r reproduce-fig1A, fig.width = 10, fig.height = 5}
+# ___________________________________________________________________________________________________________
+# FIGURE 1A
+
+# Hierarchical clustering on Bray-Curtis distance
+hc.average <- hclust(dist.zhuang$Bray, method = "average") # UPGMA = average
+
+# Make into dendogram
+dend.average <- as.dendrogram(hc.average)
+
+# Function that will allow to color the leaves of the tree according to disease type (healthy vs IBS)
+color_leaf<<-function(n){
+    if(is.leaf(n)){
+        # take the current attributes
+        a=attributes(n)
+        
+        # deduce the line in the original data, to get the corresponding disease status
+        line=match(attributes(n)$label, sample_names(physeq.zhuang))
+        disease=sample_data(physeq.zhuang)[line, "host_disease"];
+            if(disease=="Healthy"){col_disease="blue"};if(disease=="IBS"){col_disease="red"}
+        
+        #Modification of leaf attribute
+        attr(n,"nodePar") <- c(a$nodePar, list(cex=1.5, lab.cex=0.6, pch=20, col=col_disease, lab.font=1, lab.cex=1))
+        }
+    return(n)
+}
+
+# Apply the color attributes to the dendograms
+dend.average <- dendrapply(dend.average, color_leaf)
+
+# Plot
+par(mar=c(3,2,3,7), xpd=TRUE)
+plot(dend.average , main="Hierarchical clustering: UPGMA", horiz = T)
+legend(x = 35,
+     legend = c("Healthy" , "IBS-D"), 
+     col = c("blue", "red"), 
+     pch = c(20,20), bty = "n",  pt.cex = 1.5, cex = 1, 
+     text.col = "black", horiz = FALSE, inset = c(0, 0.1))
+
+```
+
+![Figure 1](/Users/scarcy/Projects/MetaIBS/data/preprocessing/analysis-individual/Zhuang-2018/03_EDA-Zhuang/ZhuangPaper_Figure1.jpg){width=60%}
+
+
+### 7.2. Figure 1B
+Now let's try to reproduce figure 1B. It's a PCoA of microbiome composition based on UniFrac.
+
+```{r reproduce-fig1B, fig.width = 6, fig.height = 5}
+# ___________________________________________________________________________________________________________
+# FIGURE 1B
+set.seed(123)
+fig.1B <- ordinate(physeq.rel, "PCoA", "unifrac", weighted=TRUE)
+plot_ordination(physeq.rel, fig.1B, color="host_subtype", shape = "host_subtype")+
+  geom_point(size=5, alpha=0.5) +
+  scale_color_manual(values = c('blue', 'red'), name="") + scale_shape_manual(values = c(17,16), name="")+
+  theme_classic()+
+  ggtitle("PCoA on weighted-UniFrac distance")
+
+```
+
+
+### 7.3. Figure 2A
+Relative abundance at phyla level
+
+```{r reproduce-fig2A, fig.width = 6, fig.height = 5}
+phy.order <- c("Bacteroidota", "Firmicutes", "Proteobacteria", "Fusobacteriota", "Actinobacteriota", "Verrucomicrobiota", "Synergistota", "Cyanobacteria", "Desulfobacterota")
+
+df <- phylum.table %>%
+  # get relative count of each phylum in each sample
+  group_by(Phylum, Sample) %>%
+  summarise(abund=sum(Abundance)*100,
+            host_disease=host_disease) %>%
+  ungroup() %>%
+  # get mean count of each phylum in healthy vs IBS
+  group_by(Phylum, host_disease) %>%
+  summarise(proportion=mean(abund)) %>%
+  ungroup() %>%
+  mutate(Phylum=factor(Phylum, levels=rev(phy.order)))
+
+
+ggplot(df, aes(x = Phylum,
+                 y = proportion, fill = host_disease))+
+  geom_bar(stat="identity", position="dodge2") +
+  scale_fill_manual(values=c("#31a354", "#de2d26"), name="")+
+  theme_cowplot()+
+  coord_flip()+
+  labs(x = "", y = "Proportion (%)", title = "Fig2A")
+```
+
+
+
+
+******************
+# 8. SESSION INFO
+******************
+
+```{r session-info}
+sessionInfo()
+```

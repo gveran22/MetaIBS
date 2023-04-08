@@ -1,10 +1,11 @@
 .git/
 .DS_Store
-data/
-standard-RAxML-master
+data_local/
+standard-RAxML-master/
 .Rproj.user/
 *.Rproj
-analysis-combined/*.nb.html
-analysis-combined/plots/
-analysis-individual/AGP/*.nb.html
-analysis-individual/Pozuelo-2015/.ipynb_checkpoints/
+scripts/analysis-combined/plots/
+scripts/analysis-individual/AGP/*.nb.html
+scripts/analysis-individual/Pozuelo-2015/.ipynb_checkpoints/
+scripts/analysis-combined/additional_scripts/
+scripts/analysis-combined/scripts_cluster/

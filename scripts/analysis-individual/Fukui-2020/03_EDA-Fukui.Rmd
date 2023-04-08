@@ -1,0 +1,501 @@
+---
+title: "Fukui2020_DataAnalysis"
+output:
+  html_document:
+    df_print: paged
+    toc: true
+    toc_float: true
+  pdf_document: default
+---
+
+```{r, include=FALSE}
+knitr::opts_chunk$set(fig.width = 15, fig.height = 5, warning=FALSE, message=FALSE,
+                      root.dir = "~/Projects/MetaIBS/scripts/analysis-individual/Fukui-2020/")
+```
+
+
+
+***********
+# 1. IMPORT
+***********
+
+## 1.1. Librairies
+
+```{r library-import}
+library(phyloseq) # for phyloseq object
+library(ggplot2)
+library(ggsignif)
+library(cowplot)
+library(plyr)
+library(dplyr)
+library("plotly") # plot 3D
+library("microbiome") # for centered log-ratio
+library("coda") # Aitchison distance
+library("coda.base") # Aitchison distance
+library("vegan") # NMDS
+library(pheatmap) # for heatmap
+library(dendextend) # for dendrogram
+```
+
+
+## 1.2. Data
+
+```{r import-data}
+# Set path
+path.root <- "~/Projects/MetaIBS"
+path.fukui <- file.path(path.root, "data/preprocessing/analysis-individual/Fukui-2020/03_EDA-Fukui")
+
+# Import phyloseq object
+physeq.fukui <- readRDS(file.path(path.root, "data/phyloseq-objects/physeq_fukui.rds"))
+
+# Sanity check
+physeq.fukui
+```
+
+Phylogenetic tree was computed with the package `phangorn`, and the script was run on a cluster. Let's check we have correctly generated a phylogenetic tree.
+
+```{r plot-tree, fig.height = 6, fig.width = 10}
+# Look at the tree
+plot_tree(physeq.fukui, color = "Phylum", ladderize="left")
+```
+
+
+```{r import-for-pdf, echo = FALSE}
+#__________________________________________________________________________
+#____________ THIS IS ONLY FOR (quicker) PDF/HTML OUTPUT __________________
+#__________________________________________________________________________
+
+# Import phyloseq objects for computing distances
+physeq.rel    <- readRDS(file.path(path.fukui, "physeq_relative.rds"))
+physeq.clr    <- readRDS(file.path(path.fukui, "physeq_clr.rds"))
+physeq.CSN    <- readRDS(file.path(path.fukui, "physeq_CSN.rds"))
+physeq.NZcomp <- readRDS(file.path(path.fukui, "physeq_NZcomp.rds"))
+```
+
+
+
+
+*****************
+# 2. DEMOGRAPHICS
+*****************
+
+There are no demographics available.
+
+
+
+
+***************
+# 3. ABUNDANCES
+***************
+
+## 3.1. Absolute abundances
+
+```{r plot-absolute-abundance, fig.width=10, fig.height = 5}
+# Plot Phylum
+plot_bar(physeq.fukui, fill = "Phylum") + facet_wrap("host_disease", scales="free_x") +
+  theme_cowplot()+
+  theme(axis.text.x = element_text(size = 6, angle=90))+
+  labs(x = "Samples", y = "Absolute abundance", title = "Fukui dataset (2020)")
+# ggsave(file.path(path.fukui, "plot_absAbundance_phylum.jpg"), width=13, height=5)
+
+# Plot Class
+plot_bar(physeq.fukui, fill = "Class")+ facet_wrap("host_disease", scales="free_x") +
+  theme_cowplot()+
+  theme(axis.text.x = element_text(size = 6, angle=90))+
+  labs(x = "Samples", y = "Absolute abundance", title = "Fukui dataset (2020)")
+```
+
+**Sequencing depth** characteristics of the Fukui dataset:  
+- minimum of `r min(sample_sums(physeq.fukui))` total count per sample  
+- median: `r median(sample_sums(physeq.fukui))` total count per sample  
+- maximum of `r max(sample_sums(physeq.fukui))` total count per sample  
+
+
+## 3.2. Relative abundances
+
+```{r plot-relative-abundances, fig.width=10, fig.height = 5}
+# Agglomerate to phylum & class levels
+phylum.table <- physeq.fukui %>%
+  tax_glom(taxrank = "Phylum") %>%                     # agglomerate at phylum level
+  transform_sample_counts(function(x) {x/sum(x)} ) %>% # Transform to rel. abundance
+  psmelt()                                             # Melt to long format
+
+class.table <- physeq.fukui %>%
+  tax_glom(taxrank = "Class") %>%
+  transform_sample_counts(function(x) {x/sum(x)} ) %>%
+  psmelt()
+
+
+# Plot relative abundances
+ggplot(phylum.table, aes(x = reorder(Sample, Sample, function(x) mean(phylum.table[Sample == x & Phylum == 'Firmicutes', 'Abundance'])),
+                         y = Abundance, fill = Phylum))+
+  facet_wrap(~ host_disease, scales = "free") + # scales = "free" removes empty lines
+  geom_bar(stat = "identity") +
+  theme_cowplot()+
+  theme(axis.text.x = element_text(size = 6, angle = -90))+
+  labs(x = "Samples", y = "Relative abundance", title = "Fukui dataset (2020)")
+# ggsave(file.path(path.fukui, "plot_relAbundance_phylum.jpg"), width=10, height=5)
+
+ggplot(class.table, aes(x = reorder(Sample, Sample, function(x) mean(phylum.table[Sample == x & Phylum == 'Firmicutes', 'Abundance'])),
+                        y = Abundance, fill = Class))+
+  facet_wrap(~ host_disease, scales = "free") + # scales = "free" removes empty lines
+  geom_bar(stat = "identity") +
+  theme_cowplot()+
+  theme(axis.text.x = element_text(size = 6, angle = -90))+
+  labs(x = "Samples", y = "Relative abundance", title = "Fukui dataset (2020)")
+# ggsave(file.path(path.fukui, "plot_relAbundance_class.jpg"), width=10, height=5)
+```
+
+
+## 3.3. Firmicutes/Bacteroidota ratio
+
+```{r plot-log-ratio, fig.height = 5, fig.width=3}
+# Extract abundance of only Bacteroidota and Firmicutes
+bacter <- phylum.table %>%
+  filter(Phylum == "Bacteroidota") %>%
+  select(c('Sample', 'Abundance', 'host_disease', 'Phylum')) %>%
+  arrange(Sample)
+
+firmi <- phylum.table %>%
+  filter(Phylum == "Firmicutes") %>%
+  select(c('Sample', 'Abundance', 'host_disease', 'Phylum')) %>%
+  arrange(Sample)
+
+# Calculate log2 ratio Firmicutes/Bacteroidota
+ratio.FB <- data.frame('Sample' = bacter$Sample,
+                       'host_disease' = bacter$host_disease,
+                       'Bacteroidota' = bacter$Abundance,
+                       'Firmicutes' = firmi$Abundance)
+ratio.FB$logRatioFB <- log2(ratio.FB$Firmicutes / ratio.FB$Bacteroidota)
+
+# Plot log2 ratio Firmicutes/Bacteroidota
+ggplot(ratio.FB, aes(x = host_disease, y = logRatioFB))+
+  geom_violin(aes(fill=host_disease))+
+  scale_fill_manual(values=scales::alpha(c("blue", "red"), .3))+
+  geom_jitter(width=0.1)+
+  geom_signif(comparisons = list(c("Healthy", "IBS")), map_signif_level = TRUE, test="wilcox.test") +
+  labs(x = "",  y = 'Log2(Firmicutes/Bacteroidota)', title = "Firmicutes:Bacteroidota ratio")+
+  theme_cowplot()+
+  theme(legend.position="none")
+# ggsave(file.path(path.fukui, "plot_ratioFB.jpg"), width=4, height=6)
+
+# Statistical test
+wilcox.test(ratio.FB[ratio.FB$host_disease == "IBS","logRatioFB"],
+            ratio.FB[ratio.FB$host_disease == "Healthy","logRatioFB"]) # p = 0.24
+```
+
+
+
+
+*******************
+# 4. NORMALIZE DATA
+*******************
+
+```{r normalize-data, eval = FALSE, echo = TRUE}
+# Sanity check no sample with less than 500 total count
+table(sample_sums(physeq.fukui)<500) # all FALSE
+
+
+#____________________________________________________________________
+# PHYLOSEQ OBJECT WITH NON-ZERO COMPOSITIONS
+physeq.NZcomp <- physeq.fukui
+otu_table(physeq.NZcomp)[otu_table(physeq.NZcomp) == 0] <- 0.5 # pseudocounts
+
+# Sanity check that 0 values have been replaced
+# otu_table(physeq.fukui)[1:5,1:5]
+# otu_table(physeq.NZcomp)[1:5,1:5]
+
+# transform into compositions
+physeq.NZcomp <- transform_sample_counts(physeq.NZcomp, function(x) x / sum(x) )
+table(rowSums(otu_table(physeq.NZcomp))) # check if there is any row not summing to 1
+
+# Save object
+saveRDS(physeq.NZcomp, file.path(path.fukui, "physeq_NZcomp.rds"))
+
+
+#____________________________________________________________________
+# PHYLOSEQ OBJECT WITH RELATIVE COUNT (BETWEEN 0 AND 1)
+physeq.rel <- physeq.fukui
+physeq.rel <- transform_sample_counts(physeq.rel, function(x) x / sum(x) ) # divide each count by the total number of counts (per sample)
+
+# check the counts are all relative
+# otu_table(physeq.fukui)[1:5, 1:5]
+# otu_table(physeq.rel)[1:5, 1:5]
+
+# sanity check
+table(rowSums(otu_table(physeq.rel))) # check if there is any row not summing to 1
+
+# save the physeq.rel object
+saveRDS(physeq.rel, file.path(path.fukui, "physeq_relative.rds"))
+
+
+#____________________________________________________________________
+# PHYLOSEQ OBJECT WITH COMMON-SCALE NORMALIZATION
+physeq.CSN <- physeq.fukui
+physeq.CSN <- transform_sample_counts(physeq.CSN, function(x) (x*min(sample_sums(physeq.CSN))) / sum(x) )
+
+# sanity check
+table(rowSums(otu_table(physeq.CSN))) # check that all rows are summing to the same total
+
+# save the physeq.CSN object
+saveRDS(physeq.CSN, file.path(path.fukui, "physeq_CSN.rds"))
+
+
+#____________________________________________________________________
+# PHYLOSEQ OBJECT WITH CENTERED LOG RATIO COUNT
+physeq.clr <- physeq.fukui
+physeq.clr <- microbiome::transform(physeq.fukui, "clr") # the function adds pseudocounts itself
+
+# Compare the otu tables in the original phyloseq object and the new one after CLR transformation
+otu_table(physeq.fukui)[1:5, 1:5] # should contain absolute counts
+otu_table(physeq.clr)[1:5, 1:5] # should all be relative
+
+# save the physeq.rel object
+saveRDS(physeq.clr, file.path(path, "physeq_clr.rds"))
+```
+
+
+
+
+**********************
+# 5. COMPUTE DISTANCES
+**********************
+
+## 5.1. UniFrac, Aitchison, Bray-Curtis and Canberra
+
+First, let's look at these four distances of interest.
+
+```{r dist-functions, fig.width = 15, fig.height = 4}
+#____________________________________________________________________________________
+# Measure distances
+getDistances <- function(){
+  set.seed(123) # for unifrac, need to set a seed
+  glom.UniF <- UniFrac(physeq.rel, weighted=TRUE, normalized=TRUE) # weighted unifrac
+  glom.ait  <- phyloseq::distance(physeq.clr, method = 'euclidean') # aitchison
+  glom.bray <- phyloseq::distance(physeq.CSN, method = "bray") # bray-curtis
+  glom.can  <- phyloseq::distance(physeq.NZcomp, method = "canberra") # canberra
+  dist.list <- list("UniF" = glom.UniF, "Ait" = glom.ait, "Canb" = glom.can, "Bray" = glom.bray)
+  
+  return(dist.list)
+}
+
+
+#____________________________________________________________________________________
+# Plot in 2D the distances
+plotDistances2D <- function(dlist, ordination="MDS"){
+  plist <- NULL
+  plist <- vector("list", 4)
+  names(plist) <- c("Weighted Unifrac", "Aitchison", "Bray-Curtis", "Canberra")
+  
+  print("Unifrac")
+  # Weighted UniFrac
+  set.seed(123)
+  iMDS.UniF <- ordinate(physeq.rel, ordination, distance=dlist$UniF)
+  plist[[1]] <- plot_ordination(physeq.rel, iMDS.UniF, color="host_disease")
+  
+  print("Aitchison")
+  # Aitchison
+  set.seed(123)
+  iMDS.Ait <- ordinate(physeq.clr, ordination, distance=dlist$Ait)
+  plist[[2]] <- plot_ordination(physeq.clr, iMDS.Ait, color="host_disease")
+  
+  print("Bray")
+  # Bray-Curtis
+  set.seed(123)
+  iMDS.Bray <- ordinate(physeq.CSN, ordination, distance=dlist$Bray)
+  plist[[3]] <- plot_ordination(physeq.CSN, iMDS.Bray, color="host_disease")
+  
+  print("Canberra")
+  # Canberra
+  set.seed(123)
+  iMDS.Can <- ordinate(physeq.NZcomp, ordination, distance=dlist$Can)
+  plist[[4]] <- plot_ordination(physeq.NZcomp, iMDS.Can, color="host_disease")
+  
+  # Creating a dataframe to plot everything
+  plot.df = plyr::ldply(plist, function(x) x$data)
+  names(plot.df)[1] <- "distance"
+  
+  return(plot.df)
+}
+```
+
+Now let's plot!
+
+```{r dist-run}
+# Get the distances & the plot data
+dist.fukui <- getDistances()
+plot.df <- plotDistances2D(dist.fukui)
+
+# Plot
+ggplot(plot.df, aes(Axis.1, Axis.2, color=host_disease))+
+  geom_point(size=6, alpha=0.5)  + scale_color_manual(values = c('blue', 'red'))+
+  facet_wrap(distance~., scales='free', nrow=1)+
+  theme_bw()+
+  theme(strip.text.x = element_text(size=20))+
+  labs(color="Disease")
+
+# ggsave(file.path(path.fukui, "plot_distances4_MDS.jpg"), height = 4, width = 15)
+```
+
+
+## 5.2. Plot in 3D
+For better visualization, we will also take a glance at reduction to 3D.
+
+```{r 3D-function, eval = TRUE, echo = TRUE}
+#____________________________________________________________________________________
+# Plot 3D ordination
+plotDistances3D <- function(d, name_dist){
+  
+  # Reset parameters
+  mds.3D <- NULL
+  xyz <- NULL
+  fig.3D <- NULL
+  
+  # Reduce distance matrix to 3 dimensions
+  set.seed(123)
+  mds.3D <- metaMDS(d, method="MDS", k=3, trace = 0)
+  xyz <- scores(mds.3D, display="sites") # pull out the (x,y,z) coordinates
+  
+  # Plot
+  fig.3D <- plot_ly(x=xyz[,1], y=xyz[,2], z=xyz[,3], type="scatter3d", mode="markers",
+                    color=sample_data(physeq.fukui)$host_disease, colors = c("blue", "red"))%>%
+    layout(title = paste('MDS in 3D with', name_dist, 'distance', sep = ' '))
+  
+  return(fig.3D)
+}
+```
+
+Now let's plot!
+```{r 3D-plot, fig.width = 8, fig.height = 5}
+plotDistances3D(dist.fukui$UniF, "UniFrac")
+plotDistances3D(dist.fukui$Ait, "Aitchison")
+plotDistances3D(dist.fukui$Canb, "Canberra")
+plotDistances3D(dist.fukui$Bray, "Bray-Curtis")
+```
+
+
+
+
+****************************
+# 6. HIERARCHICAL CLUSTERING
+****************************
+
+```{r hierarchical-clust, fig.width = 25, fig.width = 7}
+# For heatmaps: have group color
+matcol <- data.frame(group = sample_data(physeq.fukui)[,"host_disease"])
+
+
+# Function to get heatmap from the distances computed
+plotHeatmaps <- function(dlist, fontsize){
+  
+  # Initialize variables
+  i=1
+  plist <- vector("list", 4)
+  names(plist) <- names(dlist)
+  
+  # Loop through distances
+  for(d in dlist){
+    plist[[i]] <- pheatmap(as.matrix(d), 
+                          clustering_distance_rows = d,
+                          clustering_distance_cols = d,
+                          fontsize = fontsize,
+                          fontsize_col = fontsize-5,
+                          fontsize_row = fontsize-5,
+                          annotation_col = matcol,
+                          annotation_row = matcol,
+                          annotation_colors = list(host_disease = c('Healthy' = 'blue', 'IBS' = 'red')),
+                          cluster_rows = T,
+                          cluster_cols = T,
+                          clustering_method = 'complete', # hc method
+                          main = names(dlist)[i]) # have name of distance as title
+    i <- i+1
+  }
+  
+  return(plist)
+}
+
+
+# Get the heatmaps
+heatmp.fukui <- plotHeatmaps(dlist = dist.fukui, fontsize = 8)
+```
+
+
+
+
+*******************************
+# 7. REPRODUCE PLOTS FROM PAPER
+*******************************
+
+First, let's try to reproduce figure 2A. It's a PCoA of microbiome composition based on unweighted UniFrac.
+```{r reproduce-fig1B, fig.width = 6, fig.height = 5}
+# ___________________________________________________________________________________________________________
+# FIGURE 1B
+set.seed(123)
+fig.2A <- ordinate(physeq.rel, "PCoA", "unifrac", weighted=FALSE)
+plot_ordination(physeq.rel, fig.2A, color="host_disease", shape = "host_disease")+
+  geom_point(size=5, alpha=0.5) +
+  scale_color_manual(values = c('blue', 'red'))+ scale_shape_manual(values = c(17,16))+
+  theme_classic()+
+  ggtitle("PCoA on unweighted-UniFrac distance")
+
+```
+
+
+Now, let's reproduce figure 2B. They performed a hierarchical clustering with Ward linkage on the unweighted Unifrac distance.
+```{r reproduce-fig1A, fig.width = 10, fig.height = 7}
+# ___________________________________________________________________________________________________________
+# FIGURE 1A
+
+# Get unweighted unifrac
+set.seed(123)
+unw.uniF <- UniFrac(physeq.rel, weighted=FALSE)
+
+# Hierarchical clustering on Bray-Curtis distance
+hc.average <- hclust(unw.uniF, method = "ward.D")
+
+# Make into dendogram
+dend.average <- as.dendrogram(hc.average)
+
+# Function that will allow to color the leaves of the tree according to disease type (healthy vs IBS)
+color_leaf<<-function(n){
+    if(is.leaf(n)){
+        # take the current attributes
+        a=attributes(n)
+        
+        # deduce the line in the original data, to get the corresponding disease status
+        line=match(attributes(n)$label, sample_names(physeq.fukui))
+        disease=sample_data(physeq.fukui)[line, "host_disease"];
+            if(disease=="Healthy"){col_disease="blue"};if(disease=="IBS"){col_disease="red"}
+        
+        #Modification of leaf attribute
+        attr(n,"nodePar") <- c(a$nodePar, list(cex=0.8, pch=20, col=col_disease, # size & shape leaf
+                                               lab.cex=0.4)) # size leaf label
+        }
+    return(n)
+}
+
+# Apply the color attributes to the dendograms
+dend.average <- dendrapply(dend.average, color_leaf)
+dend.average <- color_branches(dend.average, k=3)
+
+# Plot
+par(mar=c(3,2,3,7), xpd=TRUE)
+plot(dend.average , main="Hierarchical clustering: Ward", horiz = T)
+legend(x = 50,
+     legend = c("Healthy" , "IBS"), 
+     col = c("blue", "red"), 
+     pch = c(20,20), bty = "n",  pt.cex = 1.5, cex = 1, 
+     text.col = "black", horiz = FALSE, inset = c(0, 0.1))
+
+```
+
+
+
+
+******************
+# 8. SESSION INFO
+******************
+
+```{r session-info}
+sessionInfo()
+```
