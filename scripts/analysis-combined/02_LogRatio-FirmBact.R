@@ -1,69 +1,66 @@
-##########################
+# *********************************
 # Purpose: Plotting Firmicutes/Bacteroidota log ratio
 # Date: December 2021
 # Author: Salomé Carcy
-##########################
+# *********************************
 
 
-##########
-# IMPORT #
-##########
 
-# Libraries
+
+# **************
+# 1. IMPORT ####
+# **************
+
+## 1.1. Libraries ####
 library(phyloseq)
 library(ggplot2)
 library(tidyverse)
 library(cowplot)
 library(ggsignif)
 
-# Data
-path.phy <- "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/CLUSTER/PhyloTree/input"
-physeq.labus    <- readRDS(file.path(path.phy, "physeq_labus.rds"))
-physeq.lopresti <- readRDS(file.path(path.phy, "physeq_lopresti.rds"))
-# physeq.ringel <- readRDS(file.path(path.phy, "physeq_ringel.rds"))
-physeq.agp      <- readRDS(file.path(path.phy, "physeq_agp.rds"))
-physeq.liu      <- readRDS(file.path(path.phy, "physeq_liu.rds"))
-physeq.pozuelo  <- readRDS(file.path(path.phy, "physeq_pozuelo.rds"))
-physeq.fukui    <- readRDS(file.path(path.phy, "physeq_fukui.rds"))
-physeq.hugerth  <- readRDS(file.path(path.phy, "physeq_hugerth.rds"))
-physeq.mars     <- readRDS(file.path(path.phy, "physeq_mars.rds"))
-physeq.zhu      <- readRDS(file.path(path.phy, "physeq_zhu.rds"))
-physeq.zhuang   <- readRDS(file.path(path.phy, "physeq_zhuang.rds"))
-physeq.nagel    <- readRDS(file.path(path.phy, "physeq_nagel.rds"))
-physeq.zeber    <- readRDS(file.path(path.phy, "physeq_zeber.rds"))
+
+## 1.2. Data ####
+path.root <- "~/Projects/MetaIBS" # CHANGE THIS ROOT DIRECTORY ON YOUR COMPUTER
+
+path.phylobj    <- file.path(path.root, "data/phyloseq-objects/phyloseq-without-phylotree")
+datasets        <- list.files(path.phylobj)
+phyloseqobjects <- sapply(datasets, function(x) readRDS(file.path(path.phylobj, x)), USE.NAMES=T, simplify=F)
+# names(phyloseqobjects) # sanity check
+
+# Remove Ringel dataset from phyloseqobjects list (we don't have any healthy/IBS information in that dataset)
+ringel_name <- names(phyloseqobjects)[grepl("ringel", names(phyloseqobjects))]
+phyloseqobjects <- phyloseqobjects[names(phyloseqobjects) != ringel_name]
 
 
 
 
-###################
-# PREPROCESS DATA #
-###################
+# ***********************
+# 2. PREPROCESS DATA ####
+# ***********************
 
 # Merge phyloseq objects
-physeq <- merge_phyloseq(physeq.labus,
-                         physeq.lopresti,
-                         physeq.pozuelo,
-                         physeq.zhuang,
-                         physeq.zhu,
-                         physeq.hugerth,
-                         physeq.fukui,
-                         physeq.mars,
-                         physeq.liu,
-                         physeq.agp,
-                         physeq.nagel,
-                         physeq.zeber) # 2,576 samples
+physeq.all <- merge_phyloseq(phyloseqobjects[[1]], phyloseqobjects[[2]]) # Merge first two phyloseq objects in the list
+# if there are more than 2 phyloseq objects, merge the rest of them
+if(length(phyloseqobjects)>2){
+  for (i in 3:length(phyloseqobjects)){
+    print(paste0("merging with phyloseq object #", i))
+    physeq.all <- merge_phyloseq(physeq.all, phyloseqobjects[[i]])
+  }
+}
+print(physeq.all) # 2,576 samples
+
 
 # Agglomerate to phylum level and melt to long format
-phylumTable <- physeq %>%
+phylumTable <- physeq.all %>%
   tax_glom(taxrank = "Phylum") %>%
   psmelt()
 
 
 
 
-###############################
-# COMPUTE FIRM/BACT LOG RATIO #
-###############################
+# ***********************************
+# 3. COMPUTE FIRM/BACT LOG RATIO ####
+# ***********************************
 
 # Extract abundance of Bacteroidota, Firmicutes and Actinobacteriota
 relevant.covariates <- c('Sample', 'Abundance', 'Phylum', 'host_disease', 'host_subtype', 'sample_type', 'Collection',
@@ -120,11 +117,14 @@ ratio.df$sequencing_tech <- factor(ratio.df$sequencing_tech, levels=seqtech.orde
 
 
 
-####################################################
-# PLOT FIRMICUTES/BACTEROIDOTA LOG RATIO FOR PAPER #
-####################################################
+# ********************************************************
+# 4. PLOT FIRMICUTES/BACTEROIDOTA LOG RATIO FOR PAPER ####
+# ********************************************************
 
-# Plot Firm/Bact ratio for fecal samples
+path.data <- file.path(path.root, "data/analysis-combined/02_LogRatio-FirmBact")
+
+##___________________________
+## 4.1. Plot F/B for fecal samples ####
 a <- ggplot(ratio.df %>% filter(Collection=="1st" & sample_type=="stool"),
        aes(x = author, y = LogRatio_FirmBact, fill=host_disease))+
   geom_point(position=position_jitterdodge(dodge.width=0.75, jitter.width=0.1), aes(color=host_disease), size=0.2)+
@@ -143,7 +143,8 @@ a <- ggplot(ratio.df %>% filter(Collection=="1st" & sample_type=="stool"),
   labs(x = '', y = expression(Log[2](Firmicutes/Bacteroidota)), fill="", title="Stool samples")
 
 
-# Plot Firm/Bact ratio for sigmoid samples
+##___________________________
+## 4.2. Plot F/B for sigmoid samples ####
 b <- ggplot(ratio.df %>% filter(Collection=="1st" & sample_type=="sigmoid"),
        aes(x = author, y = LogRatio_FirmBact, fill=host_disease))+
   geom_point(position=position_jitterdodge(dodge.width=0.75, jitter.width=0.1), aes(color=host_disease), size=0.2)+
@@ -155,7 +156,8 @@ b <- ggplot(ratio.df %>% filter(Collection=="1st" & sample_type=="sigmoid"),
   labs(x = '', y =  expression(Log[2](Firmicutes/Bacteroidota)), fill="", title="Sigmoid samples")
 
 
-# Plot Firm/Bact ratio per collection time point
+##___________________________
+## 4.3. Plot F/B per collection time point ####
 c <- ggplot(data = ratio.df %>%
                       group_by(author) %>%
                       filter(n_distinct(Collection)>1) %>%
@@ -178,7 +180,8 @@ c <- ggplot(data = ratio.df %>%
   labs(x = '', y = expression(Log[2](Firmicutes/Bacteroidota)), fill="", title="Collection time point")
 
 
-# Plot Firm/Bact ratio per IBS subtype
+##___________________________
+## 4.4. Plot F/B per IBS subtype ####
 annotation.df <- data.frame(author=c("Labus", "LoPresti", "Pozuelo", "Mars (sigmoid)", "Zeber-Lubecka"),
                              start=c("Healthy", "Healthy", "Healthy", "Healthy", "Healthy"),
                              end=c("IBS-D", "IBS-C", "IBS-D", "IBS-C","IBS-C"),
@@ -211,7 +214,8 @@ d <- ggplot(
   labs(title="IBS subtypes", x = '', y =  expression(Log[2](Firmicutes/Bacteroidota)))
 
 
-# Combine plots
+##___________________________
+## 4.5. Combine plots ####
 ggdraw() +
   draw_plot(a, x = 0, y = .5, width = .65, height = .5) +
   draw_plot(b, x = 0, y = 0, width = .30, height = .5) +
@@ -219,14 +223,14 @@ ggdraw() +
   draw_plot(d, x = 0.65, y = 0, width = 0.35, height = 1) +
   draw_plot_label(label = c("A", "B", "C", "D"), size = 15,
                   x = c(0, 0, 0.30, 0.65), y = c(1, 0.5, 0.5, 1))
-ggsave("~/Projects/IBS_Meta-analysis_16S/data/plots_paper/firm_bact_05.jpg", width=15, height=10)
+ggsave(file.path(path.data, "firm_bact_05.jpg"), width=15, height=10)
 
 
 
 
-#################################################
-# PLOT FIRMICUTES/BACTEROIDOTA LOG RATIO IN AGP #
-#################################################
+# *****************************************************
+# 5. PLOT FIRMICUTES/BACTEROIDOTA LOG RATIO IN AGP ####
+# *****************************************************
 
 ratio.df.AGP <- ratio.df %>%
   filter(author=="AGP") %>%
@@ -244,7 +248,9 @@ ratio.df.AGP <- ratio.df %>%
                               host_disease=="Healthy" & bowel_movement_quality=="Normal",
                               "Healthy"))
 
-# Plot Firm/Bact ratio per stool morphology
+
+##___________________________
+## 5.1. Plot F/B per stool morphology ####
 bwlmvt.order <- c("Healthy", "Constipated", "Diarrhea", "Unknown")
 ratio.df.AGP$host_subtype <- factor(ratio.df.AGP$host_subtype, levels=bwlmvt.order)
 
@@ -265,7 +271,8 @@ a1 <- ggplot(ratio.df.AGP %>% filter(!is.na(host_subtype)),
   labs(x = '', y = expression(Log[2](Firmicutes/Bacteroidota)), fill="", title="Bowel movement quality")
 
 
-# Plot Firm/Bact ratio per stool frequency
+##___________________________
+## 5.2. Plot F/B per stool frequency ####
 ratio.df.AGP$bowel_movement_frequency <- factor(ratio.df.AGP$bowel_movement_frequency,
                                                 levels=c("Less than one", "One", "Two", "Three", "Four", "Five or more", "Unknown"))
 b1 <- ggplot(ratio.df.AGP,
@@ -280,11 +287,12 @@ b1 <- ggplot(ratio.df.AGP,
   labs(x = '', y = expression(Log[2](Firmicutes/Bacteroidota)), fill="", title="Bowel movement frequency")
 
 
-# Combine plots
+##___________________________
+## 5.3. Combine plots ####
 ggdraw() +
   draw_plot(a1, x = 0, y = .5, width = 1, height = .5) +
   draw_plot(b1, x = 0, y = 0, width = 1, height = .5) +
   draw_plot_label(label = c("A", "B"), size = 15,
                   x = c(0, 0), y = c(1, 0.5))
-ggsave("~/Projects/IBS_Meta-analysis_16S/data/plots_paper/SuppFig5.jpg", width=6, height=9)
+ggsave(file.path(path.data, "SuppFig5.jpg"), width=6, height=9)
 
