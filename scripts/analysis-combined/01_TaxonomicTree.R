@@ -1,17 +1,17 @@
-##########################
+# *********************************
 # Purpose: Taxonomic tree plotting
 # Date: August 2021
 # Author: Salomé Carcy
-##########################
+# *********************************
 
 
 
 
-##########
-# IMPORT #
-##########
+# **************
+# 1. IMPORT ####
+# **************
 
-# Libraries
+## 1.1. Libraries ####
 library(phyloseq)
 library(ggplot2)
 library(tidyverse)
@@ -22,44 +22,32 @@ library(ggnewscale)
 library(RColorBrewer)
 library(scales)
 
-# Data
-path.phy <- "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/CLUSTER/PhyloTree/input"
-physeq.ringel   <- readRDS(file.path(path.phy, "physeq_ringel.rds"))
-physeq.labus    <- readRDS(file.path(path.phy, "physeq_labus.rds"))
-physeq.lopresti <- readRDS(file.path(path.phy, "physeq_lopresti.rds"))
-physeq.pozuelo  <- readRDS(file.path(path.phy, "physeq_pozuelo.rds"))
-physeq.zhuang   <- readRDS(file.path(path.phy, "physeq_zhuang.rds"))
-physeq.zhu      <- readRDS(file.path(path.phy, "physeq_zhu.rds"))
-physeq.hugerth  <- readRDS(file.path(path.phy, "physeq_hugerth.rds"))
-physeq.fukui    <- readRDS(file.path(path.phy, "physeq_fukui.rds"))
-physeq.mars     <- readRDS(file.path(path.phy, "physeq_mars.rds"))
-physeq.liu      <- readRDS(file.path(path.phy, "physeq_liu.rds"))
-physeq.agp      <- readRDS(file.path(path.phy, "physeq_agp.rds"))
-physeq.nagel    <- readRDS(file.path(path.phy, "physeq_nagel.rds"))
-physeq.zeber    <- readRDS(file.path(path.phy, "physeq_zeber.rds"))
+
+## 1.2. Data ####
+path.root <- "~/Projects/MetaIBS" # CHANGE THIS ROOT DIRECTORY ON YOUR COMPUTER
+
+path.phylobj    <- file.path(path.root, "data/phyloseq-objects/phyloseq-without-phylotree")
+datasets        <- list.files(path.phylobj)
+phyloseqobjects <- sapply(datasets, function(x) readRDS(file.path(path.phylobj, x)), USE.NAMES=T, simplify=F)
+# names(phyloseqobjects) # sanity check
 
 
 
 
-###################
-# PREPROCESS DATA #
-###################
+# ***********************
+# 2. PREPROCESS DATA ####
+# ***********************
 
 # Merge phyloseq objects
-cat("\n++ MERGE PHYLOSEQ OBJECTS ++\n")
-physeq.all <- merge_phyloseq(physeq.ringel,
-                             physeq.labus,
-                             physeq.lopresti,
-                             physeq.pozuelo,
-                             physeq.zhuang,
-                             physeq.zhu,
-                             physeq.hugerth,
-                             physeq.fukui,
-                             physeq.mars,
-                             physeq.liu,
-                             physeq.agp,
-                             physeq.nagel,
-                             physeq.zeber)
+physeq.all <- merge_phyloseq(phyloseqobjects[[1]], phyloseqobjects[[2]]) # Merge first two phyloseq objects in the list
+# if there are more than 2 phyloseq objects, merge the rest of them
+if(length(phyloseqobjects)>2){
+  for (i in 3:length(phyloseqobjects)){
+    print(paste0("merging with phyloseq object #", i))
+    physeq.all <- merge_phyloseq(physeq.all, phyloseqobjects[[i]])
+  }
+}
+
 
 # Separate fecal & sigmoid samples
 # physeq.fecal <- subset_samples(physeq.all, sample_type == 'stool') # 2,220 samples
@@ -74,12 +62,12 @@ physeq.all <- merge_phyloseq(physeq.ringel,
 
 
 
-####################
-# DEFINE FUNCTIONS #
-####################
+# ************************
+# 3. DEFINE FUNCTIONS ####
+# ************************
 
-#______________________
-# Get a treedata object
+#___________________________
+# 3.1. Get a treedata object
 phyloseq_to_treedata <- function(physeq){
   
   ## ***********************
@@ -137,7 +125,7 @@ phyloseq_to_treedata <- function(physeq){
 
 
 #______________________
-# Function to get dataframe with information on number of ASVs detected for each genus
+# 3.2. Function to get dataframe with information on number of ASVs detected for each genus
 nb_ASV_per_genus <- function(physeq){
   
   asvGenus.df <- as.data.frame(tax_table(physeq)) %>%
@@ -198,7 +186,7 @@ nb_ASV_per_genus <- function(physeq){
 
 
 #______________________
-# Function to get a dataframe with information on number of datasets where this genus is present
+# 3.3. Function to get a dataframe with information on number of datasets where this genus is present
 dataset_per_genus <- function(physeq){
 
   print("CAUTION: give the agglomerated phyloseq object for shorter running time")
@@ -224,20 +212,21 @@ dataset_per_genus <- function(physeq){
 
 
 
-##############
-# PLOT TREES #
-##############
+# ******************
+# 4. PLOT TREES ####
+# ******************
 
+path.data <- file.path(path.root, "data/analysis-combined/01_TaxonomicTree")
 colors <- paste0(brewer.pal(6, "Dark2"), "99", sep="")
 names(colors) <- c("Actinobacteriota", "Bacteroidota", "Firmicutes", "Proteobacteria", "Verrucomicrobiota", "Other")
 
-## ***********************
-## 1 - ALL SAMPLES
+## *********************
+## 4.1. All samples ####
 
 # Agglomerate to Genus level
 physeq.glom <- tax_glom(physeq.all, "Genus")
-# saveRDS(physeq.glom, "~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/03_TaxonomicTree/physeq_all_glomGenus.rds")
-# physeq.glom <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/03_TaxonomicTree/physeq_all_glomGenus.rds")
+# saveRDS(physeq.glom, file.path(path.data, "physeq_all_glomGenus.rds")) # recommend to save it as takes a while to compute
+# physeq.glom <- readRDS(file.path(path.data, "physeq_all_glomGenus.rds"))
 
 # Get the treedata object, and info on nb of ASV per genus, average count of each genus per sample, sample types containing the genus.
 tree.all <- phyloseq_to_treedata(physeq=physeq.glom)
@@ -296,103 +285,103 @@ gheatmap(p3+new_scale_fill(),
   scale_fill_manual(values=c("#f0f0f0","#636363","#bdbdbd"), name="Sample type")+
   labs(title="All samples")+
   scale_y_reverse() # flip tree up/down
-ggsave("~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/03_TaxonomicTree/taxTree_all.jpg", width=12, height=8)
+ggsave(file.path(path.data, "taxTree_all.jpg"), width=12, height=8)
 
 
 
 ## ***********************
-## 2 - FECAL SAMPLES
-
-# # Agglomerate to Genus level
-# physeq.fecal.glom <- tax_glom(physeq.fecal, "Genus")
-# # saveRDS(physeq.fecal.glom, "~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/03_TaxonomicTree/physeq_fecal_glomGenus.rds")
-# # physeq.fecal.glom <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/03_TaxonomicTree/physeq_fecal_glomGenus.rds")
-# 
-# # Get the treedata object, and info on nb of ASV per genus, average count of each genus per sample.
-# tree.fecal <- phyloseq_to_treedata(physeq=physeq.fecal.glom)
-# asvDF.fecal <- nb_ASV_per_genus(physeq=physeq.fecal)
-# countDF.fecal <- count_per_genus(physeq=physeq.fecal)
-# datasetDF.fecal <- dataset_per_genus(physeq=physeq.fecal.glom)
-# 
-# p1_fecal <- ggtree(tree.fecal, layout="circular", aes(color=group), lwd=0.4)+
-#   scale_color_manual(values=colors)+
-#   labs(color="Phylum")
-# 
-# p2_fecal <- gheatmap(p1_fecal, asvDF.fecal, offset=0.5, width=.08, colnames=FALSE)+
-#   scale_fill_gradient2(low = muted("red"),
-#                        mid = "white",
-#                        high = "#2b8cbe",
-#                        trans="log",
-#                        breaks=c(1,10,100,1000),
-#                        limits=c(1,4200),
-#                        name="Number of ASVs")
-# 
-# p3_fecal <- gheatmap(p2_fecal+new_scale_fill(), countDF.fecal, offset=1.1, width=.08, colnames = FALSE)+
-#   scale_fill_gradient(low = "white",
-#                       high = muted("red"),
-#                       trans="log",
-#                       breaks=c(1e-5,1e-3,1e-1,10),
-#                       limits=c(1e-6, 25),
-#                       name="Average count per sample (%)")+
-#   labs(title="Fecal samples")
-# 
-# gheatmap(p3_fecal+new_scale_fill(),
-#          datasetDF.fecal, offset=1.7, width=.08, colnames = FALSE)+
-#   scale_fill_gradient(low = "#ffffe5",
-#                       high = "#ec7014",
-#                       limits=c(1,13),
-#                       breaks = c(1,5,10),
-#                       name="Number of datasets")+
-#   scale_y_reverse() +# flip tree up/down
-#   labs(title="Fecal samples")
-# ggsave("~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/03_TaxonomicTree/taxTree_fecal.jpg", width=12, height=8)
-
-
-
-## ***********************
-## 3 - SIGMOID SAMPLES
+## 4.2. Fecal samples ####
 
 # Agglomerate to Genus level
-# physeq.sigmoid.glom <- tax_glom(physeq.sigmoid, "Genus")
-# # saveRDS(physeq.sigmoid.glom, "~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/03_TaxonomicTree/physeq_sigmoid_glomGenus.rds")
-# # physeq.sigmoid.glom <- readRDS("~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/03_TaxonomicTree/physeq_sigmoid_glomGenus.rds")
-# 
-# # Get the treedata object, and info on nb of ASV per genus, average count of each genus per sample.
-# tree.sigmoid <- phyloseq_to_treedata(physeq=physeq.sigmoid.glom)
-# asvDF.sigmoid <- nb_ASV_per_genus(physeq=physeq.sigmoid)
-# countDF.sigmoid <- count_per_genus(physeq=physeq.sigmoid)
-# datasetDF.sigmoid <- dataset_per_genus(physeq=physeq.sigmoid.glom)
-# 
-# p1_sigmoid <- ggtree(tree.sigmoid, layout="circular", aes(color=group), lwd=0.4)+
-#   scale_color_manual(values=colors)+
-#   labs(color="Phylum")
-# 
-# p2_sigmoid <- gheatmap(p1_sigmoid, asvDF.sigmoid, offset=0.5, width=.08, colnames=FALSE)+
-#   scale_fill_gradient2(low = muted("red"),
-#                        mid = "white",
-#                        high = "#2b8cbe",
-#                        trans="log",
-#                        breaks=c(1,10,100,1000),
-#                        limits=c(1,4200),
-#                        name="Number of ASVs")
-# 
-# p3_sigmoid <- gheatmap(p2_sigmoid+new_scale_fill(), countDF.sigmoid, offset=1.1, width=.08, colnames = FALSE)+
-#   scale_fill_gradient(low = "white",
-#                       high = muted("red"),
-#                       trans="log",
-#                       breaks=c(1e-5,1e-3,1e-1,10),
-#                       limits=c(1e-6, 25),
-#                       name="Average count per sample (%)")+
-#   labs(title="Sigmoid samples")
-# 
-# gheatmap(p3_sigmoid+new_scale_fill(),
-#          datasetDF.sigmoid, offset=1.7, width=.08, colnames = FALSE)+
-#   scale_fill_gradient(low = "#ffffe5",
-#                       high = "#ec7014",
-#                       limits=c(1,13),
-#                       breaks = c(1,5,10),
-#                       name="Number of datasets")+
-#   scale_y_reverse() +
-#   labs(title="Sigmoid samples")
-# ggsave("~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/03_TaxonomicTree/taxTree_sigmoid.jpg", width=12, height=8)
+physeq.fecal.glom <- tax_glom(physeq.fecal, "Genus")
+# saveRDS(physeq.fecal.glom, file.path(path.data, "physeq_fecal_glomGenus.rds")) # recommend to save it as takes a while to compute
+# physeq.fecal.glom <- readRDS(file.path(path.data, "physeq_fecal_glomGenus.rds"))
+
+# Get the treedata object, and info on nb of ASV per genus, average count of each genus per sample.
+tree.fecal <- phyloseq_to_treedata(physeq=physeq.fecal.glom)
+asvDF.fecal <- nb_ASV_per_genus(physeq=physeq.fecal)
+countDF.fecal <- count_per_genus(physeq=physeq.fecal)
+datasetDF.fecal <- dataset_per_genus(physeq=physeq.fecal.glom)
+
+p1_fecal <- ggtree(tree.fecal, layout="circular", aes(color=group), lwd=0.4)+
+  scale_color_manual(values=colors)+
+  labs(color="Phylum")
+
+p2_fecal <- gheatmap(p1_fecal, asvDF.fecal, offset=0.5, width=.08, colnames=FALSE)+
+  scale_fill_gradient2(low = muted("red"),
+                       mid = "white",
+                       high = "#2b8cbe",
+                       trans="log",
+                       breaks=c(1,10,100,1000),
+                       limits=c(1,4200),
+                       name="Number of ASVs")
+
+p3_fecal <- gheatmap(p2_fecal+new_scale_fill(), countDF.fecal, offset=1.1, width=.08, colnames = FALSE)+
+  scale_fill_gradient(low = "white",
+                      high = muted("red"),
+                      trans="log",
+                      breaks=c(1e-5,1e-3,1e-1,10),
+                      limits=c(1e-6, 25),
+                      name="Average count per sample (%)")+
+  labs(title="Fecal samples")
+
+gheatmap(p3_fecal+new_scale_fill(),
+         datasetDF.fecal, offset=1.7, width=.08, colnames = FALSE)+
+  scale_fill_gradient(low = "#ffffe5",
+                      high = "#ec7014",
+                      limits=c(1,13),
+                      breaks = c(1,5,10),
+                      name="Number of datasets")+
+  scale_y_reverse() +# flip tree up/down
+  labs(title="Fecal samples")
+ggsave(file.path(path.data, "taxTree_fecal.jpg"), width=12, height=8)
+
+
+
+## *************************
+## 4.3. Sigmoid samples ####
+
+# Agglomerate to Genus level
+physeq.sigmoid.glom <- tax_glom(physeq.sigmoid, "Genus")
+# saveRDS(physeq.sigmoid.glom, file.path(path.data, "physeq_sigmoid_glomGenus.rds")) # recommend to save it as takes a while to compute
+# physeq.sigmoid.glom <- readRDS(file.path(path.data, "physeq_sigmoid_glomGenus.rds"))
+
+# Get the treedata object, and info on nb of ASV per genus, average count of each genus per sample.
+tree.sigmoid <- phyloseq_to_treedata(physeq=physeq.sigmoid.glom)
+asvDF.sigmoid <- nb_ASV_per_genus(physeq=physeq.sigmoid)
+countDF.sigmoid <- count_per_genus(physeq=physeq.sigmoid)
+datasetDF.sigmoid <- dataset_per_genus(physeq=physeq.sigmoid.glom)
+
+p1_sigmoid <- ggtree(tree.sigmoid, layout="circular", aes(color=group), lwd=0.4)+
+  scale_color_manual(values=colors)+
+  labs(color="Phylum")
+
+p2_sigmoid <- gheatmap(p1_sigmoid, asvDF.sigmoid, offset=0.5, width=.08, colnames=FALSE)+
+  scale_fill_gradient2(low = muted("red"),
+                       mid = "white",
+                       high = "#2b8cbe",
+                       trans="log",
+                       breaks=c(1,10,100,1000),
+                       limits=c(1,4200),
+                       name="Number of ASVs")
+
+p3_sigmoid <- gheatmap(p2_sigmoid+new_scale_fill(), countDF.sigmoid, offset=1.1, width=.08, colnames = FALSE)+
+  scale_fill_gradient(low = "white",
+                      high = muted("red"),
+                      trans="log",
+                      breaks=c(1e-5,1e-3,1e-1,10),
+                      limits=c(1e-6, 25),
+                      name="Average count per sample (%)")+
+  labs(title="Sigmoid samples")
+
+gheatmap(p3_sigmoid+new_scale_fill(),
+         datasetDF.sigmoid, offset=1.7, width=.08, colnames = FALSE)+
+  scale_fill_gradient(low = "#ffffe5",
+                      high = "#ec7014",
+                      limits=c(1,13),
+                      breaks = c(1,5,10),
+                      name="Number of datasets")+
+  scale_y_reverse() +
+  labs(title="Sigmoid samples")
+ggsave(file.path(path.data, "taxTree_sigmoid.jpg", width=12, height=8))
 
