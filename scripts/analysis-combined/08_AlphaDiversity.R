@@ -1,17 +1,17 @@
-##########################
+# ************************
 # Purpose: Alpha-diversity
 # Date: August 2021
 # Author: Salomé Carcy
-##########################
+# ************************
 
 
 
 
-##########
-# IMPORT #
-##########
+# **************
+# 1. IMPORT ####
+# **************
 
-# Libraries
+## 1.1. Libraries ####
 library(phyloseq)
 library(ggplot2)
 library(cowplot)
@@ -20,36 +20,30 @@ library(reshape2)
 library(ggpubr)
 
 
-# Data
-path.phy <- "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/CLUSTER/PhyloTree/input"
-physeq.labus    <- readRDS(file.path(path.phy, "physeq_labus.rds"))
-physeq.lopresti <- readRDS(file.path(path.phy, "physeq_lopresti.rds"))
-# physeq.ringel   <- readRDS(file.path(path.phy, "physeq_ringel.rds"))
-physeq.agp      <- readRDS(file.path(path.phy, "physeq_agp.rds"))
-physeq.liu      <- readRDS(file.path(path.phy, "physeq_liu.rds"))
-physeq.pozuelo  <- readRDS(file.path(path.phy, "physeq_pozuelo.rds"))
-physeq.fukui    <- readRDS(file.path(path.phy, "physeq_fukui.rds"))
-physeq.hugerth  <- readRDS(file.path(path.phy, "physeq_hugerth.rds"))
-physeq.mars     <- readRDS(file.path(path.phy, "physeq_mars.rds"))
-physeq.zhu      <- readRDS(file.path(path.phy, "physeq_zhu.rds"))
-physeq.zhuang   <- readRDS(file.path(path.phy, "physeq_zhuang.rds"))
-physeq.nagel    <- readRDS(file.path(path.phy, "physeq_nagel.rds"))
-physeq.zeber    <- readRDS(file.path(path.phy, "physeq_zeber.rds"))
+## 1.2. Data ####
+path.root <- "~/Projects/MetaIBS" # CHANGE THIS ROOT DIRECTORY ON YOUR COMPUTER
+path.plots <- file.path(path.root, "data/analysis-combined/08_AlphaDiversity")
+
+path.phylobj    <- file.path(path.root, "data/phyloseq-objects/phyloseq-without-phylotree")
+datasets        <- list.files(path.phylobj)
+phyloseqobjects <- sapply(datasets, function(x) readRDS(file.path(path.phylobj, x)), USE.NAMES=T, simplify=F)
+# names(phyloseqobjects) # sanity check
+
+# Remove Ringel dataset from phyloseqobjects list (we don't have any healthy/IBS information in that dataset)
+ringel_name <- names(phyloseqobjects)[grepl("ringel", names(phyloseqobjects))]
+phyloseqobjects <- phyloseqobjects[names(phyloseqobjects) != ringel_name]
 
 
-# Merge
-physeq.all <- merge_phyloseq(physeq.labus,
-                             physeq.lopresti,
-                             physeq.agp,
-                             physeq.liu,
-                             physeq.pozuelo,
-                             physeq.fukui,
-                             physeq.hugerth,
-                             physeq.mars,
-                             physeq.zhu,
-                             physeq.zhuang,
-                             physeq.nagel,
-                             physeq.zeber)
+## 1.3. Merge phyloseq objects ####
+physeq.all <- merge_phyloseq(phyloseqobjects[[1]], phyloseqobjects[[2]]) # Merge first two phyloseq objects in the list
+# if there are more than 2 phyloseq objects, merge the rest of them
+if(length(phyloseqobjects)>2){
+  for (i in 3:length(phyloseqobjects)){
+    print(paste0("merging with phyloseq object #", i))
+    physeq.all <- merge_phyloseq(physeq.all, phyloseqobjects[[i]])
+  }
+}
+print(physeq.all) # 2,576 samples
 author.order <- c('Labus', 'LoPresti', # 454 pyrosequencing
                   'AGP', 'Liu', 'Pozuelo', # Illumina single end
                   'Fukui', 'Hugerth', 'Mars', 'Zhu', 'Zhuang', # Illumina paired end
@@ -59,9 +53,9 @@ sample_data(physeq.all)$author <- factor(sample_data(physeq.all)$author, levels=
 
 
 
-###########
-# SHANNON #
-###########
+# ***************
+# 2. SHANNON ####
+# ***************
 
 # Get Shannon values
 plt.shannon <- plot_richness(physeq.all, measures="Shannon")
@@ -69,6 +63,9 @@ shannon.df <- plt.shannon$data %>%
   select(c("samples", "value", "host_disease", "host_subtype", "sample_type", "Collection", "author")) %>%
   dplyr::rename(shannon=value)
 
+
+#____________________________
+## 2.1. Per host_disease ####
 
 # Do statistics (HC vs IBS)
 for(author in author.order){
@@ -107,9 +104,8 @@ a <- ggplot(shannon.df %>% filter(Collection=="1st" & sample_type=="stool"),
 
 
 
-# ++++++++
-# PER HOST_SUBTYPE
-# ++++++++
+#____________________________
+## 2.2. Per host_subtype ####
 
 # Subset the dataframe to keep only samples where we know the IBS subtype (and their HC counterpart)
 shannon.df.subtype <- shannon.df %>% filter(Collection=="1st",
@@ -170,9 +166,9 @@ c <- ggplot(shannon.df.subtype, aes(x = host_subtype, y = shannon))+
 
 
 
-###########
-# SIMPSON #
-###########
+# ***************
+# 3. SIMPSON ####
+# ***************
 
 # Get simpson values
 plt.simpson <- plot_richness(physeq.all, measures="Simpson")
@@ -219,9 +215,9 @@ b <- ggplot(simpson.df %>% filter(Collection=="1st" & sample_type=="stool"),
 
 
 
-#####################
-# PLOT ALL TOGETHER #
-#####################
+# *************************
+# 4. PLOT ALL TOGETHER ####
+# *************************
 
 ggdraw() +
   draw_plot(a, x = 0, y = .5, width = .65, height = .5) +
@@ -229,15 +225,17 @@ ggdraw() +
   draw_plot(c, x = 0.65, y = 0, width = 0.35, height = 1) +
   draw_plot_label(label = c("A", "B", "C"), size = 15,
                   x = c(0, 0, 0.65), y = c(1, 0.5, 1))
-ggsave("~/Projects/IBS_Meta-analysis_16S/data/plots_paper/alpha-diversity.jpg", width=15, height=10)
+ggsave(file.path(path.plots, "alpha-diversity.jpg"), width=15, height=10)
 
 
 
-###############
-# AGP SUBTYPE #
-###############
+# *******************
+# 5. AGP SUBTYPE ####
+# *******************
 
 # Infer IBS subtype in AGP data
+# agp_name <- names(phyloseqobjects)[grepl("agp", names(phyloseqobjects))]
+# physeq.agp <- phyloseqobjects[[agp_name]]
 # sample_data(physeq.agp)[sample_data(physeq.agp)$host_disease=="IBS" & sample_data(physeq.agp)$bowel_movement_quality=="Constipated", "host_subtype"] <- "IBS-C"
 # sample_data(physeq.agp)[sample_data(physeq.agp)$host_disease=="IBS" & sample_data(physeq.agp)$bowel_movement_quality=="Diarrhea", "host_subtype"] <- "IBS-D"
 # sample_data(physeq.agp)[sample_data(physeq.agp)$host_disease=="Healthy" & sample_data(physeq.agp)$bowel_movement_quality!="Normal", "host_subtype"] <- "HC-unknown"
@@ -248,4 +246,4 @@ ggsave("~/Projects/IBS_Meta-analysis_16S/data/plots_paper/alpha-diversity.jpg", 
 #   geom_boxplot(fill=NA, width=0.3) +
 #   theme_bw() +
 #   labs(x="", y="", title="AGP")
-# ggsave("~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/08_AlphaDiversity/agp_subtype.jpg", width=4, height=4)
+# ggsave(file.path, "agp_subtype.jpg"), width=4, height=4)
