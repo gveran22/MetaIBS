@@ -1,0 +1,15 @@
+# 04a_LogRatios-Taxa
+
+This directory is linked to the [04a_LogRatio-Taxa.R](../../../scripts/analysis-combined/04a_LogRatio-Taxa.R) script, which allows to compute sample x log-ratio between taxa, at each taxonomic level (Genus -> Phylum). For instance, a matrix at the phylum level will look as such (don't mind the values, they are made up):
+
+| Samples    | Abditibacteriota/Acidobacteriota | Abditibacteriota/Actinobacteriota | ... | Bacteroidota/Firmicutes | Bacteroidota/Proteobacteria | ... |
+| ---------- | :-------: | :--------: | :-------: | :-------: | :-------: | :-------: |
+| ERR1051013 |     0     |     0      |    ...    |  -0.737   |  2.815    |    ...    |
+| ERR1051015 |     0     |     0      |    ...    |   1.097   |  1.329    |    ...    |
+| ERR1051017 | -0.87     |     0      |    ...    |   0.184   |  2.936    |    ...    |
+
+This matrix will then be used to compute a UMAP with the [04b_UMAP.R](../../../scripts/analysis-combined/04b_UMAP.R) script.
+
+<br/>
+
+We recommend computing the log-ratios between all pairwise taxa on an HPC cluster. The bashscript `logratios-taxa.sh` can be used to submit a job on your cluster (you should adapt it to your HPC structure). The matrices will be saved in the `pseudocounts_aft-agg` subdirectory (we recommend adding pseudocounts after aggregation to a taxonomic level, as doing it the other way around would cause the pseudocounts to sum up considerably during aggregation).
