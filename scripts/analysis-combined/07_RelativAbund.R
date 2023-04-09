@@ -1,60 +1,57 @@
-##########################
+# ********************************************
 # Purpose: Plotting relative abundance of phyla
 # Date: August 2021
 # Author: Salomé Carcy
-##########################
+# ********************************************
 
 
-##########
-# IMPORT #
-##########
 
-# Libraries
+
+# **************
+# 1. IMPORT ####
+# **************
+
+## 1.1. Libraries ####
 library(phyloseq)
 library(ggplot2)
 library(cowplot)
 library(tidyverse)
 library(RColorBrewer)
 
-# Data
-path.phy <- "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/CLUSTER/PhyloTree/input"
-# physeq.ringel <- readRDS(file.path(path.phy, "physeq_ringel.rds"))
-physeq.labus    <- readRDS(file.path(path.phy, "physeq_labus.rds"))
-physeq.lopresti <- readRDS(file.path(path.phy, "physeq_lopresti.rds"))
-physeq.pozuelo  <- readRDS(file.path(path.phy, "physeq_pozuelo.rds"))
-physeq.zhuang   <- readRDS(file.path(path.phy, "physeq_zhuang.rds"))
-physeq.zhu      <- readRDS(file.path(path.phy, "physeq_zhu.rds"))
-physeq.hugerth  <- readRDS(file.path(path.phy, "physeq_hugerth.rds"))
-physeq.fukui    <- readRDS(file.path(path.phy, "physeq_fukui.rds"))
-physeq.mars     <- readRDS(file.path(path.phy, "physeq_mars.rds"))
-physeq.liu      <- readRDS(file.path(path.phy, "physeq_liu.rds"))
-physeq.agp      <- readRDS(file.path(path.phy, "physeq_agp.rds"))
-physeq.nagel    <- readRDS(file.path(path.phy, "physeq_nagel.rds"))
-physeq.zeber    <- readRDS(file.path(path.phy, "physeq_zeber.rds"))
+
+## 1.2. Data ####
+path.root <- "~/Projects/MetaIBS" # CHANGE THIS ROOT DIRECTORY ON YOUR COMPUTER
+path.plots <- file.path(path.root, "data/analysis-combined/07_RelativAbund")
+
+path.phylobj    <- file.path(path.root, "data/phyloseq-objects/phyloseq-without-phylotree")
+datasets        <- list.files(path.phylobj)
+phyloseqobjects <- sapply(datasets, function(x) readRDS(file.path(path.phylobj, x)), USE.NAMES=T, simplify=F)
+# names(phyloseqobjects) # sanity check
+
+# Remove Ringel dataset from phyloseqobjects list (we don't have any healthy/IBS information in that dataset)
+ringel_name <- names(phyloseqobjects)[grepl("ringel", names(phyloseqobjects))]
+phyloseqobjects <- phyloseqobjects[names(phyloseqobjects) != ringel_name]
 
 
 
 
-###################
-# PREPROCESS DATA #
-###################
+# ***********************
+# 2. PREPROCESS DATA ####
+# ***********************
 
 # Merge phyloseq objects
-physeq <- merge_phyloseq(physeq.labus,
-                         physeq.lopresti,
-                         physeq.pozuelo,
-                         physeq.zhuang,
-                         physeq.zhu,
-                         physeq.hugerth,
-                         physeq.fukui,
-                         physeq.mars,
-                         physeq.liu,
-                         physeq.agp,
-                         physeq.nagel,
-                         physeq.zeber)
+physeq.all <- merge_phyloseq(phyloseqobjects[[1]], phyloseqobjects[[2]]) # Merge first two phyloseq objects in the list
+# if there are more than 2 phyloseq objects, merge the rest of them
+if(length(phyloseqobjects)>2){
+  for (i in 3:length(phyloseqobjects)){
+    print(paste0("merging with phyloseq object #", i))
+    physeq.all <- merge_phyloseq(physeq.all, phyloseqobjects[[i]])
+  }
+}
+print(physeq.all) # 2,576 samples
 
 # Obtain relative abundances
-phylum.table <- physeq %>%
+phylum.table <- physeq.all %>%
   tax_glom(taxrank = "Phylum") %>%
   transform_sample_counts(function(x) {x/sum(x)} ) %>%
   psmelt()
@@ -76,16 +73,16 @@ table(phylum.table.main$Phylum) # sanity check
 
 
 
-#############################################
-# PLOT PHYLA RELATIVE ABUNDANCES PER SAMPLE #
-#############################################
+# *************************************************
+# 3. PLOT PHYLA RELATIVE ABUNDANCES PER SAMPLE ####
+# *************************************************
 
 # Set the color theme
 # rgb(0,1,0, alpha=0.55) # find code for alpha
 colors <- paste0(brewer.pal(6, "Dark2"), "80", sep="")
 names(colors) <- c("Actinobacteriota", "Bacteroidota", "Firmicutes", "Proteobacteria", "Verrucomicrobiota", "Other")
 
-# Plot main phyla by sample (fecal samples)
+## 3.1. Plot main phyla by sample (fecal samples) ####
 a <- ggplot(phylum.table.main %>% filter(sample_type == "stool"),
        aes(x = reorder(Sample, Sample, function(x) mean(phylum.table.main[Sample == x & Phylum == 'Bacteroidota', 'Abundance'])),
            y = Abundance, fill = Phylum))+
@@ -107,11 +104,11 @@ a <- ggplot(phylum.table.main %>% filter(sample_type == "stool"),
   labs(x = "Fecal samples", y = "Relative abundance")
 
 # Save figure
-# ggsave("~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/05_Relative-Abund/phyla_relabund_fecal_01.jpg", width=8, height=5) # high
-# ggsave("~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/05_Relative-Abund/phyla_relabund_fecal_02.jpg", width=10, height=5) # large
+# ggsave(a, file.path(path.plots, "phyla_relabund_fecal_01.jpg"), width=8, height=5) # high
+# ggsave(a, file.path(path.plots, "phyla_relabund_fecal_02.jpg"), width=10, height=5) # large
 
 
-# Plot main phyla by sample (sigmoid samples)
+## 3.2. Plot main phyla by sample (sigmoid samples) ####
 b <- ggplot(phylum.table.main %>% filter(sample_type == "sigmoid"),
        aes(x = reorder(Sample, Sample, function(x) mean(phylum.table.main[Sample == x & Phylum == 'Bacteroidota', 'Abundance'])),
            y = Abundance, fill = Phylum))+
@@ -133,15 +130,15 @@ b <- ggplot(phylum.table.main %>% filter(sample_type == "sigmoid"),
   labs(x = "Biopsy samples", y = "Relative abundance")
 
 # Save figure
-# ggsave("~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/05_Relative-Abund/phyla_relabund_sigmoid_01.jpg", width=8, height=5) # high
-# ggsave("~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/05_Relative-Abund/phyla_relabund_sigmoid_02.jpg", width=10, height=5) # large
+# ggsave(b, file.path(path.plots, "phyla_relabund_sigmoid_01.jpg"), width=8, height=5) # high
+# ggsave(b, file.path(path.plots, "phyla_relabund_sigmoid_02.jpg"), width=10, height=5) # large
 
 
 
 
-##############################################
-# PLOT PHYLA RELATIVE ABUNDANCES PER DISEASE #
-##############################################
+# **************************************************
+# 4. PLOT PHYLA RELATIVE ABUNDANCES PER DISEASE ####
+# **************************************************
 
 # Get a df with abundance of each Phylum per sample
 phylum.sample <- phylum.table.main %>%
@@ -156,9 +153,8 @@ phylum.sample <- phylum.table.main %>%
 # table(test$sum_per_sample)
 
 
-# *********
-# BY HOST_DISEASE
-# *********
+#___________________________
+## 4.1. By host_disease ####
 
 # Get the mean abundance of each phylum per disease status (across samples)
 phylum.disease <- phylum.sample %>%
@@ -200,12 +196,11 @@ d <- ggplot(phylum.disease,
         panel.background=element_blank(),
         axis.line.x = element_line(size=0.5, color="black"))+
   labs(x = "", y = "Proportion")
-# ggsave("~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/05_Relative-Abund/phyla_relabund_1.jpg", width=7, height=5)
+# ggsave(d, file.path(path.plots, "phyla_relabund_1.jpg"), width=7, height=5)
 
 
-# *********
-# BY HOST_SUBTYPE
-# *********
+# ___________________________
+## 4.2. By host_subtype ####
 
 # Get the mean abundance of each phylum per disease status (across samples)
 phylum.subtype <- phylum.sample %>%
@@ -246,12 +241,11 @@ c <- ggplot(phylum.subtype %>% filter(host_subtype != "IBS-unspecified"),
         panel.background=element_blank(),
         axis.line.x = element_line(size=0.5, color="black"))+
   labs(x = "", y = "Proportion", title="Fecal samples")
-# ggsave("~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/05_Relative-Abund/phyla_relabund_2.jpg", width=6, height=5)
+# ggsave(c, file.path(path.plots, "phyla_relabund_2.jpg"), width=6, height=5)
 
 
-# *********
-# BY COLLECTION TIME POINT
-# *********
+# ___________________________
+## 4.3. By collection time point ####
 
 # Get the mean abundance of each phylum per disease status (across samples)
 phylum.collection <- phylum.sample %>%
@@ -302,11 +296,11 @@ e <- ggplot(phylum.collection,
         panel.background=element_blank(),
         axis.line.x = element_line(size=0.5, color="black"))+
   labs(x = "", y = "Proportion", title="")
-# ggsave("~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/05_Relative-Abund/phyla_relabund_3.jpg", width=7, height=5)
+# ggsave(e, file.path(path.plots, "phyla_relabund_3.jpg"), width=7, height=5)
 
 
-
-# Combine plots
+# ___________________________
+## 4.4. Combine plots ####
 ggdraw() +
   draw_plot(a, x = 0, y = .5, width = .5, height = .5) +
   draw_plot(b, x = .55, y = .5, width = .45, height = .5) +
@@ -315,7 +309,7 @@ ggdraw() +
   draw_plot(e, x = 0.55, y = 0, width = 0.45, height = .5) +
   draw_plot_label(label = c("A", "B", "C", "D", "E"), size = 15,
                   x = c(0, .55, 0, 0.27, 0.55), y = c(1, 1, 0.45, 0.45, 0.45))
-# ggsave("~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/05_Relative-Abund/phyla_relabund_all.jpg", width=15, height=10)
+# ggsave(file.path(path.plots, "phyla_relabund_all.jpg"), width=15, height=10)
 
 
 
