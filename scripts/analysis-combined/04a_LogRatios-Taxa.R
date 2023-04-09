@@ -19,8 +19,9 @@ library(reshape2)
 library(gtools)
 
 ## 1.2. Data ####
-path.root <- "~/Projects/MetaIBS" # CHANGE THIS ROOT DIRECTORY ON YOUR COMPUTER
-path.data <- file.path(path.root, "data/analysis-combined/04a_LogRatios-Taxa")
+path.root   <- "~/Projects/MetaIBS" # CHANGE THIS ROOT DIRECTORY ON YOUR CLUSTER
+# path.output <- file.path(path.root, "data/analysis-combined/04a_LogRatios-Taxa/pseudocounts_aft-agg") # for authors of MetaIBS paper
+path.output <- file.path(path.root, "data/analysis-combined/04a_LogRatios-Taxa/output") # CHANGE NAME OF THE OUTPUT FOLDER WHERE YOU WANT TO SAVE THE MATRICES
 
 path.phylobj    <- file.path(path.root, "data/phyloseq-objects/phyloseq-without-phylotree")
 datasets        <- list.files(path.phylobj)
@@ -139,8 +140,8 @@ LogRatios <- function(abundanceTable, tax_rank, add_pseudocounts="after"){
   cat("We have", dim(ratios)[2], "samples and", dim(ratios)[1], "predictors (log-ratios) \n")
   
   # Save
-  if(add_pseudocounts=="before"){filepath <- paste0(path.data, "/pseudocounts_bef-agg/ratios", tax_rank, ".rds")}
-  else if(add_pseudocounts=="after"){filepath <- paste0(path.data, "/pseudocounts_aft-agg/ratios", tax_rank, ".rds")}
+  # if(add_pseudocounts=="before"){filepath <- paste0(path.output, "/pseudocounts_bef-agg/ratios", tax_rank, ".rds")}
+  if(add_pseudocounts=="after"){filepath <- paste0(path.output, "/ratios", tax_rank, ".rds")}
   
   # Save table with samples as rows and logratios as columns
   saveRDS(object=t(ratios), file=filepath)
