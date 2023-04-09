@@ -1,57 +1,43 @@
-##########################
+# ********************************************************
 # Purpose: merge phyloseq object and keep only common ASVs
 # Date: October 2021
 # Author: Salomé Carcy
-##########################
+# ********************************************************
 
 
-##########
-# IMPORT #
-##########
 
-# Libraries
+
+# **************
+# 1. IMPORT ####
+# **************
+
+## 1.1. Libraries ####
 library(tidyverse)
 library(phyloseq)
 library(reshape2)
 library(ggupset)
 library(cowplot)
 
-# Data
-path.phy <- "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/CLUSTER/PhyloTree/input"
-physeq.labus    <- readRDS(file.path(path.phy, "physeq_labus.rds"))
-physeq.lopresti <- readRDS(file.path(path.phy, "physeq_lopresti.rds"))
-physeq.ringel   <- readRDS(file.path(path.phy, "physeq_ringel.rds"))
-physeq.agp      <- readRDS(file.path(path.phy, "physeq_agp.rds"))
-physeq.liu      <- readRDS(file.path(path.phy, "physeq_liu.rds"))
-physeq.pozuelo  <- readRDS(file.path(path.phy, "physeq_pozuelo.rds"))
-physeq.fukui    <- readRDS(file.path(path.phy, "physeq_fukui.rds"))
-physeq.hugerth  <- readRDS(file.path(path.phy, "physeq_hugerth.rds"))
-physeq.mars     <- readRDS(file.path(path.phy, "physeq_mars.rds"))
-physeq.zhu      <- readRDS(file.path(path.phy, "physeq_zhu.rds"))
-physeq.zhuang   <- readRDS(file.path(path.phy, "physeq_zhuang.rds"))
-physeq.nagel    <- readRDS(file.path(path.phy, "physeq_nagel.rds"))
-physeq.zeber    <- readRDS(file.path(path.phy, "physeq_zeber.rds"))
+## 1.2. Data ####
+path.root   <- "~/Projects/MetaIBS" # CHANGE THIS ROOT DIRECTORY ON YOUR CLUSTER
+path.data  <- file.path(path.root, "data/analysis-combined/05_Common-ASVs") 
 
-# Put datasets in a list
-datasets <- list("Labus"    = physeq.labus,
-                 "Lopresti" = physeq.lopresti,
-                 "Ringel"   = physeq.ringel,
-                 "AGP"      = physeq.agp,
-                 "Liu"      = physeq.liu,
-                 "Pozuelo"  = physeq.pozuelo,
-                 "Fukui"    = physeq.fukui,
-                 "Mars"     = physeq.mars,
-                 "Hugerth"  = physeq.hugerth,
-                 "Zhu"      = physeq.zhu,
-                 "Zhuang"   = physeq.zhuang,
-                 "Nagel"    = physeq.nagel,
-                 "Zeber"    = physeq.zeber)
+path.phylobj    <- file.path(path.root, "data/phyloseq-objects/phyloseq-without-phylotree")
+datasets        <- list.files(path.phylobj)
+phyloseqobjects <- sapply(datasets, function(x) readRDS(file.path(path.phylobj, x)), USE.NAMES=T, simplify=F)
+
+# Change name of phyloseq objects to make it easier later on
+names(phyloseqobjects) # sanity check
+names(phyloseqobjects) <- gsub("physeq_", "", names(phyloseqobjects))
+names(phyloseqobjects) <- gsub(".rds", "", names(phyloseqobjects))
+names(phyloseqobjects)# sanity check
+
 
 # If the phyloseq objects contain phylogenetic trees, they need to be removed
-# for (i in 1:length(datasets)){
-#   print(names(datasets)[i])
+# for (i in 1:length(phyloseqobjects)){
+#   print(names(phyloseqobjects)[i])
 #   # Get the phyloseq object
-#   physeq <- datasets[[i]]
+#   physeq <- phyloseqobjects[[i]]
 #   # Replace rownames in tax_table and colnames in otu_table by ASV sequences (and not "ASV1, ASV2, ...")
 #   taxa_names(physeq) <- as.character(refseq(physeq))
 #   # Remove phylogenetic tree
@@ -60,54 +46,41 @@ datasets <- list("Labus"    = physeq.labus,
 #                      tax_table(physeq),
 #                      refseq(physeq))
 #   # Replace the phyloseq object in the list
-#   datasets[[i]] <- physeq
+#   phyloseqobjects[[i]] <- physeq
 # }
 # # Sanity checks
-# print(datasets$Labus) # shouldn't have a phy_tree() slot
-# print(taxa_names(datasets$Labus)[1:3]) # should be DNA sequences (the ASV sequences) and not "ASV1, ASV2, ASV3"
+# print(phyloseqobjects[[1]]) # shouldn't have a phy_tree() slot
+# print(taxa_names(phyloseqobjects[[1]])[1:3]) # should be DNA sequences (the ASV sequences) and not "ASV1, ASV2, ASV3"
 
 
 
 
-##############################################
-# MERGE PHYLOSEQ OBJECTS WITH MERGE_PHYLOSEQ #
-##############################################
+# **************************************************
+# 2. MERGE PHYLOSEQ OBJECTS WITH MERGE_PHYLOSEQ ####
+# **************************************************
 
 # Merge phyloseq objects
-physeq.all <- merge_phyloseq(datasets$Labus,
-                             datasets$Lopresti,
-                             datasets$Ringel,
-                             datasets$AGP,
-                             datasets$Liu,
-                             datasets$Pozuelo,
-                             datasets$Fukui,
-                             datasets$Mars,
-                             datasets$Hugerth,
-                             datasets$Zhu,
-                             datasets$Zhuang,
-                             datasets$Nagel,
-                             datasets$Zeber)
+physeq.all <- merge_phyloseq(phyloseqobjects[[1]], phyloseqobjects[[2]]) # Merge first two phyloseq objects in the list
+# if there are more than 2 phyloseq objects, merge the rest of them
+if(length(phyloseqobjects)>2){
+  for (i in 3:length(phyloseqobjects)){
+    print(paste0("merging with phyloseq object #", i))
+    physeq.all <- merge_phyloseq(physeq.all, phyloseqobjects[[i]])
+  }
+}
 
 # Compare the number of ASVs before/after merging
-sum(ntaxa(physeq.labus)+
-      ntaxa(physeq.lopresti)+
-      ntaxa(physeq.ringel)+
-      ntaxa(physeq.agp)+
-      ntaxa(physeq.liu)+
-      ntaxa(physeq.pozuelo)+
-      ntaxa(physeq.fukui)+
-      ntaxa(physeq.mars)+
-      ntaxa(physeq.hugerth)+
-      ntaxa(physeq.zhu)+
-      ntaxa(physeq.zhuang)+
-      ntaxa(physeq.nagel)+
-      ntaxa(physeq.zeber)) # 81,474 before
+sum_taxa <- 0
+for(i in 1:length(phyloseqobjects)){
+  sum_taxa <- sum_taxa+ntaxa(phyloseqobjects[[i]])
+}
+print(sum_taxa) # 81,474 before merging
 
-ntaxa(physeq.all) # 79,943 after
+ntaxa(physeq.all) # 79,943 after merging
 
 
 # Let's get all ASVs in a dataframe and check if we can find common ones
-asv.df <- melt(lapply(datasets, function(x) taxa_names(x)))
+asv.df <- melt(lapply(phyloseqobjects, function(x) taxa_names(x)))
 colnames(asv.df) <- c("asv", "author")
 length(unique(asv.df$asv)) # we do find 79,943 unique sequences
 
@@ -117,7 +90,7 @@ common.asv <- asv.df %>%
   summarize(Datasets = list(unique(author))) %>%
   filter(lengths(Datasets)>1)
 
-# jpeg("~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/01_Merge-Datasets/commonASV_merge-phyloseq-funct.jpg", width=2000, height=2200, res=400)
+# jpeg(file.path(path.data, "commonASV_merge-phyloseq-funct.jpg"), width=2000, height=2200, res=400)
 ggplot(common.asv, aes(x=Datasets))+
   geom_bar(fill="#737373") +
   scale_x_upset()+
@@ -128,9 +101,9 @@ ggplot(common.asv, aes(x=Datasets))+
 
 
 
-#################################################
-# CREATE PHYLOSEQ OBJECTS WITH ONLY COMMON ASVs #
-#################################################
+# *****************************************************
+# 3. CREATE PHYLOSEQ OBJECTS WITH ONLY COMMON ASVs ####
+# *****************************************************
 
 # Get a phyloseq object with only the identified common ASVs
 physeq.common <- prune_taxa(taxa_names(physeq.all) %in% common.asv$asv, physeq.all)
@@ -166,40 +139,36 @@ physeq.common.LopRin <- prune_taxa(taxa_sums(physeq.common.LopRin)>0, physeq.com
 #   filter(length(Datasets)>1) # should give 806 OTUs that are present in both datasets
 
 # See how many counts the common ASVs represent
-# sum(otu_table(physeq.common.NagPoz)) / ( sum(otu_table(physeq.nagel)) + sum(otu_table(physeq.pozuelo)) )
-# sum(otu_table(subset_samples(physeq.common.NagPoz, author == "Nagel"))) / sum(otu_table(physeq.nagel))
-# sum(otu_table(subset_samples(physeq.common.NagPoz, author == "Pozuelo"))) / sum(otu_table(physeq.pozuelo))
+# sum(otu_table(physeq.common.NagPoz)) / ( sum(otu_table(phyloseqobjects$nagel)) + sum(otu_table(phyloseqobjects$pozuelo)) )
+# sum(otu_table(subset_samples(physeq.common.NagPoz, author == "Nagel"))) / sum(otu_table(phyloseqobjects$nagel))
+# sum(otu_table(subset_samples(physeq.common.NagPoz, author == "Pozuelo"))) / sum(otu_table(phyloseqobjects$pozuelo))
 
-# sum(otu_table(physeq.common.LiuZhug)) / ( sum(otu_table(physeq.liu)) + sum(otu_table(physeq.zhuang)) )
-# sum(otu_table(subset_samples(physeq.common.LiuZhug, author == "Liu"))) / sum(otu_table(physeq.liu))
-# sum(otu_table(subset_samples(physeq.common.LiuZhug, author == "Zhuang"))) / sum(otu_table(physeq.zhuang))
+# sum(otu_table(physeq.common.LiuZhug)) / ( sum(otu_table(phyloseqobjects$liu)) + sum(otu_table(phyloseqobjects$zhuang)) )
+# sum(otu_table(subset_samples(physeq.common.LiuZhug, author == "Liu"))) / sum(otu_table(phyloseqobjects$liu))
+# sum(otu_table(subset_samples(physeq.common.LiuZhug, author == "Zhuang"))) / sum(otu_table(phyloseqobjects$zhuang))
 
-# sum(otu_table(physeq.common.HugZhu)) / ( sum(otu_table(physeq.hugerth)) + sum(otu_table(physeq.zhu)) )
-# sum(otu_table(physeq.common.LopRin)) / ( sum(otu_table(physeq.lopresti)) + sum(otu_table(physeq.ringel)) )
-
-
-
+# sum(otu_table(physeq.common.HugZhu)) / ( sum(otu_table(phyloseqobjects$hugerth)) + sum(otu_table(phyloseqobjects$zhu)) )
+# sum(otu_table(physeq.common.LopRin)) / ( sum(otu_table(phyloseqobjects$lopresti)) + sum(otu_table(phyloseqobjects$ringel)) )
 
 
 # Save the phyloseq objects
-path <- "~/Projects/IBS_Meta-analysis_16S/phyloseq-objects/common-ASVs"
-saveRDS(physeq.common.NagPoz, file.path(path, "physeq_commonASV_Nagel-Pozuelo.rds"))
-saveRDS(physeq.common.LiuZhug, file.path(path, "physeq_commonASV_Liu-Zhuang.rds"))
-saveRDS(physeq.common.HugZhu, file.path(path, "physeq_commonASV_Hugerth-Zhu.rds"))
-saveRDS(physeq.common.LopRin, file.path(path, "physeq_commonASV_Lopresti-Ringel.rds"))
+saveRDS(physeq.common.NagPoz,  file.path(path.data, "physeq_commonASV_Nagel-Pozuelo.rds"))
+saveRDS(physeq.common.LiuZhug, file.path(path.data, "physeq_commonASV_Liu-Zhuang.rds"))
+saveRDS(physeq.common.HugZhu,  file.path(path.data, "physeq_commonASV_Hugerth-Zhu.rds"))
+saveRDS(physeq.common.LopRin,  file.path(path.data, "physeq_commonASV_Lopresti-Ringel.rds"))
 
 
 
 
-#############################
-# CREATE LONG SHAPED TABLES #
-#############################
+# *********************************
+# 4. CREATE LONG SHAPED TABLES ####
+# *********************************
 
 # If need to re-import data
-# physeq.common.NagPoz <- readRDS(file.path(path, "physeq_commonASV_Nagel-Pozuelo.rds"))
-# physeq.common.LiuZhug <- readRDS(file.path(path, "physeq_commonASV_Liu-Zhuang.rds"))
-# physeq.common.HugZhu <- readRDS(file.path(path, "physeq_commonASV_Hugerth-Zhu.rds"))
-# physeq.common.LopRin <- readRDS(file.path(path, "physeq_commonASV_Lopresti-Ringel.rds"))
+# physeq.common.NagPoz  <- readRDS(file.path(path.data, "physeq_commonASV_Nagel-Pozuelo.rds"))
+# physeq.common.LiuZhug <- readRDS(file.path(path.data, "physeq_commonASV_Liu-Zhuang.rds"))
+# physeq.common.HugZhu  <- readRDS(file.path(path.data, "physeq_commonASV_Hugerth-Zhu.rds"))
+# physeq.common.LopRin  <- readRDS(file.path(path.data, "physeq_commonASV_Lopresti-Ringel.rds"))
 
 # Columns we can remove (only AGP dataset has info on these columns, and "Run" is being duplicated in a "Sample" column)
 col_to_remove <- c("Run", "age_cat", "bmi_cat", "country", "RACE", "exercise_frequency", "alcohol_frequency", "probiotic_frequency", "gluten",
@@ -208,10 +177,10 @@ col_to_remove <- c("Run", "age_cat", "bmi_cat", "country", "RACE", "exercise_fre
 
 
 # Get long-shaped dataframes
-df.common.NagPoz <- psmelt(physeq.common.NagPoz) %>% select(-all_of(col_to_remove))
+df.common.NagPoz  <- psmelt(physeq.common.NagPoz) %>% select(-all_of(col_to_remove))
 df.common.LiuZhug <- psmelt(physeq.common.LiuZhug) %>% select(-all_of(col_to_remove))
-df.common.HugZhu <- psmelt(physeq.common.HugZhu) %>% select(-all_of(col_to_remove))
-df.common.LopRin <- psmelt(physeq.common.LopRin) %>% select(-all_of(col_to_remove))
+df.common.HugZhu  <- psmelt(physeq.common.HugZhu) %>% select(-all_of(col_to_remove))
+df.common.LopRin  <- psmelt(physeq.common.LopRin) %>% select(-all_of(col_to_remove))
 
 
 # Sanity checks
@@ -232,9 +201,8 @@ df.common.LopRin <- psmelt(physeq.common.LopRin) %>% select(-all_of(col_to_remov
 
 
 # Save tables!
-path <- "~/Projects/IBS_Meta-analysis_16S/aggregated-tables/common-ASVs"
-write.csv(df.common.NagPoz, file.path(path, "commonASV_Nagel-Pozuelo.csv"))
-write.csv(df.common.LiuZhug, file.path(path, "commonASV_Liu-Zhuang.csv"))
-write.csv(df.common.HugZhu, file.path(path, "commonASV_Hugerth-Zhu.csv"))
-write.csv(df.common.LopRin, file.path(path, "commonASV_Lopresti-Ringel.csv"))
+write.csv(df.common.NagPoz,  file.path(path.data, "commonASV_Nagel-Pozuelo.csv"))
+write.csv(df.common.LiuZhug, file.path(path.data, "commonASV_Liu-Zhuang.csv"))
+write.csv(df.common.HugZhu,  file.path(path.data, "commonASV_Hugerth-Zhu.csv"))
+write.csv(df.common.LopRin,  file.path(path.data, "commonASV_Lopresti-Ringel.csv"))
 
