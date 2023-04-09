@@ -1,71 +1,59 @@
-##########################
+# ***************************************
 # Purpose: Obtain log-ratios between taxa
 # Date: March 2022
 # Author: Salomé Carcy
-##########################
+# Note: this script is highly recommended to run on a cluster!!!
+# ***************************************
 
 
 
 
-##########
-# IMPORT #
-##########
+# **************
+# 1. IMPORT ####
+# **************
 
-# Libraries
+## 1.1. Libraries ####
 library(phyloseq)
 library(tidyverse)
 library(reshape2)
 library(gtools)
 
-# Data
-path.phy <- "~/IBS/PhyloTree/input"
-physeq.labus    <- readRDS(file.path(path.phy, "physeq_labus.rds"))
-physeq.lopresti <- readRDS(file.path(path.phy, "physeq_lopresti.rds"))
-physeq.ringel   <- readRDS(file.path(path.phy, "physeq_ringel.rds"))
-physeq.agp      <- readRDS(file.path(path.phy, "physeq_agp.rds"))
-physeq.liu      <- readRDS(file.path(path.phy, "physeq_liu.rds"))
-physeq.pozuelo  <- readRDS(file.path(path.phy, "physeq_pozuelo.rds"))
-physeq.fukui    <- readRDS(file.path(path.phy, "physeq_fukui.rds"))
-physeq.hugerth  <- readRDS(file.path(path.phy, "physeq_hugerth.rds"))
-physeq.mars     <- readRDS(file.path(path.phy, "physeq_mars.rds"))
-physeq.zhu      <- readRDS(file.path(path.phy, "physeq_zhu.rds"))
-physeq.zhuang   <- readRDS(file.path(path.phy, "physeq_zhuang.rds"))
-physeq.nagel    <- readRDS(file.path(path.phy, "physeq_nagel.rds"))
-physeq.zeber    <- readRDS(file.path(path.phy, "physeq_zeber.rds"))
+## 1.2. Data ####
+path.root <- "~/Projects/MetaIBS" # CHANGE THIS ROOT DIRECTORY ON YOUR COMPUTER
+path.data <- file.path(path.root, "data/analysis-combined/04a_LogRatios-Taxa")
+
+path.phylobj    <- file.path(path.root, "data/phyloseq-objects/phyloseq-without-phylotree")
+datasets        <- list.files(path.phylobj)
+phyloseqobjects <- sapply(datasets, function(x) readRDS(file.path(path.phylobj, x)), USE.NAMES=T, simplify=F)
+# names(phyloseqobjects) # sanity check
 
 
 
 
-###################
-# PREPROCESS DATA #
-###################
+# ***********************
+# 2. PREPROCESS DATA ####
+# ***********************
 
 # Merge phyloseq objects
-cat("\n++ MERGE PHYLOSEQ OBJECTS ++\n")
-physeq.all <- merge_phyloseq(physeq.labus,
-                             physeq.lopresti,
-                             physeq.ringel,
-                             physeq.agp,
-                             physeq.liu,
-                             physeq.pozuelo,
-                             physeq.fukui,
-                             physeq.hugerth,
-                             physeq.mars,
-                             physeq.zhu,
-                             physeq.zhuang,
-                             physeq.nagel,
-                             physeq.zeber)
+physeq.all <- merge_phyloseq(phyloseqobjects[[1]], phyloseqobjects[[2]]) # Merge first two phyloseq objects in the list
+# if there are more than 2 phyloseq objects, merge the rest of them
+if(length(phyloseqobjects)>2){
+  for (i in 3:length(phyloseqobjects)){
+    print(paste0("merging with phyloseq object #", i))
+    physeq.all <- merge_phyloseq(physeq.all, phyloseqobjects[[i]])
+  }
+}
 
-cat("Nb of samples:", nsamples(physeq.all), "\n") # should be 2651
+cat("Nb of samples:", nsamples(physeq.all), "\n") # should be 2,651
 cat("Nb of taxa:", ntaxa(physeq.all), "\n\n\n") # should be 79,943
 
 
 
 
 
-#############
-# FUNCTIONS #
-#############
+# *****************
+# 3. FUNCTIONS ####
+# *****************
 
 #________________________________________________________
 # Function to agglomerate to given taxonomic level
@@ -151,8 +139,8 @@ LogRatios <- function(abundanceTable, tax_rank, add_pseudocounts="after"){
   cat("We have", dim(ratios)[2], "samples and", dim(ratios)[1], "predictors (log-ratios) \n")
   
   # Save
-  if(add_pseudocounts=="before"){filepath <- paste0("~/IBS/LogRatios-taxa/pseudocounts_bef-agg/ratios", paste0(tax_rank, ".rds", sep=""), sep="")}
-  else if(add_pseudocounts=="after"){filepath <- paste0("~/IBS/LogRatios-taxa/pseudocounts_aft-agg/ratios", paste0(tax_rank, ".rds", sep=""), sep="")}
+  if(add_pseudocounts=="before"){filepath <- paste0(path.data, "/pseudocounts_bef-agg/ratios", tax_rank, ".rds")}
+  else if(add_pseudocounts=="after"){filepath <- paste0(path.data, "/pseudocounts_aft-agg/ratios", tax_rank, ".rds")}
   
   # Save table with samples as rows and logratios as columns
   saveRDS(object=t(ratios), file=filepath)
@@ -178,20 +166,20 @@ getTable <- function(physeq, tax_rank, add_pseudocounts){
 
 
 
-######################
-# COMPUTE LOG RATIOS #
-######################
+# **************************
+# 3. COMPUTE LOG RATIOS ####
+# **************************
 
 taxranks <- c("Phylum", "Class", "Order", "Family", "Genus")
 
-# Get log-ratios while adding pseudocounts before agglomeration
-cat("*****************************************\n")
-cat("*** PSEUDOCOUNTS BEFORE AGGLOMERATION *** \n")
-cat("*****************************************\n")
-for(taxa in taxranks){
-  cat("\n >>>>", taxa, "level <<<<\n")
-  getTable(physeq=physeq.all, tax_rank=taxa, add_pseudocounts="before")
-}
+# # Get log-ratios while adding pseudocounts before agglomeration (bad idea because then the pseudocounts add up during agglomeration!!!)
+# cat("*****************************************\n")
+# cat("*** PSEUDOCOUNTS BEFORE AGGLOMERATION *** \n")
+# cat("*****************************************\n")
+# for(taxa in taxranks){
+#   cat("\n >>>>", taxa, "level <<<<\n")
+#   getTable(physeq=physeq.all, tax_rank=taxa, add_pseudocounts="before")
+# }
 
 # Get log-ratios while adding pseudocounts after agglomeration
 cat("\n\n\n*****************************************\n")
