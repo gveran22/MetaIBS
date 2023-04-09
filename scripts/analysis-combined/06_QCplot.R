@@ -1,36 +1,36 @@
-##########################
+# ******************************************
 # Purpose: Plotting seq depth pre/post DADA2
 # Date: August 2021
 # Author: Salomé Carcy
-##########################
+# ******************************************
 
 
-##########
-# IMPORT #
-##########
 
-# Libraries
+
+# **************
+# 1. IMPORT ####
+# **************
+
+## 1.1. Libraries ####
+library(dplyr)
 library(ggplot2)
 library(cowplot)
 library(scales)
 library(RColorBrewer)
 
-# Data
-path <- "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/DADA2-FILT"
-df <- reshape2::melt(rbind(readRDS(file.path(path, "seqdepth_labus.rds")),
-                              readRDS(file.path(path, "seqdepth_lopresti.rds")),
-                              readRDS(file.path(path, "seqdepth_ringel.rds")),
-                              readRDS(file.path(path, "seqdepth_agp.rds")),
-                              readRDS(file.path(path, "seqdepth_liu.rds")),
-                              readRDS(file.path(path, "seqdepth_pozuelo.rds")),
-                              readRDS(file.path(path, "seqdepth_fukui.rds")),
-                              readRDS(file.path(path, "seqdepth_mars.rds")),
-                              readRDS(file.path(path, "seqdepth_hugerth.rds")),
-                              readRDS(file.path(path, "seqdepth_zhu.rds")),      
-                              readRDS(file.path(path, "seqdepth_zhuang.rds")),
-                              readRDS(file.path(path, "seqdepth_nagel.rds")),
-                              readRDS(file.path(path, "seqdepth_zeber.rds"))),
-                       id.vars="dataset", variable.name="QC", value.name="seqdepth")
+
+## 1.2. Data ####
+path.root <- "~/Projects/MetaIBS" # CHANGE THIS ROOT DIRECTORY ON YOUR CLUSTER
+# path.data <- file.path(path.root, "data_local/analysis-individual/DADA2-FILT") # for authors of MetaIBS paper
+path.data <- file.path("data/preprocessing/dada2-filt")
+
+datasets     <- list.files(path.data)
+print(datasets) # should all be named "nbreads_NameDataset.rds"
+nbreads_list <- sapply(datasets, function(x) readRDS(file.path(path.data, x)), USE.NAMES=T, simplify=F)
+
+# rbind all the dataframes
+df <- bind_rows(nbreads_list)
+df <- reshape2::melt(df, id.vars="dataset", variable.name="QC", value.name="seqdepth")
 
 # Sanity checks
 dim(df[df$QC=="before",]) # 2948 samples
@@ -38,9 +38,11 @@ dim(df[df$QC=="before",]) # 2948 samples
 # but in the Hugerth dataset, 3 FASTQ files had a weird header and couldn't be processed => 2948 samples
 
 
-########
-# PLOT #
-########
+
+
+# ************
+# 2. PLOT ####
+# ************
 
 # Set order
 authors_order <- c('Labus', 'LoPresti', 'Ringel',
@@ -61,5 +63,5 @@ ggplot(df, aes(x = dataset, y = seqdepth, fill=QC))+
   labs(x = '', y = "# reads per sample")
 
 # Save figure
-ggsave("~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/04_QCplot/seqdepth.jpg", width=10, height=5)
+ggsave(file.path(path.root, "data/analysis-combined/06_QCplot/seqdepth.jpg"), width=10, height=5)
 
