@@ -1,15 +1,17 @@
-#
+# ************************
 # Purpose: PCoA on Bray-Curtis in big datasets
 # Date: July 2022
 # Author: Salomé Carcy
-#
+# ************************
 
 
 
 
-# 1. IMPORT ----------------------------------------------------------------------------------------
+# **************
+# 1. IMPORT ####
+# **************
 
-# Libraries
+## 1.1. Libraries ####
 library(phyloseq)
 library(ggplot2)
 library(cowplot)
@@ -19,18 +21,21 @@ library(reshape2)
 library(gtools)
 
 
-# Phyloseq objects
-path.phy <- "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/CLUSTER/PhyloTree/input"
-physeq.agp      <- readRDS(file.path(path.phy, "physeq_agp.rds"))
-physeq.pozuelo  <- readRDS(file.path(path.phy, "physeq_pozuelo.rds"))
-physeq.hugerth  <- readRDS(file.path(path.phy, "physeq_hugerth.rds"))
+## 1.2. Phyloseq objects ####
+path.root <- "~/Projects/MetaIBS" # CHANGE THIS ROOT DIRECTORY ON YOUR COMPUTER
+path.plots <- file.path(path.root, "data/analysis-combined/09_PCoA-BrayCurtis_BigDatasets")
+physeq.agp      <- readRDS(file.path(path.root, "data/phyloseq-objects/phyloseq-without-phylotree/physeq_agp.rds"))
+physeq.pozuelo  <- readRDS(file.path(path.root, "data/phyloseq-objects/phyloseq-without-phylotree/physeq_pozuelo.rds"))
+physeq.hugerth  <- readRDS(file.path(path.root, "data/phyloseq-objects/phyloseq-without-phylotree/physeq_hugerth.rds"))
 
 
 
 
-# 2. Bray-Curtis on PCoA -------------------------------------------------------------------------------
+# ***************************
+# 2. BRAY-CURTIS ON PCoA ####
+# ***************************
 
-# 2.1. Functions ===================================================
+## 2.1. Functions ####
 
 getBray <- function(physeq, tax_rank){
   
@@ -60,8 +65,7 @@ getBray <- function(physeq, tax_rank){
 
 
 
-# 2.2. Compute Bray-Curtis ==========================================
-
+## 2.2. Compute Bray-Curtis ####
 bray.agp <- getBray(physeq=physeq.agp, tax_rank="none")
 bray.pozuelo <- getBray(physeq=physeq.pozuelo, tax_rank="none")
 # bray.pozuelo <- getBray(physeq=subset_samples(physeq.pozuelo, Collection=="1st"), tax_rank="none")
@@ -70,9 +74,9 @@ bray.hugerth <- getBray(physeq=physeq.hugerth, tax_rank="none")
 
 
 
-# 2.3. Plot PCoA ==================================================
+## 2.3. Plot PCoA ####
 
-# 2.3.1. AGP ####
+### 2.3.1. AGP ====
 d <- ggplot(bray.agp, aes(x = Axis.1, y = Axis.2, color = host_disease))+
   geom_point(size = 1.5)+
   scale_color_manual(values = c('blue', 'red', 'black'), name="")+ # disease
@@ -84,7 +88,7 @@ d <- ggplot(bray.agp, aes(x = Axis.1, y = Axis.2, color = host_disease))+
         plot.title = element_text(hjust = 0.5))
 
 
-# 2.3.2. Pozuelo ####
+### 2.3.2. Pozuelo ====
 e1 <- ggplot(bray.pozuelo, aes(x = Axis.1, y = Axis.2, color = host_disease))+
   geom_line(aes(group=host_ID), color="black", lwd=0.1) +
   geom_point(size = 1)+
@@ -108,7 +112,7 @@ e2 <- ggplot(bray.pozuelo, aes(x = Axis.1, y = Axis.2, color = Collection))+
         legend.position = c(0.1,0.95),
         plot.title = element_text(hjust = 0.5))
 
-# 2.3.3. Hugerth ####
+### 2.3.3. Hugerth ====
 f1 <- ggplot(bray.hugerth, aes(x = Axis.1, y = Axis.2, color = host_disease))+
   geom_line(aes(group=host_ID), color="black", lwd=0.1) +
   geom_point(size = 1)+
@@ -133,16 +137,12 @@ f2 <- ggplot(bray.hugerth, aes(x = Axis.1, y = Axis.2, color = sample_type))+
         plot.title = element_text(hjust = 0.5))
 
 
-# 2.3.4. Combine plots ####
+### 2.3.4. Combine plots ====
 ggdraw() +
   draw_plot(d,  x = 0,    y = .1, width = .39, height = .8) +
   draw_plot(e1, x = .4,   y = .5, width = .29, height = .5) +
   draw_plot(e2, x = .4,   y = 0,  width = .29, height = .5) +
   draw_plot(f1, x = .7,   y = .5, width = .29, height = .5) +
   draw_plot(f2, x = .7,   y = 0,  width = .29, height = .5)
-ggsave("~/Projects/IBS_Meta-analysis_16S/data/plots_paper/AGP-Poz-Hug_bray-PCoA.jpeg", width=15, height=5)
-
-
-
-
+ggsave(file.path(path.plots, "AGP-Poz-Hug_bray-PCoA.jpeg"), width=15, height=5)
 
