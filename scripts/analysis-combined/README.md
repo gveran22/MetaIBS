@@ -2,6 +2,8 @@
 
 This repository contains `scripts` to perform statistical analyses on combined datasets. These scripts were used to make the figures in the paper.
 
+Note: we strongly recommend to run [`04a_LogRatios-Taxa.R`](./04a_LogRatios-Taxa.R) on a high performance computing cluster. A bash script to execute this R script is provided in the corresponding [data](../../data/analysis-combined/04a_LogRatios-Taxa/) directory.
+
 
 |                                **Script**                                |**Paper figure(s)**|               **Short description**         |
 | ------------------------------------------------------------------------ | :-----------: | ---------------------------------------------- |
