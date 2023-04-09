@@ -2,7 +2,7 @@
 *.Rmd linguist-language=R
 data/phyloseq-objects/physeq_agp.rds filter=lfs diff=lfs merge=lfs -text
 data/aggregated-tables/AGP-2021/* filter=lfs diff=lfs merge=lfs -text
-data/aggregated-tables/common-ASVs/*.csv filter=lfs diff=lfs merge=lfs -text
+data/analysis-combined/05_Common-ASVs/*.csv filter=lfs diff=lfs merge=lfs -text
 data/analysis-combined/04a_LogRatios-Taxa/pseudocounts_aft-agg/*.rds filter=lfs diff=lfs merge=lfs -text
 scripts/analysis-individual/AGP/00_Metadata-AGP/SraRunTable.csv filter=lfs diff=lfs merge=lfs -text
 scripts/analysis-individual/AGP/00_Metadata-AGP/correctedt2.tsv filter=lfs diff=lfs merge=lfs -text
