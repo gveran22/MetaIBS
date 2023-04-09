@@ -1,17 +1,17 @@
-##########################
+# **********************
 # Purpose: UMAP plotting
 # Date: April 2022
 # Author: Salomé Carcy
-##########################
+# **********************
 
 
 
 
-##########
-# IMPORT #
-##########
+# **************
+# 1. IMPORT ####
+# **************
 
-# Libraries
+## 1.1. Libraries ####
 library(phyloseq)
 library(ggplot2)
 library(cowplot)
@@ -19,36 +19,25 @@ library(umap)
 library(tidyverse)
 
 
-# Phyloseq objects
-path.phy <- "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/CLUSTER/PhyloTree/input"
-physeq.labus    <- readRDS(file.path(path.phy, "physeq_labus.rds"))
-physeq.lopresti <- readRDS(file.path(path.phy, "physeq_lopresti.rds"))
-physeq.ringel   <- readRDS(file.path(path.phy, "physeq_ringel.rds"))
-physeq.agp      <- readRDS(file.path(path.phy, "physeq_agp.rds"))
-physeq.liu      <- readRDS(file.path(path.phy, "physeq_liu.rds"))
-physeq.pozuelo  <- readRDS(file.path(path.phy, "physeq_pozuelo.rds"))
-physeq.fukui    <- readRDS(file.path(path.phy, "physeq_fukui.rds"))
-physeq.hugerth  <- readRDS(file.path(path.phy, "physeq_hugerth.rds"))
-physeq.mars     <- readRDS(file.path(path.phy, "physeq_mars.rds"))
-physeq.zhu      <- readRDS(file.path(path.phy, "physeq_zhu.rds"))
-physeq.zhuang   <- readRDS(file.path(path.phy, "physeq_zhuang.rds"))
-physeq.nagel    <- readRDS(file.path(path.phy, "physeq_nagel.rds"))
-physeq.zeber    <- readRDS(file.path(path.phy, "physeq_zeber.rds"))
+## 1.2. Phyloseq objects ####
+path.root   <- "~/Projects/MetaIBS" # CHANGE THIS ROOT DIRECTORY ON YOUR CLUSTER
 
-physeq.all <- merge_phyloseq(physeq.labus,
-                             physeq.lopresti,
-                             physeq.ringel,
-                             physeq.agp,
-                             physeq.liu,
-                             physeq.pozuelo,
-                             physeq.fukui,
-                             physeq.hugerth,
-                             physeq.mars,
-                             physeq.zhu,
-                             physeq.zhuang,
-                             physeq.nagel,
-                             physeq.zeber)
-cat("Nb of samples:", nsamples(physeq.all), "\n") # should be 2651
+path.phylobj    <- file.path(path.root, "data/phyloseq-objects/phyloseq-without-phylotree")
+datasets        <- list.files(path.phylobj)
+phyloseqobjects <- sapply(datasets, function(x) readRDS(file.path(path.phylobj, x)), USE.NAMES=T, simplify=F)
+# names(phyloseqobjects) # sanity check
+
+
+# Merge phyloseq objects
+physeq.all <- merge_phyloseq(phyloseqobjects[[1]], phyloseqobjects[[2]]) # Merge first two phyloseq objects in the list
+# if there are more than 2 phyloseq objects, merge the rest of them
+if(length(phyloseqobjects)>2){
+  for (i in 3:length(phyloseqobjects)){
+    print(paste0("merging with phyloseq object #", i))
+    physeq.all <- merge_phyloseq(physeq.all, phyloseqobjects[[i]])
+  }
+}
+cat("Nb of samples:", nsamples(physeq.all), "\n") # should be 2,651
 cat("Nb of taxa:", ntaxa(physeq.all), "\n") # should be 79,943
 
 covariates <- data.frame(disease         = sample_data(physeq.all)[,'host_disease'],
@@ -68,23 +57,22 @@ covariates <- covariates %>%
                                                                         "Illumina paired-end", "Ion Torrent")))
 
 
-# Log-ratios between families (computed on the cluster)
-path <- "~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/02_UMAP"
-ratiosFamily <- readRDS(file.path(path, "pseudocounts_aft-agg/ratiosFamily.rds"))
+## 1.3. Log-ratios between families (computed on the cluster) ####
+path.logratios <- file.path(path.root, "data/analysis-combined/04a_LogRatios-Taxa/pseudocounts_aft-agg")
+ratiosFamily   <- readRDS(file.path(path.logratios, "ratiosFamily.rds"))
 # Sanity checks
 ratiosFamily[1:10,1:10]
-dim(ratiosFamily) # should have 2651 samples (rows) and 64,620 predictors (family log ratios)
+dim(ratiosFamily) # should have 2,651 samples (rows) and 64,620 predictors (family log ratios)
 
 
 
 
-#################
-# STOOL SAMPLES #
-#################
+# *********************
+# 2. STOOL SAMPLES ####
+# *********************
 
-# *********
-# RUN UMAP 
-# *********
+#__________________________
+## 2.1. Run UMAP  ####
 
 # Subset samples to only stool samples
 stool.samples <- sample_names(subset_samples(physeq.all, sample_type=="stool"))
@@ -112,9 +100,10 @@ colnames(dims.umap)[1] <- "Sample"
 cat("Nb of samples", nrow(dims.umap), "\n")
 
 
-# **********
-# PLOT UMAP
-# **********
+# __________________________
+## 2.2. Plot UMAP ####
+
+path.plots <- file.path(path.root, "data/analysis-combined/04b_UMAP")
 
 # Per author/dataset
 a <- ggplot(dims.umap,
@@ -158,18 +147,17 @@ ggdraw() +
   draw_plot(a, x = .25,  y = .4, width = .6, height = .6) +
   draw_plot(b, x = .1,   y = 0,  width = .4, height = .4) +
   draw_plot(c, x = .5,   y = 0,  width = .4, height = .4)
-ggsave("~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/02_UMAP/plots/umap_family_legends.jpeg", width=10, height=10)
+ggsave(file.path(path.plots, "umap_family_legends.jpeg"), width=10, height=10)
 
 
 
 
-###################
-# SIGMOID SAMPLES #
-###################
+# ***********************
+# 3. SIGMOID SAMPLES ####
+# ***********************
 
-# *********
-# RUN UMAP 
-# *********
+#__________________________
+## 3.1. Run UMAP  ####
 
 # Subset samples to only sigmoid biopsy samples
 sigm.samples <- sample_names(subset_samples(physeq.all, sample_type=="sigmoid"))
@@ -197,9 +185,8 @@ colnames(dims.umap.sigm)[1] <- "Sample"
 cat("Nb of samples", nrow(dims.umap.sigm), "\n")
 
 
-# **********
-# PLOT UMAP
-# **********
+# __________________________
+## 3.2. Plot UMAP ####
 
 # Per author/dataset
 d <- ggplot(dims.umap.sigm,
@@ -240,14 +227,14 @@ ggdraw() +
   draw_plot(d, x = 0,     y = 0, width = .32, height = 1) +
   draw_plot(e, x = .33,   y = 0, width = .32, height = 1) +
   draw_plot(f, x = .66,   y = 0, width = .32, height = 1)
-ggsave("~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/02_UMAP/plots/sigmoid_umap_family.jpeg", width=15, height=5)
+ggsave(file.path(path.plots, "sigmoid_umap_family.jpeg"), width=15, height=5)
 
 
 
 
-################
-# HOST SUBTYPE #
-################
+# ********************
+# 4. HOST SUBTYPE ####
+# ********************
 
 # Stool
 g <- ggplot(dims.umap %>% arrange(match(host_subtype, c("IBS-unspecified", "NA", "HC", "IBS-C", "IBS-D", "IBS-M"))),
@@ -275,6 +262,6 @@ h <- ggplot(dims.umap.sigm %>% arrange(match(host_subtype, c("IBS-unspecified", 
 ggdraw() +
   draw_plot(g, x = 0,  y = 0, width = .5, height = 1) +
   draw_plot(h, x = .5, y = 0, width = .5, height = 1)
-ggsave("~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/02_UMAP/plots/host-subtype_umap_family.jpeg", width=11, height=6)
-# ggsave("~/Projects/IBS_Meta-analysis_16S/data/analysis-combined/02_UMAP/plots/host-subtype_umap_legend.jpeg", width=15, height=6)
+ggsave(file.path(path.plots, "host-subtype_umap_family.jpeg"), width=11, height=6)
+# ggsave(file.path(path.plots, "host-subtype_umap_legend.jpeg"), width=15, height=6)
 
