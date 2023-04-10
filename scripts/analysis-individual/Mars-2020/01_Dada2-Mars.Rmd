@@ -39,7 +39,7 @@ library(stringr)
 # ROOT DIRECTORY (to modify on your computer)
 path.root <- "~/Projects/MetaIBS"
 path.mars <- file.path(path.root, "scripts/analysis-individual/Mars-2020")
-path.data <- file.path(path.root, "data/preprocessing/analysis-individual/Mars-2020")
+path.data <- file.path(path.root, "data/analysis-individual/Mars-2020")
 ```
 
 ```{r html-import, echo = FALSE}
@@ -57,7 +57,7 @@ dadaFs            <- readRDS(file.path(path.data, "01_Dada2-Mars/infered_seq_F.r
 dadaRs            <- readRDS(file.path(path.data, "01_Dada2-Mars/infered_seq_R.rds")) # infered ASVs R
 mergers           <- readRDS(file.path(path.data, "01_Dada2-Mars/mergers.rds")) # mergers
 taxa              <- readRDS(file.path(path.data, "01_Dada2-Mars/taxa_mars.rds")) # taxa
-physeq            <- readRDS(file.path(path.root, "data/preprocessing/analysis-individual/CLUSTER/PhyloTree/input/physeq_mars.rds")) # phyloseq object without phylogenetic tree
+physeq            <- readRDS(file.path(path.root, "data/analysis-individual/CLUSTER/PhyloTree/input/physeq_mars.rds")) # phyloseq object without phylogenetic tree
 ```
 
 
@@ -347,7 +347,7 @@ nb.reads <- data.frame("before" = raw_stats$reads,
 #   mutate(after = nafill(after, fill=0),
 #          "dataset" = "AGP")
 
-saveRDS(nb.reads, file.path(path.root, "data/preprocessing/dada2-filt/nbreads_mars.rds"))
+saveRDS(nb.reads, file.path(path.root, "data/analysis-combined/06_QCplot/nbreads_mars.rds"))
 ```
 
 
@@ -361,18 +361,18 @@ Extensions: The dada2 package also implements a method to make species level ass
 
 ```{r assign-taxonomy-on-cluster, eval=FALSE, echo=FALSE, include=FALSE}
 # In case you prefer to assign taxonomy on a computer cluster (in other words run this chunk on a computer cluster), you can export the ASV table
-# saveRDS(seqtable.nochim, file.path(path.root, "data/preprocessing/analysis-individual/CLUSTER/taxonomy/input/seqtablenochim_mars.rds"))
+# saveRDS(seqtable.nochim, file.path(path.root, "data/analysis-individual/CLUSTER/taxonomy/input/seqtablenochim_mars.rds"))
 
 # then you can :
-# 1. copy the "data/preprocessing/analysis-individual/CLUSTER/taxonomy/" directory to your cluster (where there is the input data & R scripts to assign taxonomy)
+# 1. copy the "data/analysis-individual/CLUSTER/taxonomy/" directory to your cluster (where there is the input data & R scripts to assign taxonomy)
 # 2. run the R scripts on the cluster (they will output the taxonomic tables in the "output/" subdirectory)
 # 3. copy the "taxonomy/output/" subdirectory back to your personal computer
 # 4. import the taxonomic table below (in that case you don't need to run the next code chunk "assign-taxonomy"):
-# taxa <- readRDS(file.path(path.root, "data/preprocessing/analysis-individual/CLUSTER/taxonomy/output/taxa_mars.rds"))
+# taxa <- readRDS(file.path(path.root, "data/analysis-individual/CLUSTER/taxonomy/output/taxa_mars.rds"))
 ```
 
 ```{r assign-taxonomy, eval = FALSE, echo = TRUE}
-path.silva <- file.path(path.root, "data/preprocessing/analysis-individual/CLUSTER/taxonomy/silva-taxonomic-ref")
+path.silva <- file.path(path.root, "data/analysis-individual/CLUSTER/taxonomy/silva-taxonomic-ref")
 
 # Assign taxonomy (with silva v138)
 taxa <- assignTaxonomy(seqtable.nochim, file.path(path.silva, "silva_nr_v138_train_set.fa.gz"),
@@ -475,7 +475,7 @@ saveRDS(mergers,   file.path(path.data, "01_Dada2-Mars/mergers.rds"))
 
 # Taxa & Phyloseq object
 saveRDS(taxa,   file.path(path.data, "01_Dada2-Mars/taxa_mars.rds"))
-saveRDS(physeq, file.path(path.root, "data/preprocessing/analysis-individual/CLUSTER/PhyloTree/input/physeq_mars.rds"))
+saveRDS(physeq, file.path(path.root, "data/analysis-individual/CLUSTER/PhyloTree/input/physeq_mars.rds"))
 ```
 
 

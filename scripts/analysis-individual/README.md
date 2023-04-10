@@ -14,6 +14,6 @@ Within each sub-directory, you will find:
 
 
 # Important links
-**Make sure to download Silva's reference fastas** and put it in the [silva-taxonomic-ref directory](../../data/preprocessing/silva-taxonomic-ref/) to be able to do taxonomic alignment of infered ASVs:
+**Make sure to download Silva's reference fastas** and put it in the [silva-taxonomic-ref directory](../../data/analysis-individual/CLUSTER/taxonomy/silva-taxonomic-ref/) to be able to do taxonomic alignment of infered ASVs:
 - to reproduce results of the paper, download the fasta files from our zenodo link (ADD LINK), where we used Silva v138
 - to have the latest Silva version, download the reference fastas DADA2-formatted from [the DADA2 website](https://benjjneb.github.io/dada2/training.html)

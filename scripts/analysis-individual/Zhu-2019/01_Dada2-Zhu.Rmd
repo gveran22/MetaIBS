@@ -39,7 +39,7 @@ library(stringr)
 # ROOT DIRECTORY (to modify on your computer)
 path.root <- "~/Projects/MetaIBS"
 path.zhu  <- file.path(path.root, "scripts/analysis-individual/Zhu-2019")
-path.data <- file.path(path.root, "data/preprocessing/analysis-individual/Zhu-2019")
+path.data <- file.path(path.root, "data/analysis-individual/Zhu-2019")
 ```
 
 
@@ -60,7 +60,7 @@ mergers           <- readRDS(file.path(path.data, "01_Dada2-Zhu/mergers.rds")) #
 taxa              <- readRDS(file.path(path.data, "01_Dada2-Zhu/taxa_zhu.rds")) # taxa
 taxa.small        <- readRDS(file.path(path.data, "01_Dada2-Zhu/taxa_zhu_shortASV.rds")) # taxa from trimmed ASVs
 physeq            <- readRDS(file.path(path.data, "01_Dada2-Zhu/physeq_zhu_longASV.rds")) # phyloseq object without phylogenetic tree
-physeq.small      <- readRDS(file.path(path.root, "data/preprocessing/analysis-individual/CLUSTER/PhyloTree/input/physeq_zhu.rds")) # phyloseq object without phylogenetic tree (and with trimmed ASVs)
+physeq.small      <- readRDS(file.path(path.root, "data/analysis-individual/CLUSTER/PhyloTree/input/physeq_zhu.rds")) # phyloseq object without phylogenetic tree (and with trimmed ASVs)
 ```
 
 
@@ -400,7 +400,7 @@ nb.reads <- data.frame("before" = raw_stats$reads,
 #   mutate(after = nafill(after, fill=0),
 #          "dataset" = "AGP")
 
-saveRDS(nb.reads, file.path(path.root, "data/preprocessing/dada2-filt/nbreads_zhu.rds"))
+saveRDS(nb.reads, file.path(path.root, "data/analysis-combined/06_QCplot/nbreads_zhu.rds"))
 ```
 
 
@@ -415,18 +415,18 @@ Extensions: The dada2 package also implements a method to make species level ass
 
 ```{r assign-taxonomy-on-cluster, eval=FALSE, echo=FALSE, include=FALSE}
 # In case you prefer to assign taxonomy on a computer cluster (in other words run this chunk on a computer cluster), you can export the ASV table
-# saveRDS(seqtable.nochim, file.path(path.root, "data/preprocessing/analysis-individual/CLUSTER/taxonomy/input/seqtablenochim_zhu.rds"))
+# saveRDS(seqtable.nochim, file.path(path.root, "data/analysis-individual/CLUSTER/taxonomy/input/seqtablenochim_zhu.rds"))
 
 # then you can :
-# 1. copy the "data/preprocessing/analysis-individual/CLUSTER/taxonomy/" directory to your cluster (where there is the input data & R scripts to assign taxonomy)
+# 1. copy the "data/analysis-individual/CLUSTER/taxonomy/" directory to your cluster (where there is the input data & R scripts to assign taxonomy)
 # 2. run the R scripts on the cluster (they will output the taxonomic tables in the "output/" subdirectory)
 # 3. copy the "taxonomy/output/" subdirectory back to your personal computer
 # 4. import the taxonomic table below (in that case you don't need to run the next code chunk "assign-taxonomy"):
-# taxa <- readRDS(file.path(path.root, "data/preprocessing/analysis-individual/CLUSTER/taxonomy/output/taxa_zhu.rds"))
+# taxa <- readRDS(file.path(path.root, "data/analysis-individual/CLUSTER/taxonomy/output/taxa_zhu.rds"))
 ```
 
 ```{r assign-taxonomy, eval = FALSE, echo = TRUE}
-path.silva <- file.path(path.root, "data/preprocessing/analysis-individual/CLUSTER/taxonomy/silva-taxonomic-ref")
+path.silva <- file.path(path.root, "data/analysis-individual/CLUSTER/taxonomy/silva-taxonomic-ref")
 
 # Assign taxonomy (with silva v138)
 taxa <- assignTaxonomy(seqtable.nochim, file.path(path.silva, "silva_nr_v138_train_set.fa.gz"),
@@ -648,7 +648,7 @@ saveRDS(taxa,       file.path(path.data, "01_Dada2-Zhu/taxa_zhu.rds"))
 saveRDS(taxa.small, file.path(path.data, "01_Dada2-Zhu/taxa_zhu_shortASV.rds")
 
 saveRDS(physeq,       file.path(path, "01_Dada2-Zhu/physeq_zhu_longASV.rds"))
-saveRDS(physeq.small, file.path(path.root, "data/preprocessing/analysis-individual/CLUSTER/PhyloTree/input/physeq_zhu.rds") # phyloseq object with shorter ASVs
+saveRDS(physeq.small, file.path(path.root, "data/analysis-individual/CLUSTER/PhyloTree/input/physeq_zhu.rds") # phyloseq object with shorter ASVs
 ```
 
 

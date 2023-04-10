@@ -22,7 +22,7 @@ library(RColorBrewer)
 ## 1.2. Data ####
 path.root <- "~/Projects/MetaIBS" # CHANGE THIS ROOT DIRECTORY ON YOUR CLUSTER
 # path.data <- file.path(path.root, "data_local/analysis-individual/DADA2-FILT") # for authors of MetaIBS paper
-path.data <- file.path("data/preprocessing/dada2-filt")
+path.data <- file.path("data/analysis-combined/06_QCplot")
 
 datasets     <- list.files(path.data)
 print(datasets) # should all be named "nbreads_NameDataset.rds"
@@ -63,5 +63,5 @@ ggplot(df, aes(x = dataset, y = seqdepth, fill=QC))+
   labs(x = '', y = "# reads per sample")
 
 # Save figure
-ggsave(file.path(path.root, "data/analysis-combined/06_QCplot/seqdepth.jpg"), width=10, height=5)
+ggsave(file.path(path.data, "seqdepth.jpg"), width=10, height=5)
 

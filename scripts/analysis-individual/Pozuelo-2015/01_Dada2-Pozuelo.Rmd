@@ -11,7 +11,7 @@ output:
 
 ```{r, include=FALSE}
 knitr::opts_chunk$set(fig.width = 3.5, fig.height = 3, warning=FALSE, message=FALSE,
-                      root.dir = "~/Projects/MetaIBS/")
+                      root.dir = "~/Projects/MetaIBS/scripts/analysis-individual/Pozuelo-2015/")
 ```
 
 
@@ -39,7 +39,7 @@ library(stringr)
 # ROOT DIRECTORY (to modify on your computer)
 path.root <- "~/Projects/MetaIBS"
 path.pozuelo <- file.path(path.root, "scripts/analysis-individual/Pozuelo-2015")
-path.data    <- file.path(path.root, "data/preprocessing/analysis-individual/Pozuelo-2015")
+path.data    <- file.path(path.root, "data/analysis-individual/Pozuelo-2015")
 ```
 
 ```{r html-import, echo = FALSE}
@@ -55,7 +55,7 @@ filt2_samples <- sort(list.files(file.path(path, "filtered2"), pattern=".fastq.g
 err           <- readRDS(file.path(path.data, "01_Dada2-Pozuelo/err.rds")) # error rates
 seq_infered   <- readRDS(file.path(path.data, "01_Dada2-Pozuelo/seq_infered.rds")) # infered ASVs
 taxa          <- readRDS(file.path(path.data, "01_Dada2-Pozuelo/taxa_pozuelo.rds")) # taxa
-physeq        <- readRDS(file.path(path.root, "data/preprocessing/analysis-individual/CLUSTER/PhyloTree/input/physeq_pozuelo.rds")) # phyloseq object without phylogenetic tree
+physeq        <- readRDS(file.path(path.root, "data/analysis-individual/CLUSTER/PhyloTree/input/physeq_pozuelo.rds")) # phyloseq object without phylogenetic tree
 ```
 
 
@@ -379,7 +379,7 @@ nb.reads <- data.frame("before" = raw_stats$reads,
 # table(test$host_disease) # 88 HC and 185 IBS
 
 # Save
-saveRDS(nb.reads, file.path(path.root, "data/preprocessing/dada2-filt/nbreads_pozuelo.rds"))
+saveRDS(nb.reads, file.path(path.root, "data/analysis-combined/06_QCplot/nbreads_pozuelo.rds"))
 ```
 
 
@@ -393,18 +393,18 @@ Extensions: The dada2 package also implements a method to make species level ass
 
 ```{r assign-taxonomy-on-cluster, eval=FALSE, echo=FALSE, include=FALSE}
 # In case you prefer to assign taxonomy on a computer cluster (in other words run this chunk on a computer cluster), you can export the ASV table
-# saveRDS(seqtable.nochim, file.path(path.root, "data/preprocessing/analysis-individual/CLUSTER/taxonomy/input/seqtablenochim_pozuelo.rds"))
+# saveRDS(seqtable.nochim, file.path(path.root, "data/analysis-individual/CLUSTER/taxonomy/input/seqtablenochim_pozuelo.rds"))
 
 # then you can :
-# 1. copy the "data/preprocessing/analysis-individual/CLUSTER/taxonomy/" directory to your cluster (where there is the input data & R scripts to assign taxonomy)
+# 1. copy the "data/analysis-individual/CLUSTER/taxonomy/" directory to your cluster (where there is the input data & R scripts to assign taxonomy)
 # 2. run the R scripts on the cluster (they will output the taxonomic tables in the "output/" subdirectory)
 # 3. copy the "taxonomy/output/" subdirectory back to your personal computer
 # 4. import the taxonomic table below (in that case you don't need to run the next code chunk "assign-taxonomy"):
-# taxa <- readRDS(file.path(path.root, "data/preprocessing/analysis-individual/CLUSTER/taxonomy/output/taxa_pozuelo.rds"))
+# taxa <- readRDS(file.path(path.root, "data/analysis-individual/CLUSTER/taxonomy/output/taxa_pozuelo.rds"))
 ```
 
 ```{r assign-taxonomy, eval = FALSE}
-path.silva <- file.path(path.root, "data/preprocessing/analysis-individual/CLUSTER/taxonomy/silva-taxonomic-ref")
+path.silva <- file.path(path.root, "data/analysis-individual/CLUSTER/taxonomy/silva-taxonomic-ref")
 
 # Assign taxonomy (with silva v138)
 taxa <- assignTaxonomy(seqtable.nochim, file.path(path.silva, "silva_nr_v138_train_set.fa.gz"),
@@ -499,7 +499,7 @@ saveRDS(seq_infered, file.path(path.data, "01_Dada2-Pozuelo/seq_infered.rds"))
 
 # Taxa & Phyloseq object
 saveRDS(taxa,   file.path(path.data, "01_Dada2-Pozuelo/taxa_pozuelo.rds"))
-saveRDS(physeq, file.path(path.root, "data/preprocessing/analysis-individual/CLUSTER/PhyloTree/input/physeq_pozuelo.rds"))
+saveRDS(physeq, file.path(path.root, "data/analysis-individual/CLUSTER/PhyloTree/input/physeq_pozuelo.rds"))
 ```
 
 

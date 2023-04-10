@@ -39,7 +39,7 @@ library(stringr)
 # ROOT DIRECTORY (to modify on your computer)
 path.root <- "~/Projects/MetaIBS"
 path.hugerth <- file.path(path.root, "scripts/analysis-individual/Hugerth-2019")
-path.data    <- file.path(path.root, "data/preprocessing/analysis-individual/Hugerth-2019")
+path.data    <- file.path(path.root, "data/analysis-individual/Hugerth-2019")
 ```
 
 
@@ -64,7 +64,7 @@ dadaRs            <- readRDS(file.path(path.data, "01_Dada2-Hugerth/infered_seq_
 mergers           <- readRDS(file.path(path.data, "01_Dada2-Hugerth/mergers.rds")) # mergers
 track             <- readRDS(file.path(path.data, "01_Dada2-Hugerth/track.rds")) # nb reads though pipeline
 taxa              <- readRDS(file.path(path.data, "01_Dada2-Hugerth/taxa_hugerth.rds")) # taxa
-physeq            <- readRDS(file.path(path.root, "data/preprocessing/analysis-individual/CLUSTER/phylotree/input/physeq_hugerth.rds")) # phyloseq object without phylogenetic tree
+physeq            <- readRDS(file.path(path.root, "data/analysis-individual/CLUSTER/phylotree/input/physeq_hugerth.rds")) # phyloseq object without phylogenetic tree
 ```
 
 
@@ -444,7 +444,7 @@ nb.reads <- data.frame("before" = raw_stats$reads[raw_stats$sample %in% rownames
 #   mutate(after = nafill(after, fill=0),
 #          "dataset" = "AGP")
 
-saveRDS(nb.reads, file.path(path.root, "data/preprocessing/dada2-filt/nbreads_hugerth.rds"))
+saveRDS(nb.reads, file.path(path.root, "data/analysis-combined/06_QCplot/nbreads_hugerth.rds"))
 ```
 
 
@@ -458,24 +458,26 @@ Extensions: The dada2 package also implements a method to make species level ass
 
 ```{r assign-taxonomy-on-cluster, eval=FALSE, echo=FALSE, include=FALSE}
 # In case you prefer to assign taxonomy on a computer cluster (in other words run this chunk on a computer cluster), you can export the ASV table
-# saveRDS(seqtable.nochim, file.path(path.root, "data/preprocessing/analysis-individual/CLUSTER/taxonomy/input/seqtablenochim_hugerth.rds"))
+# saveRDS(seqtable.nochim, file.path(path.root, "data/analysis-individual/CLUSTER/taxonomy/input/seqtablenochim_hugerth.rds"))
 
 # then you can :
-# 1. copy the "data/preprocessing/analysis-individual/CLUSTER/taxonomy/" directory to your cluster (where there is the input data & R scripts to assign taxonomy)
+# 1. copy the "data/analysis-individual/CLUSTER/taxonomy/" directory to your cluster (where there is the input data & R scripts to assign taxonomy)
 # 2. run the R scripts on the cluster (they will output the taxonomic tables in the "output/" subdirectory)
 # 3. copy the "taxonomy/output/" subdirectory back to your personal computer
 # 4. import the taxonomic table below (in that case you don't need to run the next code chunk "assign-taxonomy"):
-# taxa <- readRDS(file.path(path.root, "data/preprocessing/analysis-individual/CLUSTER/taxonomy/output/taxa_hugerth.rds"))
+# taxa <- readRDS(file.path(path.root, "data/analysis-individual/CLUSTER/taxonomy/output/taxa_hugerth.rds"))
 ```
 
 ```{r assign-taxonomy, eval = FALSE}
+path.silva <- file.path(path.root, "data/analysis-individual/CLUSTER/taxonomy/silva-taxonomic-ref")
+
 # Assign taxonomy (with silva v138)
-taxa <- assignTaxonomy(seqtable.nochim, file.path(path.root, "data/preprocessing/analysis-individual/CLUSTER/taxonomy/silva-taxonomic-ref/silva_nr_v138_train_set.fa.gz"),
+taxa <- assignTaxonomy(seqtable.nochim, file.path(path.silva, "silva_nr_v138_train_set.fa.gz"),
                        tryRC = TRUE, # try reverse complement of the sequences
                        multithread=TRUE, verbose = TRUE)
 
 # Add species assignment
-taxa <- addSpecies(taxa, file.path(path.root, "data/preprocessing/analysis-individual/CLUSTER/taxonomy/silva-taxonomic-ref/silva_species_assignment_v138.fa.gz"))
+taxa <- addSpecies(taxa, file.path(path.silva, "silva_species_assignment_v138.fa.gz"))
 ```
 
 ```{r}
@@ -575,7 +577,7 @@ saveRDS(track,     file.path(path.data, "01_Dada2-Hugerth/track.rds"))
 
 # Taxa & Phyloseq object
 saveRDS(taxa,   file.path(path.data, "01_Dada2-Hugerth/taxa_hugerth.rds"))
-saveRDS(physeq, file.path(path.root, "data/preprocessing/analysis-individual/CLUSTER/phylotree/input/physeq_hugerth.rds"))
+saveRDS(physeq, file.path(path.root, "data/analysis-individual/CLUSTER/phylotree/input/physeq_hugerth.rds"))
 ```
 
 
