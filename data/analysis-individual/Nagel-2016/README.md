@@ -1,6 +1,6 @@
 # Nagel preprocessing
 
-This folder will auto-populate when you run the [01_Dada2-Nagel.Rmd](../../../../scripts/analysis-individual/Nagel-2016/01_Dada2-Nagel.Rmd) and [03_EDA-Nagel.Rmd](../../../../scripts/analysis-individual/Nagel-2016/03_EDA-Nagel.Rmd) scripts.
+This folder will auto-populate when you run the [01_Dada2-Nagel.Rmd](../../../scripts/analysis-individual/Nagel-2016/01_Dada2-Nagel.Rmd) and [03_EDA-Nagel.Rmd](../../../scripts/analysis-individual/Nagel-2016/03_EDA-Nagel.Rmd) scripts.
 - `01_Dada2-Nagel/` will contain .rds files saved as checkpoints & also for a quicker html output of the 01_Dada2-Nagel.Rmd notebook;
 - `03_EDA-Nagel/` will contain .rds files saved as checkpoints & also for a quicker html output of the 03_EDA-Nagel.Rmd notebook, and it will also contain plots generated from that script;
 - `filtered1/` will contain the .fastq files generated from removing primers;

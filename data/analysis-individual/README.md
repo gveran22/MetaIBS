@@ -6,9 +6,9 @@ This repository contains `data` generated when you preprocess raw fastq files in
 # Structure of each dataset sub-directory
 
 Within each sub-directory, you will find:
-1. A `01_Dada2-NameDataset/` folder, in which you will save `.rds` files as checkpoints when running the `01_Dada2-NameDataset.Rmd` script (in the corresponding [scripts sub-directory](../../../scripts/analysis-individual/));
-2. A `filtered1/` and `filtered2/` folders, in which `.fastq` files will be generated during primer removal and quality-filtering of the reads (respectively), again using the `01_Dada2-NameDataset.Rmd` script (in the corresponding [scripts sub-directory](../../../scripts/analysis-individual/));
-3. A `03_EDA-NameDataset/` folder, in which you will save normalized phyloseq objects as `.rds` files, and also save plots when running the `03_EDA-NameDataset.Rmd` script (in the corresponding [scripts sub-directory](../../../scripts/analysis-individual/)).
+1. A `01_Dada2-NameDataset/` folder, in which you will save `.rds` files as checkpoints when running the `01_Dada2-NameDataset.Rmd` script (in the corresponding [scripts sub-directory](../../scripts/analysis-individual/));
+2. A `filtered1/` and `filtered2/` folders, in which `.fastq` files will be generated during primer removal and quality-filtering of the reads (respectively), again using the `01_Dada2-NameDataset.Rmd` script (in the corresponding [scripts sub-directory](../../scripts/analysis-individual/));
+3. A `03_EDA-NameDataset/` folder, in which you will save normalized phyloseq objects as `.rds` files, and also save plots when running the `03_EDA-NameDataset.Rmd` script (in the corresponding [scripts sub-directory](../../scripts/analysis-individual/)).
 
 
 # CLUSTER sub-directory
