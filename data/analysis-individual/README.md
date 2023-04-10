@@ -1,4 +1,4 @@
-# data/preprocessing/analysis-individual/
+# data/analysis-individual/
 
 This repository contains `data` generated when you preprocess raw fastq files into ASV and taxonomic tables. Our meta-analysis included 13 datasets, so there are 13 sub-directories (+ `CLUSTER` sub-directory). Even though we used a standardized pipeline to preprocess the data for all datasets, we still have separate directories & scripts as there are subtle differences between datasets (e.g. cleaning up metadata tables, different primer sequences, ...). However, we structured all these sub-directories in a similar way.
 
