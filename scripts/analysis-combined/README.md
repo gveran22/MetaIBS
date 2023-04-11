@@ -2,21 +2,24 @@
 
 This repository contains `scripts` to perform statistical analyses on combined datasets. These scripts were used to make the figures in the paper.
 
-Note: we strongly recommend to run [`04a_LogRatios-Taxa.R`](./04a_LogRatios-Taxa.R) on a high performance computing cluster. A bash script to execute this R script is provided in the corresponding [data](../../data/analysis-combined/04a_LogRatios-Taxa/) directory.
+Note: we strongly recommend to run [`04a_LogRatios-Taxa.R`](./04a_LogRatios-Taxa.R) and [`10_DA-analysis/DA_analysis_run.ipynb`](./10_DA-analysis/DA_analysis_run.ipynb) on a high performance computing cluster. 
+A bash script to execute the logratio analysis is provided in the corresponding [data](../../data/analysis-combined/04a_LogRatios-Taxa/) directory. Code for executing the differential abundance analysis in a distributed fashion is available upon request.
 
 
-|                                **Script**                                |**Paper figure(s)**|               **Short description**         |
-| ------------------------------------------------------------------------ | :-----------: | ---------------------------------------------- |
-| [`01_TaxonomicTree.R`](./01_TaxonomicTree.R)                             | Fig1A, FigS2  | Taxonomic tree of all ASVs inferred across datasets |
-| [`02_LogRatio-FirmBact.R`](./02_LogRatio-FirmBact.R)                     | Fig2, FigS5   | Log-ratio of Firmicutes:Bacteroidota abundance in healthy vs IBS samples |
-| [`03_Heatmaps.R`](./03_Heatmaps.R)                                       | Fig3A, FigS6A | Heatmap of microbial families relative abundances |
-| [`04a_LogRatios-Taxa.R`](./04a_LogRatios-Taxa.R)                         | Fig3B, FigS6B | Compute log-ratio between all combinations of microbial families, and save the sample x log-ratio dataframe (to be provided as input for UMAP) |
-| [`04b_UMAP.R`](./04b_UMAP.R)                                             | Fig3B, FigS6B | UMAP of log-ratios between microbial families across datasets |
-| [`05_Common-ASVs.R`](./05_Common-ASVs.R)                                   | Fig5A         | Find how many ASVs are identical across datasets (expectation is to find common ASVs between datasets that amplified the same variable regions) |
-| [`06_QCplot.R`](./06_QCplot.R)                                           | FigS1         | Plot number of reads per sample before/after quality filtering with DADA2 preprocessing |
-| [`07_RelativAbund.R`](./07_RelativAbund.R)                               | FigS3         | Plot relative abundance of 5 main phyla across datasets |
-| [`08_AlphaDiversity.R`](./08_AlphaDiversity.R)                           | FigS4         | Shannon and Simpson &alpha;-diversity indexes in healthy vs IBS samples |
-| [`09_PCoA-BrayCurtis-BigDatasets.R`](./09_PCoA-BrayCurtis-BigDatasets.R) | FigS7         | Compute Bray-Curtis dissimilarity in AGP, Pozuelo and Hugerth datasets (3 biggest datasets) and perform PCoA |
+| **Script**                                                                                               |         **Paper figure(s)**         | **Short description**                                                                                                                           |
+|----------------------------------------------------------------------------------------------------------|:-----------------------------------:|-------------------------------------------------------------------------------------------------------------------------------------------------|
+| [`01_TaxonomicTree.R`](./01_TaxonomicTree.R)                                                             |            Fig1A, FigS2             | Taxonomic tree of all ASVs inferred across datasets                                                                                             |
+| [`02_LogRatio-FirmBact.R`](./02_LogRatio-FirmBact.R)                                                     |             Fig2, FigS5             | Log-ratio of Firmicutes:Bacteroidota abundance in healthy vs IBS samples                                                                        |
+| [`03_Heatmaps.R`](./03_Heatmaps.R)                                                                       |            Fig3A, FigS6A            | Heatmap of microbial families relative abundances                                                                                               |
+| [`04a_LogRatios-Taxa.R`](./04a_LogRatios-Taxa.R)                                                         |            Fig3B, FigS6B            | Compute log-ratio between all combinations of microbial families, and save the sample x log-ratio dataframe (to be provided as input for UMAP)  |
+| [`04b_UMAP.R`](./04b_UMAP.R)                                                                             |            Fig3B, FigS6B            | UMAP of log-ratios between microbial families across datasets                                                                                   |
+| [`05_Common-ASVs.R`](./05_Common-ASVs.R)                                                                 |                Fig5A                | Find how many ASVs are identical across datasets (expectation is to find common ASVs between datasets that amplified the same variable regions) |
+| [`06_QCplot.R`](./06_QCplot.R)                                                                           |                FigS1                | Plot number of reads per sample before/after quality filtering with DADA2 preprocessing                                                         |
+| [`07_RelativAbund.R`](./07_RelativAbund.R)                                                               |                FigS3                | Plot relative abundance of 5 main phyla across datasets                                                                                         |
+| [`08_AlphaDiversity.R`](./08_AlphaDiversity.R)                                                           |                FigS4                | Shannon and Simpson &alpha;-diversity indexes in healthy vs IBS samples                                                                         |
+| [`09_PCoA-BrayCurtis-BigDatasets.R`](./09_PCoA-BrayCurtis-BigDatasets.R)                                 |                FigS7                | Compute Bray-Curtis dissimilarity in AGP, Pozuelo and Hugerth datasets (3 biggest datasets) and perform PCoA                                    |
+| [`10_DA-analysis/DA_analysis_run.ipynb`](./10_DA-analysis/DA_analysis_run.ipynb)                         |                  -                  | Differential abundance analysis of all datasets individually (run models and create intermediate results)                                       |
+| [`10_DA-analysis/DA_analysis_individual_data.ipynb`](./10_DA-analysis/DA_analysis_individual_data.ipynb) | Fig4, FigS8, FigS9, Table2, TableS5 | Differential abundance analysis of all datasets individually (result analysis)                                                                  |
 
 
 <br/>

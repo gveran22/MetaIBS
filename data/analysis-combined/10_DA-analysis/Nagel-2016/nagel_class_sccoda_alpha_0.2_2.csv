@@ -1,0 +1,19 @@
+Covariate,Cell Type,Final Parameter,HDI 3%,HDI 97%,SD,Inclusion probability,Expected Sample,log2-fold change
+"C(host_disease, Treatment('Healthy'))[T.IBS]",Bacteria*Bacteroidota*Bacteroidia,0.0,-0.481,0.188,0.139,0.5089333333333333,3148.3891340706004,-0.22158216894088337
+"C(host_disease, Treatment('Healthy'))[T.IBS]",Bacteria*Firmicutes*Clostridia,0.3490976526407565,-0.039,0.767,0.252,0.8197333333333333,8440.053003861678,0.2820592833099137
+"C(host_disease, Treatment('Healthy'))[T.IBS]",Bacteria*Firmicutes*Bacilli,0.0,-0.303,0.429,0.136,0.5042,1033.4378222587393,-0.22158216894088373
+"C(host_disease, Treatment('Healthy'))[T.IBS]",Bacteria*Firmicutes*Negativicutes,0.0,-0.623,0.169,0.17,0.5261333333333333,763.2962416753842,-0.22158216894088356
+"C(host_disease, Treatment('Healthy'))[T.IBS]",Bacteria*Actinobacteriota*Actinobacteria,0.0,-0.312,0.428,0.138,0.492,619.3349338799286,-0.22158216894088356
+"C(host_disease, Treatment('Healthy'))[T.IBS]",Bacteria*Proteobacteria*Gammaproteobacteria,0.0,0.0,0.0,0.0,0.0,612.5595823586069,-0.22158216894088337
+"C(host_disease, Treatment('Healthy'))[T.IBS]",Bacteria*Actinobacteriota*Coriobacteriia,0.0,-0.212,0.587,0.167,0.5177333333333334,382.08619136761206,-0.22158216894088337
+"C(host_disease, Treatment('Healthy'))[T.IBS]",Bacteria*Fusobacteriota*Fusobacteriia,0.0,-0.352,0.419,0.137,0.48246666666666665,209.90314604283944,-0.22158216894088337
+"C(host_disease, Treatment('Healthy'))[T.IBS]",Bacteria*Desulfobacterota*Desulfovibrionia,0.0,-0.409,0.345,0.133,0.47413333333333335,320.1040870731695,-0.22158216894088317
+"C(host_disease, Treatment('Healthy'))[T.IBS]",Bacteria*Verrucomicrobiota*Verrucomicrobiae,0.0,-0.29,0.463,0.144,0.4926,279.6800342722002,-0.22158216894088337
+"C(host_disease, Treatment('Healthy'))[T.IBS]",Archaea*Euryarchaeota*Methanobacteria,0.0,-0.24,0.554,0.156,0.5111333333333333,233.60840135405246,-0.22158216894088356
+"C(host_disease, Treatment('Healthy'))[T.IBS]",Bacteria*Proteobacteria*Alphaproteobacteria,0.0,-0.321,0.454,0.141,0.4792,212.01270773206247,-0.22158216894088337
+"C(host_disease, Treatment('Healthy'))[T.IBS]",Bacteria*Verrucomicrobiota*Lentisphaeria,0.0,-0.34,0.408,0.133,0.4997333333333333,209.06521044710672,-0.22158216894088317
+"C(host_disease, Treatment('Healthy'))[T.IBS]",Bacteria*Elusimicrobiota*Elusimicrobia,0.0,-0.372,0.398,0.133,0.4632,198.8689798167219,-0.22158216894088373
+"C(host_disease, Treatment('Healthy'))[T.IBS]",Bacteria*Cyanobacteria*Vampirivibrionia,0.0,-0.378,0.392,0.139,0.4998,203.4959728003425,-0.22158216894088337
+"C(host_disease, Treatment('Healthy'))[T.IBS]",Bacteria*Cyanobacteria*Cyanobacteriia,0.0,-0.359,0.425,0.137,0.4714,206.57142058631268,-0.22158216894088356
+"C(host_disease, Treatment('Healthy'))[T.IBS]",Bacteria*Synergistota*Synergistia,0.0,-0.372,0.388,0.133,0.46986666666666665,199.66604881121944,-0.22158216894088337
+"C(host_disease, Treatment('Healthy'))[T.IBS]",Archaea*Thermoplasmatota*Thermoplasmata,0.0,-0.339,0.429,0.135,0.45966666666666667,196.300414924756,-0.22158216894088337

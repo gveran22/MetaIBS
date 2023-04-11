@@ -1,0 +1,15 @@
+Covariate,Cell Type,Final Parameter,HDI 3%,HDI 97%,SD,Inclusion probability,Expected Sample,log2-fold change
+"C(host_disease, Treatment('Healthy'))[T.IBS]",Bacteria*Bacteroidota*Bacteroidia,0.0,-0.644,0.062,0.202,0.6562666666666667,18118.29758080435,0.0
+"C(host_disease, Treatment('Healthy'))[T.IBS]",Bacteria*Firmicutes*Clostridia,0.0,-0.394,0.278,0.121,0.46413333333333334,7636.369880329308,0.0
+"C(host_disease, Treatment('Healthy'))[T.IBS]",Bacteria*Firmicutes*Negativicutes,0.0,-0.371,0.343,0.128,0.5092666666666666,1116.1913878074868,0.0
+"C(host_disease, Treatment('Healthy'))[T.IBS]",Bacteria*Fusobacteriota*Fusobacteriia,0.0,-0.27,0.407,0.119,0.4972,556.5058165535484,0.0
+"C(host_disease, Treatment('Healthy'))[T.IBS]",Bacteria*Proteobacteria*Gammaproteobacteria,0.0,0.0,0.0,0.0,0.0,1650.242659902415,0.0
+"C(host_disease, Treatment('Healthy'))[T.IBS]",Bacteria*Desulfobacterota*Desulfovibrionia,0.0,-0.296,0.369,0.121,0.5356,562.6611729293192,0.0
+"C(host_disease, Treatment('Healthy'))[T.IBS]",Bacteria*Proteobacteria*Alphaproteobacteria,0.0,-0.31,0.362,0.122,0.4918666666666667,314.0893886701766,0.0
+"C(host_disease, Treatment('Healthy'))[T.IBS]",Bacteria*Actinobacteriota*Actinobacteria,0.0,-0.314,0.387,0.128,0.5222666666666667,433.8407896572462,0.0
+"C(host_disease, Treatment('Healthy'))[T.IBS]",Bacteria*Synergistota*Synergistia,0.0,-0.344,0.342,0.12,0.49293333333333333,313.14853249407224,0.0
+"C(host_disease, Treatment('Healthy'))[T.IBS]",Bacteria*Firmicutes*Bacilli,0.0,-0.465,0.263,0.131,0.5193333333333333,568.3160117290328,0.0
+"C(host_disease, Treatment('Healthy'))[T.IBS]",Bacteria*Verrucomicrobiota*Verrucomicrobiae,0.0,-0.369,0.35,0.128,0.4992,326.5808755669718,0.0
+"C(host_disease, Treatment('Healthy'))[T.IBS]",Bacteria*Actinobacteriota*Coriobacteriia,0.0,-0.303,0.371,0.123,0.4786,354.84377517580475,0.0
+"C(host_disease, Treatment('Healthy'))[T.IBS]",Bacteria*Verrucomicrobiota*Lentisphaeria,0.0,-0.361,0.337,0.119,0.5017333333333334,302.98328006673387,0.0
+"C(host_disease, Treatment('Healthy'))[T.IBS]",Bacteria*Cyanobacteria*Cyanobacteriia,0.0,-0.314,0.317,0.111,0.48693333333333333,294.9121816468719,0.0

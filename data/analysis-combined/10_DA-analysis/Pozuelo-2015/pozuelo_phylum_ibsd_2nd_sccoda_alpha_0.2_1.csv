@@ -1,0 +1,16 @@
+Covariate,Cell Type,Final Parameter,HDI 3%,HDI 97%,SD,Inclusion probability,Expected Sample,log2-fold change
+"C(host_disease, Treatment('Healthy'))[T.IBS]",Bacteria*Bacteroidota,0.0,-0.768,0.095,0.244,0.6060666666666666,20289.098057385163,0.5212005009911279
+"C(host_disease, Treatment('Healthy'))[T.IBS]",Bacteria*Firmicutes,-0.6812444772865072,-1.164,-0.294,0.239,1.0,18612.608417840624,-0.46162752802311025
+"C(host_disease, Treatment('Healthy'))[T.IBS]",Bacteria*Proteobacteria,0.0,0.0,0.0,0.0,0.0,1478.5822659854232,0.5212005009911279
+"C(host_disease, Treatment('Healthy'))[T.IBS]",Bacteria*Verrucomicrobiota,0.0,-0.944,0.116,0.297,0.5902,485.33480834840896,0.5212005009911279
+"C(host_disease, Treatment('Healthy'))[T.IBS]",Bacteria*Fusobacteriota,0.0,-0.512,1.574,0.506,0.5956,38.39161127173347,0.5212005009911279
+"C(host_disease, Treatment('Healthy'))[T.IBS]",Bacteria*Actinobacteriota,0.0,-0.657,0.21,0.178,0.39013333333333333,960.8698608641481,0.5212005009911277
+"C(host_disease, Treatment('Healthy'))[T.IBS]",Bacteria*Cyanobacteria,0.0,-0.575,0.585,0.18,0.3648666666666667,213.97067635691337,0.5212005009911279
+"C(host_disease, Treatment('Healthy'))[T.IBS]",Archaea*Euryarchaeota,-0.772067172532858,-1.515,0.014,0.458,0.8745333333333334,116.60262735572095,-0.5926569800551902
+"C(host_disease, Treatment('Healthy'))[T.IBS]",Bacteria*Desulfobacterota,-0.48293637231579595,-1.018,0.026,0.326,0.7152666666666667,496.1620598598407,-0.1755294084137772
+"C(host_disease, Treatment('Healthy'))[T.IBS]",Bacteria*Elusimicrobiota,-0.6896882010952853,-2.283,0.617,0.842,0.6556,6.489274766487797,-0.473809246488671
+"C(host_disease, Treatment('Healthy'))[T.IBS]",Bacteria*Synergistota,0.0,-1.189,0.526,0.336,0.47786666666666666,64.31796458673854,0.5212005009911277
+"C(host_disease, Treatment('Healthy'))[T.IBS]",Bacteria*Spirochaetota,0.0,-1.578,1.364,0.586,0.5646,0.34226806924978836,0.5212005009911279
+"C(host_disease, Treatment('Healthy'))[T.IBS]",Archaea*Thermoplasmatota,0.0,-1.397,1.195,0.508,0.5636,4.557795115393697,0.5212005009911277
+"C(host_disease, Treatment('Healthy'))[T.IBS]",Bacteria*Campilobacterota,0.0,-0.956,0.914,0.342,0.4769333333333333,27.822331212474342,0.5212005009911277
+"C(host_disease, Treatment('Healthy'))[T.IBS]",Bacteria*Bdellovibrionota,0.0,-1.766,1.157,0.544,0.5058666666666667,0.26816279986023434,0.5212005009911277
