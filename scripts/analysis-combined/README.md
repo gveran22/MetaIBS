@@ -18,8 +18,10 @@ A bash script to execute the logratio analysis is provided in the corresponding 
 | [`07_RelativAbund.R`](./07_RelativAbund.R)                                                               |                FigS3                | Plot relative abundance of 5 main phyla across datasets                                                                                         |
 | [`08_AlphaDiversity.R`](./08_AlphaDiversity.R)                                                           |                FigS4                | Shannon and Simpson &alpha;-diversity indexes in healthy vs IBS samples                                                                         |
 | [`09_PCoA-BrayCurtis-BigDatasets.R`](./09_PCoA-BrayCurtis-BigDatasets.R)                                 |                FigS7                | Compute Bray-Curtis dissimilarity in AGP, Pozuelo and Hugerth datasets (3 biggest datasets) and perform PCoA                                    |
+| [`10_DA-analysis/sccoda_reference_finding.ipynb`](./10_DA-analysis/sccoda_reference_finding.ipynb)       |                  -                  | Find a suited reference taxon for running scCODA in the other scripts of this chapter                                                           |
 | [`10_DA-analysis/DA_analysis_run.ipynb`](./10_DA-analysis/DA_analysis_run.ipynb)                         |                  -                  | Differential abundance analysis of all datasets individually (run models and create intermediate results)                                       |
 | [`10_DA-analysis/DA_analysis_individual_data.ipynb`](./10_DA-analysis/DA_analysis_individual_data.ipynb) | Fig4, FigS8, FigS9, Table2, TableS5 | Differential abundance analysis of all datasets individually (result analysis)                                                                  |
+| [`10_DA-analysis/shared_ASV_run.ipynb`](./10_DA-analysis/shared_ASV_run.ipynb)                           |                  -                  | Differential abundance analysis of shared ASVs between Nagel and Pozuelo datasets (preparation for next chapter)                                |
 
 
 <br/>

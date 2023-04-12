@@ -26,10 +26,9 @@ os.environ["PATH"] = r_path + ";" + os.environ["PATH"]
 tax_levels = ["Kingdom", "Phylum", "Class", "Order", "Family", "Genus"]
 
 
-def agg_ibs_data(author, level):
+def agg_ibs_data(author, level, data_dir):
 
     # read data
-    data_dir = "../../../data/aggregated-tables/"
     subdir_name = [x for x in os.listdir(data_dir) if x.startswith(author+"-")][0]
     file_name = data_dir + subdir_name + f"/{author.lower()}_{level.lower()}-agg.csv"
     raw_data = pd.read_csv(file_name, index_col=0)
@@ -55,7 +54,7 @@ def agg_ibs_data(author, level):
     return ret
 
 
-def run_sccoda(author, level, add=None, fdr_level=0.1):
+def run_sccoda(author, level, data_dir, add=None, fdr_level=0.1,):
     references = {
         "Genus": "Bacteria*Proteobacteria*Gammaproteobacteria*Burkholderiales*Sutterellaceae*Parasutterella",
         "Family": "Bacteria*Proteobacteria*Gammaproteobacteria*Burkholderiales*Sutterellaceae",
@@ -64,7 +63,7 @@ def run_sccoda(author, level, add=None, fdr_level=0.1):
         "Phylum": "Bacteria*Proteobacteria",
     }
 
-    data = agg_ibs_data(author, level)
+    data = agg_ibs_data(author, level, data_dir)
     if add is not None:
         data = data[data.obs[add[0]] == add[1]]
 
@@ -79,7 +78,7 @@ def run_sccoda(author, level, add=None, fdr_level=0.1):
     return effect_df
 
 
-def run_tree_agg(author, level, add=None, fdr_level=0.1, reg="None", pen_args={"lambda": 10, "phi": 2}, model="old"):
+def run_tree_agg(author, level, data_dir, add=None, fdr_level=0.1, reg="None", pen_args={"lambda": 10, "phi": 2}, model="old"):
 
     references = {
         "Genus": "Bacteria*Proteobacteria*Gammaproteobacteria*Burkholderiales*Sutterellaceae*Parasutterella",
@@ -89,7 +88,7 @@ def run_tree_agg(author, level, add=None, fdr_level=0.1, reg="None", pen_args={"
         "Phylum": "Bacteria*Proteobacteria",
     }
 
-    data = agg_ibs_data(author, level)
+    data = agg_ibs_data(author, level, data_dir)
     if add is not None:
         data = data[data.obs[add[0]] == add[1]]
 
@@ -130,8 +129,8 @@ def run_tree_agg(author, level, add=None, fdr_level=0.1, reg="None", pen_args={"
     return result
 
 
-def run_ancom_model(author, level, add=None):
-    data = agg_ibs_data(author, level)
+def run_ancom_model(author, level, data_dir, add=None):
+    data = agg_ibs_data(author, level, data_dir)
     if add is not None:
         data = data[data.obs[add[0]] == add[1]]
 
@@ -143,8 +142,8 @@ def run_ancom_model(author, level, add=None):
     return out
 
 
-def run_ancombc_model(author, level, add=None, alpha=0.05):
-    data = agg_ibs_data(author, level)
+def run_ancombc_model(author, level, data_dir, add=None, alpha=0.05):
+    data = agg_ibs_data(author, level, data_dir)
     if add is not None:
         data = data[data.obs[add[0]] == add[1]]
 
@@ -212,8 +211,8 @@ def run_ancombc_model(author, level, add=None, alpha=0.05):
     return out
 
 
-def run_linda_model(author, level, add=None, alpha=0.05, formula="host_disease"):
-    data = agg_ibs_data(author, level)
+def run_linda_model(author, level, data_dir, add=None, alpha=0.05, formula="host_disease"):
+    data = agg_ibs_data(author, level, data_dir)
     if add is not None:
         data = data[data.obs[add[0]] == add[1]]
 
