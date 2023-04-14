@@ -1,6 +1,6 @@
 # Taxa aggregation
 
-This directory contains tables of aggregated taxa for each dataset. The code used to obtain these .csv files is in the [00_TaxaAggregation.R](../../scripts/analysis-combined/10_DA-analysis/00_TaxaAggregation.R) file.
+This directory contains tables of aggregated taxa for each dataset. The code used to obtain these `.csv` files is in the [00_TaxaAggregation.R](../../scripts/analysis-combined/10_DA-analysis/00_TaxaAggregation.R) file.
 
 For each dataset, taxa were aggregated at all taxonomic levels (from Genus to Phylum). The counts correspond to the **absolute count** (no normalization of total count per sample!!). Tables contain the available covariates, too.
 
