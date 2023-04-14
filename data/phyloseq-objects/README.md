@@ -1,6 +1,7 @@
 # Phyloseq objects
 
 This directory contains all the phyloseq objects saved as `.rds` files, obtained from preprocessing the raw data for each dataset (refer to the [scripts/analysis-individual/](../../scripts/analysis-individual/) folder for more information on how the data was preprocessed).
+To better understand how phyloseq objects are structured, you can refer to the [phyloseq tutorial](https://joey711.github.io/phyloseq/import-data.html).
 
 Phyloseq objects in this directory contain:
 - an ASV table (`otu_table()`);
