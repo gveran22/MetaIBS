@@ -1,79 +1,52 @@
-##########################
+# *********************************
 # Purpose: Exporting ASV sequences in fasta format for annotIEM
 # Date: November 2021
 # Author: Salomé Carcy
-##########################
+# *********************************
 
 
 
-##########
-# IMPORT #
-##########
 
-# Libraries
+# **************
+# 1. IMPORT ####
+# **************
+
+## 1.1. Libraries ####
 library(Biostrings)
 
 
-# Data
-path <- "~/Projects/IBS_Meta-analysis_16S/data/analysis-individual/CLUSTER/Taxonomy/input"
-seqtable.agp      <- readRDS(file.path(path, "seqtable_agp.rds"))
-seqtable.fukui    <- readRDS(file.path(path, "seqtable_fukui.rds"))
-seqtable.hugerth  <- readRDS(file.path(path, "seqtable_hugerth.rds"))
-seqtable.labus    <- readRDS(file.path(path, "seqtable_labus.rds"))
-seqtable.liu      <- readRDS(file.path(path, "seqtable_liu.rds"))
-seqtable.lopresti <- readRDS(file.path(path, "seqtable_lopresti.rds"))
-seqtable.mars     <- readRDS(file.path(path, "seqtable_mars.rds"))
-seqtable.nagel    <- readRDS(file.path(path, "seqtable_nagel.rds"))
-seqtable.pozuelo  <- readRDS(file.path(path, "seqtable_pozuelo.rds"))
-seqtable.ringel   <- readRDS(file.path(path, "seqtable_ringel.rds"))
-seqtable.zeber    <- readRDS(file.path(path, "seqtable_zeber.rds"))
-seqtable.zhu      <- readRDS(file.path(path, "seqtable_zhu.rds"))
-seqtable.zhu.small<- readRDS(file.path(path, "seqtable_zhu_cutFWDprimer.rds"))
-seqtable.zhuang   <- readRDS(file.path(path, "seqtable_zhuang.rds"))
+## 1.2. Data ####
+path.root <- "~/Projects/MetaIBS" # CHANGE THIS ROOT DIRECTORY ON YOUR COMPUTER
 
-# Get a list
-datasets <- list("agp"              = seqtable.agp,
-                 "fukui"            = seqtable.fukui,
-                 "hugerth"          = seqtable.hugerth,
-                 "labus"            = seqtable.labus,
-                 "liu"              = seqtable.liu,
-                 "lopresti"         = seqtable.lopresti,
-                 "mars"             = seqtable.mars,
-                 "nagel"            = seqtable.nagel,
-                 "pozuelo"          = seqtable.pozuelo,
-                 "ringel"           = seqtable.ringel,
-                 "zeber"            = seqtable.zeber,
-                 "zhu"              = seqtable.zhu,
-                 "zhu_cutFWDprimer" = seqtable.zhu.small,
-                 "zhuang"           = seqtable.zhuang)
+path.asvtables <- file.path(path.root, "data/analysis-individual/CLUSTER/taxonomy/input") # these are the asv tables used for taxonomic alignment
+datasets       <- list.files(path.asvtables, pattern=".rds", include.dirs=FALSE)
+asvtables      <- sapply(datasets, function(x) readRDS(file.path(path.asvtables, x)), USE.NAMES=T, simplify=F)
+
+# Change name of phyloseq objects to make it easier later on
+names(asvtables)# sanity check
+names(asvtables) <- gsub("seqtable_", "", names(asvtables))
+names(asvtables) <- gsub(".rds", "", names(asvtables))
+names(asvtables)# sanity check
 
 
 
 
-###################################
-# EXPORT TO FASTA FORMAT THE ASVs #
-###################################
+# ***************************************
+# 2. EXPORT TO FASTA FORMAT THE ASVs ####
+# ***************************************
 
-for (author in names(datasets)){
+path.output <- file.path(path.root, "data/asv-sequences/")
+
+for (author in names(asvtables)){
   print(author)
-  print(dim(datasets[[author]]))
+  print(dim(asvtables[[author]]))
   
   # Store ASVs sequences as DNAStringSet
-  asv <- DNAStringSet(colnames(datasets[[author]]))
+  asv <- DNAStringSet(colnames(asvtables[[author]]))
   
   # Save ASVs sequences in FASTA file
-  file.name <- paste("~/Projects/IBS_Meta-analysis_16S/asv-sequences/asv_", author, ".fasta", sep="")
+  file.name <- paste0(path.output, "asv_", author, ".fasta")
   writeXStringSet(x=asv, filepath=file.name, compress=FALSE, format="fasta")
   
 }
-
-
-
-
-
-
-
-
-
-
 
