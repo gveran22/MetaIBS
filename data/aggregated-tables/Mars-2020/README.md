@@ -1,0 +1,3 @@
+This directory contains tables of aggregated taxa for the Mars dataset. The code used to obtain these `.csv` files is in the [00_TaxaAggregation.R](../../../scripts/analysis-combined/10_DA-analysis/00_TaxaAggregation.R) file.
+
+Taxa were aggregated at all taxonomic levels (from Genus to Phylum). The counts correspond to the **absolute count** (no normalization of total count per sample!!). Tables contain some available covariates, too.
