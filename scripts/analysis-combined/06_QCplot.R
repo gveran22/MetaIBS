@@ -24,7 +24,7 @@ path.root <- "~/Projects/MetaIBS" # CHANGE THIS ROOT DIRECTORY ON YOUR CLUSTER
 # path.data <- file.path(path.root, "data_local/analysis-individual/DADA2-FILT") # for authors of MetaIBS paper
 path.data <- file.path("data/analysis-combined/06_QCplot")
 
-datasets     <- list.files(path.data)
+datasets     <- list.files(path.data, pattern=".rds")
 print(datasets) # should all be named "nbreads_NameDataset.rds"
 nbreads_list <- sapply(datasets, function(x) readRDS(file.path(path.data, x)), USE.NAMES=T, simplify=F)
 

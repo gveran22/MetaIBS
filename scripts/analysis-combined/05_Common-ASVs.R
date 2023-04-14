@@ -23,7 +23,7 @@ path.root   <- "~/Projects/MetaIBS" # CHANGE THIS ROOT DIRECTORY ON YOUR CLUSTER
 path.data  <- file.path(path.root, "data/analysis-combined/05_Common-ASVs") 
 
 path.phylobj    <- file.path(path.root, "data/phyloseq-objects/phyloseq-without-phylotree")
-datasets        <- list.files(path.phylobj)
+datasets        <- list.files(path.phylobj, pattern=".rds")
 phyloseqobjects <- sapply(datasets, function(x) readRDS(file.path(path.phylobj, x)), USE.NAMES=T, simplify=F)
 
 # Change name of phyloseq objects to make it easier later on

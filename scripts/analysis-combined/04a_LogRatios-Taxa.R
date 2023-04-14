@@ -24,7 +24,7 @@ path.root   <- "~/Projects/MetaIBS" # CHANGE THIS ROOT DIRECTORY ON YOUR CLUSTER
 path.output <- file.path(path.root, "data/analysis-combined/04a_LogRatios-Taxa/output") # CHANGE NAME OF THE OUTPUT FOLDER WHERE YOU WANT TO SAVE THE MATRICES
 
 path.phylobj    <- file.path(path.root, "data/phyloseq-objects/phyloseq-without-phylotree")
-datasets        <- list.files(path.phylobj)
+datasets        <- list.files(path.phylobj, pattern=".rds")
 phyloseqobjects <- sapply(datasets, function(x) readRDS(file.path(path.phylobj, x)), USE.NAMES=T, simplify=F)
 # names(phyloseqobjects) # sanity check
 

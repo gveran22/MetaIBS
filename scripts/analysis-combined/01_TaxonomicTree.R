@@ -27,7 +27,7 @@ library(scales)
 path.root <- "~/Projects/MetaIBS" # CHANGE THIS ROOT DIRECTORY ON YOUR COMPUTER
 
 path.phylobj    <- file.path(path.root, "data/phyloseq-objects/phyloseq-without-phylotree")
-datasets        <- list.files(path.phylobj)
+datasets        <- list.files(path.phylobj, pattern=".rds")
 phyloseqobjects <- sapply(datasets, function(x) readRDS(file.path(path.phylobj, x)), USE.NAMES=T, simplify=F)
 # names(phyloseqobjects) # sanity check
 
