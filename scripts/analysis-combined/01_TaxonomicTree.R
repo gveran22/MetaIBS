@@ -15,7 +15,7 @@
 library(phyloseq)
 library(ggplot2)
 library(tidyverse)
-library(trac)
+# library(trac)
 library(treeio)
 library(ggtree)
 library(ggnewscale)
@@ -66,13 +66,68 @@ if(length(phyloseqobjects)>2){
 # 3. DEFINE FUNCTIONS ####
 # ************************
 
-#___________________________
-# 3.1. Get a treedata object
+#______________________________________________
+## 3.1. Transform tax table to phylo object ####
+# This function is copied from https://github.com/jacobbien/trac/blob/master/R/getting_A.R
+tax_table_to_phylo <- function (x, data = parent.frame(), collapse = TRUE, ...) {
+  err <- "Formula must be of the kind ~A1/A2/.../An."
+  if (any(lapply(data, class) != "factor"))
+    stop("Every column of data must be a factor.")
+  if (length(x) != 2)
+    stop(err)
+  if (x[[1]] != "~")
+    stop(err)
+  f <- x[[2]]
+  taxo <- list()
+  while (length(f) == 3) {
+    if (f[[1]] != "/")
+      stop(err)
+    f3.txt <- deparse(f[[3]])
+    if (!is.factor(data[[f3.txt]]))
+      stop(paste("Variable", f3.txt, "must be a factor"))
+    taxo[[f3.txt]] <- data[[f3.txt]]
+    if (length(f) > 1)
+      f <- f[[2]]
+  }
+  f.txt <- deparse(f)
+  if (!is.factor(data[[f.txt]]))
+    stop(paste("Variable", f.txt, "must be a factor."))
+  taxo[[f.txt]] <- data[[f.txt]]
+  taxo.data <- as.data.frame(taxo)
+  leaves.names <- as.character(taxo.data[, 1])
+  taxo.data[, 1] <- 1:nrow(taxo.data)
+  f.rec <- function(subtaxo) {
+    u <- ncol(subtaxo)
+    levels <- unique(subtaxo[, u])
+    if (u == 1) {
+      if (length(levels) != nrow(subtaxo))
+        warning("leaves names are not unique.")
+      return(as.character(subtaxo[, 1]))
+    }
+    t <- character(length(levels))
+    for (l in 1:length(levels)) {
+      x <- f.rec(subtaxo[subtaxo[, u] == levels[l], ][1:(u-1)])
+      t[l] <- paste0("(", paste(x, collapse = ","), ")", "'", levels[l], "'")
+    }
+    t
+  }
+  string <- paste0(f.rec(taxo.data), ";")
+  #string <- paste0("(", paste(f.rec(taxo.data), collapse = ","), ");")
+  phy <- ape::read.tree(text = string)
+  if (collapse)
+    phy <- ape::collapse.singles(phy)
+  phy$tip.label <- leaves.names[as.numeric(phy$tip.label)]
+  phy
+}
+
+
+#_________________________________
+## 3.2. Get a treedata object ####
 phyloseq_to_treedata <- function(physeq){
   
   ## ***********************
   ## 1 - GET TAXONOMIC TABLE
-  tax <- physeq@tax_table@.Data[,1:6]
+  tax <- physeq@tax_table@.Data[,1:6] # don't include Species
   # Add a "Life" column (rank0)
   tax <- cbind("Life", tax)
   colnames(tax)[1] <- "Life"
@@ -124,8 +179,8 @@ phyloseq_to_treedata <- function(physeq){
 }
 
 
-#______________________
-# 3.2. Function to get dataframe with information on number of ASVs detected for each genus
+#_________________________________
+## 3.3. Function to get dataframe with information on number of ASVs detected for each genus ####
 nb_ASV_per_genus <- function(physeq){
   
   asvGenus.df <- as.data.frame(tax_table(physeq)) %>%
@@ -185,8 +240,8 @@ nb_ASV_per_genus <- function(physeq){
 # }
 
 
-#______________________
-# 3.3. Function to get a dataframe with information on number of datasets where this genus is present
+#_________________________________
+## 3.4. Function to get a dataframe with information on number of datasets where this genus is present ####
 dataset_per_genus <- function(physeq){
 
   print("CAUTION: give the agglomerated phyloseq object for shorter running time")
