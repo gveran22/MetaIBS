@@ -1,7 +1,7 @@
 ---
 title: "Zeber2016_DataAnalysis"
 output:
-  html_document: default
+  html_document:
     df_print: paged
     toc: true
     toc_float: true
