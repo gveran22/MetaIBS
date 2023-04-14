@@ -14,6 +14,7 @@ Phyloseq objects in the [phyloseq-without-phylotree/](./phyloseq-without-phylotr
 - an ASV table (`otu_table()`);
 - a taxonomic table (`tax_table()`);
 - a metadata table (`sample_data()`).
+
 These phyloseq objects without a phylogenetic tree are useful for analyses on combined datasets, as you can't merge phylogenetic trees...
 
 
