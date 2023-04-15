@@ -20,7 +20,8 @@ ADD REPO TREE
 ## Requirements
 A few things are necessary for you to do before being able to use this repository:
 - download the [data/](data/) directory from our Zenodo link (ADD ZENODO LINK), and put it here in the root directory;
-- install R ([version 4.1.3.](https://cran.r-project.org/src/base/R-4/) was used for this project);
+- install [git LFS](https://git-lfs.com/) to be able to clone entirely this repository;
+- install R ([version 4.1.3.](https://cran.r-project.org/bin/macosx/base/) was used for this project);
 - install the required packages:
 	- for R packages: create your R project & run `renv::restore()` in your console, and it will download all the packages necessary at the version used for MetaIBS;
 	- for python packages: ...
