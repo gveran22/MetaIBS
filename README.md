@@ -12,13 +12,17 @@ This repository contains all the data and code used for the meta-analysis, and c
 - [data_empty/](data_empty/): empty `data` directory for users who would like to reproduce our results. It copies the directory structure of the [data/](data/) directory, containing only `README.md` files;
 - [scripts/](scripts/): `code` directory containing R scripts for (1) preprocessing raw fastq files into phyloseq objects; and (2) performing analyses on combined data from different datasets
 
+ADD REPO TREE
+
 
 <br/>
 
 ## Requirements
 A few things are necessary for you to do before being able to use this repository:
 - download the [data/](data/) directory from our Zenodo link (ADD ZENODO LINK), and put it here in the root directory;
-- install the required packages with ...
+- install the required packages:
+	- for R packages: create your R project & run `renv::restore()` in your console, and it will download all the packages necessary at the version used for MetaIBS;
+	- for python packages: ...
 
 
 <br/>
