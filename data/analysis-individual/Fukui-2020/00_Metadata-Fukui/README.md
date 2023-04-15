@@ -1,2 +1,3 @@
 This directory contains metadata for the Fukui dataset.
-- `FukuiSraRunTable.csv`: metadata table downloaded from the [SRA Run Selector](https://www.ncbi.nlm.nih.gov/Traces/study/?acc=PRJNA637763&o=acc_s%3Aa) (accession number PRJNA637763)
+- `Metadata-Fukui.csv`: final metadata table with essential information, cleaned up from `FukuiSraRunTable.txt` using the [00_Metadata-Fukui.R](../../../../scripts/analysis-individual/Fukui-2020/00_Metadata-Pozuelo.R) script;
+- `FukuiSraRunTable.txt`: metadata table downloaded from the [SRA Run Selector](https://www.ncbi.nlm.nih.gov/Traces/study/?acc=PRJNA637763&o=acc_s%3Aa) (accession number PRJNA637763).
