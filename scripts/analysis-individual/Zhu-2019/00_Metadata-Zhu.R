@@ -12,7 +12,7 @@
 library(tidyverse)
 
 # Data
-path <- "~/Projects/MetaIBS/scripts/analysis-individual/Zhu-2019"
+path <- "~/Projects/MetaIBS/scripts/analysis-individual/Zhu-2019" # CHANGE THIS PATH ON YOUR COMPUTER
 sraDF <- read.table(file.path(path, "00_Metadata-Zhu/ZhuSraRunTable.txt"), header = TRUE, sep = ",")
 
 

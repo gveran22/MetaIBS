@@ -1,3 +1,3 @@
-To download samples from your terminal, you need to have the SRA-toolkit installed (instructions to download the SRA-toolkit can be found [here](https://github.com/ncbi/sra-tools/wiki/)), and put the `sra-toolkit/` directory in your home directory, so that the `download_fastq_labus.sh` script can use the sra-toolkit to download the list of samples in `list_files_labus.txt`.
+To download samples from your terminal, you need to have the SRA-toolkit installed (instructions to download the SRA-toolkit can be found [here](https://github.com/ncbi/sra-tools/wiki/02.-Installing-SRA-Toolkit)), and put the `sra-toolkit/` directory in your home directory, so that the `download_fastq_labus.sh` script can use the sra-toolkit to download the list of samples in `list_files_labus.txt`.
 
 As an alternative, you can also download the fastq files directly from our zenodo (ADD LINK).
