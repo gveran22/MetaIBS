@@ -28,10 +28,12 @@ library(tidyverse)
 
 ## 1.2. Data
 ```{r import-data}
-path <- "~/Projects/MetaIBS/scripts/analysis-individual/Liu-2020"
+path.root <- "~/Projects/MetaIBS" # CHANGE THIS PATH ON YOUR COMPUTER
+path.scripts <- file.path(path.root, "scripts/analysis-individual/Liu-2020")
+path.data    <- file.path(path.root, "data/analysis-individual/Liu-2020")
 
 # Metadata table downloaded from the SRA
-sra_metadata <- read.csv(file.path(path, "00_Metadata-Liu/LiuSraRunTable.txt"), header=TRUE, sep = ",")
+sra_metadata <- read.csv(file.path(path.data, "00_Metadata-Liu/LiuSraRunTable.txt"), header=TRUE, sep = ",")
 head(sra_metadata)
 ```
 
@@ -69,10 +71,10 @@ head(clean.df)
 
 ```{r save-data, echo=TRUE, eval=FALSE}
 # Export metadata table
-write.csv(clean.df, file.path(path, "00_Metadata-Liu/modif_metadata(R).csv"))
+write.csv(clean.df, file.path(path.data, "00_Metadata-Liu/modif_metadata(R).csv"))
 
 # Export the list of Runs to download
-write.table(clean.df$Run, file.path(path, "download-Liu-samples/list_files_liu.txt"),
+write.table(clean.df$Run, file.path(path.scripts, "download-Liu-samples/list_files_liu.txt"),
             sep="\t", row.names=FALSE, col.names=FALSE, quote=FALSE)
 ```
 

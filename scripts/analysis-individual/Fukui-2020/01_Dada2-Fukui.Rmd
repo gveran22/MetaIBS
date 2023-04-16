@@ -74,8 +74,8 @@ PRJNA637763.
 
 ```{r quality-check, echo=TRUE, results="hide"}
 # Save the path to the directory containing the fastq zipped files
-path.fastq <- file.path(path.fukui, "download-Fukui-samples/")
-# list.files(path) # check we are in the right directory
+path.fastq <- file.path(path.fukui, "download-Fukui-samples")
+# list.files(path.fastq) # check we are in the right directory
 
 # fastq filenames have format: SAMPLENAME.fastq.gz
 # Saves the whole directory path to each file name
