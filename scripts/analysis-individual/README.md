@@ -34,10 +34,9 @@ If you wish to download yourself the fastq files of each dataset from the SRA da
 
 5. Test that the SRA toolkit is functional: 
  ```fastq-dump --stdout -X 2 SRR390728```
- 
- You should see as output after a few seconds:
+You should see as output after a few seconds:
 ```
- Read 2 spots for SRR390728
+Read 2 spots for SRR390728
 Written 2 spots for SRR390728
 @SRR390728.1 1 length=72
 CATTCTTCACGTAGTTCTCGAGCCTTGGTTTTCAGCGATGGAGAATGACTTTGACAAGCTGAGAGAAGNTNC
