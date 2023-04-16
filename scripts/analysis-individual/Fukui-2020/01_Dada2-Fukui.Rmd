@@ -56,6 +56,7 @@ errF              <- readRDS(file.path(path.data, "01_Dada2-Fukui/errF.rds")) # 
 errR              <- readRDS(file.path(path.data, "01_Dada2-Fukui/errR.rds")) # error rates
 dadaFs            <- readRDS(file.path(path.data, "01_Dada2-Fukui/infered_seq_F.rds")) # inferred ASVs
 dadaRs            <- readRDS(file.path(path.data, "01_Dada2-Fukui/infered_seq_R.rds")) # inferred ASVs
+mergers           <- readRDS(file.path(path.data, "01_Dada2-Fukui/mergers.rds")) # merged ASVs
 taxa              <- readRDS(file.path(path.data, "01_Dada2-Fukui/taxa_fukui.rds")) # taxa
 physeq            <- readRDS(file.path(path.root, "data/analysis-individual/CLUSTER/phylotree/input/physeq_fukui.rds")) # phyloseq object
 ```
@@ -82,7 +83,8 @@ fnFs <- sort(list.files(path.fastq, pattern="_1.fastq.gz", full.names = TRUE)) #
 fnRs <- sort(list.files(path.fastq, pattern="_2.fastq.gz", full.names = TRUE)) # reverse
 show(fnFs[1:5])
 show(fnRs[1:5])
-#length(fnFs) # should be 111
+# length(fnFs) # should be 111
+# length(fnRs) # should be 111
 
 # Extract sample names, assuming filenames have format: SAMPLENAME.fastq.gz
 sample.names <- sapply(strsplit(basename(fnFs), "_"), `[`, 1)
@@ -97,9 +99,9 @@ for (i in 1:3){ # 1:length(fnFs)
 # Look at nb of reads per sample
 # raw_stats <- data.frame('sample' = sample.names,
 #                         'reads' = fastqq(fnFs)@nReads)
-# min(raw_stats$reads)
-# max(raw_stats$reads)
-# mean(raw_stats$reads)
+# min(raw_stats$reads) # min 22,487 reads/sample
+# max(raw_stats$reads) # max 72,649 reads/sample
+# mean(raw_stats$reads) # 41,870 average
 ```
 
 We will have a quick peak at the per base sequence content of the reads in some samples, to make sure there is no anomaly (i.e. all reads having the same sequence).
@@ -148,7 +150,7 @@ primerHits <- function(primer, fn) {
 }
 
 # Look in all samples how many times the 27F and 338R primers are found in the reads of each sample
-for (i in 1:3){
+for (i in 1:3){ # 1:length(fnFs)
   cat("SAMPLE", sample.names[i], "with total number of", raw_stats[i,'reads'], "reads\n\n")
   x <- rbind(ForwardRead.FWDPrimer = sapply(FWD.orients, primerHits, fn = fnFs[[i]]),
              ForwardRead.REVPrimer = sapply(REV.orients, primerHits, fn = fnFs[[i]]),
@@ -159,6 +161,43 @@ for (i in 1:3){
 }
 ```
 
+Let's have a quick look at where primers are positioned in the forward/reverse reads
+```{r primer-position, fig.width = 5, fig.height = 4}
+# Function that gets position in which sequence is found
+primerHitsPosition <- function(primer, fn){
+  hits <- as.data.frame(vmatchPattern(primer, sread(readFastq(fn)), fixed = FALSE, max.mismatch = 2))
+  hits <- hits[,c("group", "start")]
+  colnames(hits) <- c("sample", "start")
+  hits$sample <- sapply(strsplit(basename(fn), "_"), `[`, 1)
+  hits$readslength <- seqTools::fastqq(fn)@maxSeqLen
+  return(hits)
+}
+
+# Get position of FWD primers
+FWDpos <- data.frame()
+for(i in 1:3){ # length(fnFs)
+  cat("SAMPLE", i)
+  new <- primerHitsPosition(FWD.orients["Forward"], fnFs[[i]])
+  FWDpos <- rbind(new, FWDpos)
+}
+ggplot(FWDpos, aes(x=start))+
+  geom_density(aes(y=..scaled..)) +
+  xlim(c(0,max(FWDpos$readslength)))+
+  labs(x="start position of FWD primer", y="proportion of primers starting at x position")
+
+# Get position of REV primers
+REVpos <- data.frame()
+for(i in 1:3){ # length(fnRs)
+  cat("SAMPLE", i)
+  new <- primerHitsPosition(REV.orients["Forward"], fnRs[[i]])
+  REVpos <- rbind(new, REVpos)
+}
+ggplot(REVpos, aes(x=start))+
+  geom_density(aes(y=..scaled..)) +
+  xlim(c(0,max(REVpos$readslength)))+
+  labs(x="start position of REV primer", y="proportion of primers starting at x position")
+```
+
 
 
 
@@ -167,10 +206,10 @@ for (i in 1:3){
 ********************
 
 ### 3.1. Primer removal
-The vast majority of the reads contain their respective primers (>95% of reads). After looking at the fastq files, the primers are located at the very beginning of the reads, as expected.
+The vast majority of the reads contain their respective primers (>95% of reads), and the primers are located at the very beginning of the reads, as expected.
 Ideally, to follow the standardized pipeline, we should (1) filter out reads not containing any primer and (2) trim the primers. However, the fastq files deposited on the SRA/ENA databases do not contain Illumina headers. Thus, during the merging step of paired reads later on, the Dada2 package won't be able to match paired-reads.
 
-We will simply perform a quality filtering of the reads, and trim the first 25bp of the reads.
+We will simply perform a quality filtering of the reads, and trim the first 25bp of the reads (primers start at position ~5, and they are 16bp long => 5+16=21, so let's trim 25bp to be safe).
 
 
 ### 3.2. Quality filtering
@@ -217,13 +256,14 @@ for (i in 1:3){
 Now we will build the parametric error model, to be able to infer amplicon sequence variants (ASVs) later on.
 
 ```{r error-rate-estimate, eval = FALSE}
+set.seed(123)
 errF <- learnErrors(FWD.filt2_samples, multithread=TRUE, randomize = TRUE, verbose = 1)
 errR <- learnErrors(REV.filt2_samples, multithread=TRUE, randomize = TRUE, verbose = 1)
 ```
 
 The error rates for each possible transition (A→C, A→G, …) are shown. Points are the observed error rates for each consensus quality score. The black line shows the estimated error rates after convergence of the machine-learning algorithm. The red line shows the error rates expected under the nominal definition of the Q-score. Here the estimated error rates (black line) are a good fit to the observed rates (points), and the error rates drop with increased quality as expected.
 
-```{r plot-errors, fig.height=5, fig.width=5}
+```{r plot-errors, fig.height=7, fig.width=7}
 plotErrors(errF, nominalQ = TRUE) # Forward reads
 plotErrors(errR, nominalQ = TRUE) # Reverse reads
 ```
@@ -336,19 +376,15 @@ track
 
 ```{r seqdepth, echo=FALSE, eval=FALSE, include=FALSE}
 # Save nb of reads per sample before / after dada2 pipeline
-nb.reads <- data.frame("before" = raw_stats$reads,
-                       "after" = rowSums(seqtable.nochim),
-                       "dataset" = "Fukui")
-# better alternative? choose!!
-# nb.reads <- as.data.frame(rowSums(seqtable.nochim)) %>%
-#   rename("after"="rowSums(seqtable.nochim)") %>%
-#   mutate("Run"=names(rowSums(seqtable.nochim))) %>%
-#   right_join(raw_stats %>% rename(Run=sample, before=reads),
-#              by="Run") %>%
-#   relocate(before) %>%
-#   relocate(Run) %>%
-#   mutate(after = nafill(after, fill=0),
-#          "dataset" = "AGP")
+nb.reads <- as.data.frame(rowSums(seqtable.nochim)) %>%
+  dplyr::rename("after"="rowSums(seqtable.nochim)") %>%
+  mutate("Run"=names(rowSums(seqtable.nochim))) %>%
+  right_join(raw_stats %>% dplyr::rename(Run=sample, before=reads),
+             by="Run") %>%
+  relocate(before) %>%
+  relocate(Run) %>%
+  mutate(after = nafill(after, fill=0),
+         "dataset" = "Fukui")
 
 saveRDS(nb.reads, file.path(path.root, "data/analysis-combined/06_QCplot/nbreads_fukui.rds"))
 ```
@@ -378,12 +414,12 @@ Extensions: The dada2 package also implements a method to make species level ass
 path.silva <- file.path(path.root, "data/analysis-individual/CLUSTER/taxonomy/silva-taxonomic-ref")
 
 # Assign taxonomy (with silva v138)
-taxa <- assignTaxonomy(seqtable.nochim, file.path(path.silva, "silva_nr_v138_train_set.fa.gz"),
+taxa <- assignTaxonomy(seqtable.nochim, file.path(path.silva, "silva_nr99_v138.1_train_set.fa.gz"),
                        tryRC = TRUE, # try reverse complement of the sequences
                        multithread=TRUE, verbose = TRUE)
 
 # Add species assignment
-taxa <- addSpecies(taxa, file.path(path.silva, "silva_species_assignment_v138.fa.gz"))
+taxa <- addSpecies(taxa, file.path(path.silva, "silva_species_assignment_v138.1.fa.gz"))
 ```
 
 ```{r}
@@ -412,31 +448,8 @@ The preprocessing will be easier to do with ASV, taxonomic and metadata tables c
 ```{r phyloseq-preprocess, echo=TRUE, eval=TRUE}
 #________________________
 # Import metadata
-metadata_table <- read.table(file.path(path.agp, "00_Metadata-Fukui/FukuiSraRunTable.txt"), header = TRUE, sep = ",")
+metadata_table <- read.csv(file.path(path.data, "00_Metadata-Fukui/Metadata-Fukui.csv"), row.names=1)
 
-# Keep relevant columns
-metadata_table <- metadata_table[, c("Run", "Sample.Name", "Collection_date")]
-
-metadata_table[grep("IBS*",metadata_table$Sample.Name), "host_disease"] <- "IBS"
-metadata_table[grep("HC*",metadata_table$Sample.Name), "host_disease"] <- "Healthy"
-
-metadata_table[metadata_table$host_disease == "Healthy", "host_subtype"] <- "HC"
-metadata_table[metadata_table$host_disease == "IBS", "host_subtype"] <- "IBS-unspecified"
-
-# Sanity check
-table(metadata_table$host_disease) # 85 IBS & 26 HC
-table(metadata_table$host_subtype) # 85 IBS & 26 HC
-
-metadata_table$Sample.Name <- NULL
-colnames(metadata_table)[2] <- "collection_date"
-rownames(metadata_table) <- metadata_table$Run
-head(metadata_table)
-
-metadata_table$sample_type <- "stool"
-metadata_table$author <- "Fukui"
-metadata_table$sequencing_tech <- "Illumina paired-end"
-metadata_table$variable_region <- "V1-V2"
-metadata_table$Collection <- "1st" # only 1 collection time point per individual
 
 #_________________________
 # Create phyloseq object
@@ -457,7 +470,7 @@ physeq <- prune_taxa(taxa_sums(physeq)>0, physeq)
 ### 7.2. Quick peek at data analysis
 ```{r plot, fig.width = 10, fig.height = 4}
 # Absolute abundance
-plot_bar(physeq, fill = "Phylum")+ facet_wrap("host_disease", scales="free_x") + theme(axis.text.x = element_blank())
+# plot_bar(physeq, fill = "Phylum")+ facet_wrap("host_disease", scales="free_x") + theme(axis.text.x = element_blank())
 
 # Relative abundance for Phylum
 phylum.table <- physeq %>%
