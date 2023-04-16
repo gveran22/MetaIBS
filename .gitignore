@@ -4,6 +4,9 @@ data_local/
 standard-RAxML-master/
 .Rproj.user/
 *.Rproj
+*.fastq.gz
+*.fa.gz
+data/analysis-individual/*.rds
 scripts/analysis-combined/plots/
 scripts/analysis-individual/AGP/*.nb.html
 scripts/analysis-individual/Pozuelo-2015/.ipynb_checkpoints/
