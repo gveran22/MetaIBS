@@ -59,6 +59,6 @@ rownames(metadata) <- metadata$Run
 # SAVE DATAFRAME 
 write.csv(metadata, file.path(path.data, "00_Metadata-Labus/Metadata-Labus.csv"))
 
-# Export list of files to download
-write.table(metadata$Run, file.path(path.scripts, "download-Labus-samples/list_files_labus.txt"),
-            sep="\t", row.names=FALSE, col.names=FALSE, quote=FALSE)
+# No need to export list of files to download, we'll download all .fastq files directly from the ENA
+# write.table(metadata$Run, file.path(path.scripts, "download-Labus-samples/list_files_labus.txt"),
+#             sep="\t", row.names=FALSE, col.names=FALSE, quote=FALSE)
