@@ -16,7 +16,7 @@ library(Biostrings)
 library(base)
 
 # CHANGE THIS PATH (for your cluster or your local computer)
-path.root <- "/grid/wsbs/home_norepl/scarcy/IBS/PhyloTree"
+path.root <- "~/IBS/PhyloTree"
 
 
 #____________________________________________________________________
