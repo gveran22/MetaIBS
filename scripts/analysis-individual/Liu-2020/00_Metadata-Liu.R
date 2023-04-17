@@ -1,33 +1,19 @@
----
-title: "00_Metadata-Liu"
-output:
-  html_document:
-    df_print: paged
-    toc: true
-    toc_float: true
----
-
-
-```{r, include=FALSE}
-knitr::opts_chunk$set(warning=FALSE, message=FALSE,
-                      root.dir = "~/Projects/MetaIBS/data/analysis-individual/Liu-2020/00_Metadata-Liu/")
-```
+##########################
+# Purpose: Build metadata table for Liu dataset
+# Date: March 2023
+# Author: Salomé Carcy
+##########################
 
 
 
+#____________________________________________________________________
+# IMPORT
 
-***********
-# 1. IMPORT
-***********
-
-## 1.1. Libraries
-```{r import-libraries}
+# Libraries
 library(data.table)
 library(tidyverse)
-```
 
-## 1.2. Data
-```{r import-data}
+# Data
 path.root <- "~/Projects/MetaIBS" # CHANGE THIS PATH ON YOUR COMPUTER
 path.scripts <- file.path(path.root, "scripts/analysis-individual/Liu-2020")
 path.data    <- file.path(path.root, "data/analysis-individual/Liu-2020")
@@ -35,56 +21,41 @@ path.data    <- file.path(path.root, "data/analysis-individual/Liu-2020")
 # Metadata table downloaded from the SRA
 sra_metadata <- read.csv(file.path(path.data, "00_Metadata-Liu/LiuSraRunTable.txt"), header=TRUE, sep = ",")
 head(sra_metadata)
-```
 
 
 
 
-******************
-# 2. CLEANUP TABLE
-******************
+#____________________________________________________________________
+# DATAFRAME CLEANUP
 
-```{r cleanup-metadata}
 clean.df <- sra_metadata %>%
   # Select relevant columns
   select(all_of(c("Run","Isolation_source", "sex", "AGE", "BMI", "Bristol", "IBS_SSS", "Collection_date"))) %>%
   # Reformat DF
-  rename(host_subtype = Isolation_source,
+  dplyr::rename(host_subtype = Isolation_source,
          host_sex = sex,
          host_age = AGE,
          host_bmi = BMI,
          collection_date = Collection_date) %>%
   mutate(host_disease = replace(host_subtype, host_subtype=="HC", "Healthy")) %>%
+  mutate(host_disease = str_replace(host_disease, "IBS-D", "IBS")) %>%
   mutate(sample_type = "stool") %>%
   relocate(host_disease, .after=Run) %>%
-  relocate(host_subtype, .after=IBS_SSS)
-
+  relocate(host_subtype, .after=IBS_SSS) %>%
+  # Add some additional covariates useful for future combined analyses
+  mutate(author="Liu", sequencing_tech="Illumina single-end", variable_region="V3-V4", Collection="1st")
+rownames(clean.df) <- clean.df$Run
 head(clean.df)
-```
 
 
 
 
-******************
-# 3. SAVE METADATA
-******************
+#____________________________________________________________________
+# SAVE DATAFRAME 
 
-```{r save-data, echo=TRUE, eval=FALSE}
 # Export metadata table
-write.csv(clean.df, file.path(path.data, "00_Metadata-Liu/modif_metadata(R).csv"))
+write.csv(clean.df, file.path(path.data, "00_Metadata-Liu/Metadata-Liu.csv"))
 
 # Export the list of Runs to download
 write.table(clean.df$Run, file.path(path.scripts, "download-Liu-samples/list_files_liu.txt"),
             sep="\t", row.names=FALSE, col.names=FALSE, quote=FALSE)
-```
-
-
-
-
-*****************
-# 4. SESSION INFO
-*****************
-
-```{r session-info}
-sessionInfo()
-```
