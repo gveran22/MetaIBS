@@ -501,6 +501,7 @@ saveRDS(mergers,   file.path(path.data, "01_Dada2-Fukui/mergers.rds"))
 # Taxa & phyloseq object
 saveRDS(taxa,   file.path(path.data, "01_Dada2-Fukui/taxa_fukui.rds"))
 saveRDS(physeq, file.path(path.root, "data/analysis-individual/CLUSTER/phylotree/input/physeq_fukui.rds"))
+saveRDS(physeq, file.path(path.root, "data/phyloseq-objects/phyloseq-without-phylotree/physeq_fukui.rds"))
 ```
 
 
