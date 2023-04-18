@@ -76,19 +76,6 @@ def run_sccoda(author, level, data_dir, add=None, fdr_level=0.1,):
     return effect_df
 
 
-def run_ancom_model(author, level, data_dir, add=None):
-    data = agg_ibs_data(author, level, data_dir)
-    if add is not None:
-        data = data[data.obs[add[0]] == add[1]]
-
-    data.X[data.X == 0] = 0.5
-    ac = om.AncomModel(data, covariate_column="host_disease")
-    ac.fit_model()
-    out = ac.ancom_out[0].loc[:, ["W", "Reject null hypothesis"]]
-
-    return out
-
-
 def run_ancombc_model(author, level, data_dir, add=None, alpha=0.05):
     data = agg_ibs_data(author, level, data_dir)
     if add is not None:
@@ -203,11 +190,6 @@ def read_authors_results(authors, data_dir, method, adds=None, alpha=None, run_n
                         if method == "sccoda":
                             res_ = res_.reset_index()
                             res_["Is credible"] = (res_["Final Parameter"] != 0)
-                        elif method == "ancom":
-                            res_ = res_.reset_index().rename(columns={
-                                "index": "Cell Type",
-                                "Reject null hypothesis": "Is credible"
-                            })
                         elif method == "ANCOMBC":
                             res_ = res_.reset_index().rename(columns={
                                 "index": "Cell Type",
