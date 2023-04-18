@@ -24,7 +24,7 @@ A few things are necessary for you to do before being able to use this repositor
 - install R ([version 4.1.3.](https://cran.r-project.org/bin/macosx/base/) was used for this project);
 - install the required packages:
 	- for R packages: create your R project & run `renv::restore()` in your console, and it will download all the packages necessary at the version used for MetaIBS;
-	- for python packages: ...
+	- for python packages: create a new python environment and install the packages in `requirements.txt` via pip: `pip install -r requirements.txt`
 
 
 <br/>

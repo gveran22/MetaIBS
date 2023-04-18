@@ -4,12 +4,10 @@ import anndata as ad
 import numpy as np
 import toytree as tt
 import toyplot
-import sys
 import toyplot.color
 
 import sccoda.util.comp_ana as mod
 import sccoda.model.other_models as om
-import tree_aggregation.tree_ana as ta
 
 from rpy2.robjects import numpy2ri, pandas2ri
 import rpy2.robjects as rp
@@ -17,8 +15,8 @@ numpy2ri.activate()
 pandas2ri.activate()
 import rpy2.robjects.packages as rpackages
 
-r_home = "/Library/Frameworks/R.framework/Resources"
-r_path = r"/Library/Frameworks/R.framework/Resources/bin"
+r_home = "/Library/Frameworks/R.framework/Resources" # CHANGE THIS DIRECTORY ON YOUR COMPUTER
+r_path = r"/Library/Frameworks/R.framework/Resources/bin" # CHANGE THIS DIRECTORY ON YOUR COMPUTER
 
 os.environ["R_HOME"] = r_home
 os.environ["PATH"] = r_path + ";" + os.environ["PATH"]
@@ -76,57 +74,6 @@ def run_sccoda(author, level, data_dir, add=None, fdr_level=0.1,):
     _, effect_df = result.summary_prepare(est_fdr = fdr_level)
 
     return effect_df
-
-
-def run_tree_agg(author, level, data_dir, add=None, fdr_level=0.1, reg="None", pen_args={"lambda": 10, "phi": 2}, model="old"):
-
-    references = {
-        "Genus": "Bacteria*Proteobacteria*Gammaproteobacteria*Burkholderiales*Sutterellaceae*Parasutterella",
-        "Family": "Bacteria*Proteobacteria*Gammaproteobacteria*Burkholderiales*Sutterellaceae",
-        "Order": "Bacteria*Proteobacteria*Gammaproteobacteria*Burkholderiales",
-        "Class": "Bacteria*Proteobacteria*Gammaproteobacteria",
-        "Phylum": "Bacteria*Proteobacteria",
-    }
-
-    data = agg_ibs_data(author, level, data_dir)
-    if add is not None:
-        data = data[data.obs[add[0]] == add[1]]
-
-    n_level = tax_levels.index(level)+1
-
-    for char in data.var.index:
-        split = char.split(sep="*")
-
-        for n in range(n_level):
-            data.var.loc[char, tax_levels[n]] = "*".join(split[:n+1])
-
-    newick = df2newick(data.var.reset_index(drop=True))
-
-    tree = tt.tree(newick, tree_format=1)
-    data.uns["phylo_tree"] = tree
-
-    data = data[:, tree.get_tip_labels()]
-
-    model = ta.CompositionalAnalysisTree(
-        data=data,
-        formula="C(host_disease, Treatment('Healthy'))",
-        reference_cell_type=references[level],
-        reg=reg,
-        pen_args=pen_args,
-        model=model
-    )
-    result = model.sample_hmc_da(num_results=2000, num_burnin=500)
-    result.set_fdr(fdr_level)
-
-    eff_lv = get_phylo_levels(result.effect_df.reset_index(), level)
-    result.effect_df.index = pd.MultiIndex.from_frame(eff_lv)
-
-    nd = result.node_df.reset_index()
-    node_lv = get_phylo_levels(nd, level, "Node")
-    result.node_df.index = pd.MultiIndex.from_frame(node_lv)
-    result.node_df["Cell Type"] = np.array(nd.loc[:, "Node"])
-
-    return result
 
 
 def run_ancom_model(author, level, data_dir, add=None):
