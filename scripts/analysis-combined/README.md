@@ -30,4 +30,3 @@ A bash script to execute the logratio analysis is provided in the corresponding 
 <p align="center">
 	<img src="https://media.tenor.com/TcSYAlWSHC0AAAAd/bioinformatics-market.gif" height="300"/>
 </p>
-~/MetaIBS/scripts/analysis-combined/11_shared-classification-analysis
