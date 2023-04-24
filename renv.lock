@@ -137,6 +137,28 @@
       ],
       "Hash": "b2866e62bab9378c3cc9476a1954226b"
     },
+    "DECIPHER": {
+      "Package": "DECIPHER",
+      "Version": "2.22.0",
+      "Source": "Bioconductor",
+      "git_url": "https://git.bioconductor.org/packages/DECIPHER",
+      "git_branch": "RELEASE_3_14",
+      "git_last_commit": "45da5ca",
+      "git_last_commit_date": "2021-10-26",
+      "Requirements": [
+        "Biostrings",
+        "DBI",
+        "IRanges",
+        "R",
+        "RSQLite",
+        "S4Vectors",
+        "XVector",
+        "methods",
+        "parallel",
+        "stats"
+      ],
+      "Hash": "ae960336cac449fa17ba2b9c5cb1d092"
+    },
     "DelayedArray": {
       "Package": "DelayedArray",
       "Version": "0.20.0",
@@ -354,6 +376,24 @@
         "methods"
       ],
       "Hash": "1d6ed2d006d483f31c6d5531f3a39923"
+    },
+    "RSQLite": {
+      "Package": "RSQLite",
+      "Version": "2.3.1",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Requirements": [
+        "DBI",
+        "R",
+        "bit64",
+        "blob",
+        "cpp11",
+        "memoise",
+        "methods",
+        "pkgconfig",
+        "plogr"
+      ],
+      "Hash": "207c90cd5438a1f596da2cd54c606fee"
     },
     "RSeqAn": {
       "Package": "RSeqAn",
@@ -1481,6 +1521,25 @@
       ],
       "Hash": "29bb601821609476215720798eecf979"
     },
+    "ggb": {
+      "Package": "ggb",
+      "Version": "0.10.0",
+      "Source": "GitHub",
+      "RemoteType": "github",
+      "RemoteHost": "api.github.com",
+      "RemoteRepo": "ggb",
+      "RemoteUsername": "jacobbien",
+      "RemoteRef": "HEAD",
+      "RemoteSha": "76a00af23715c349e81a50e3fa646123f9f4c80d",
+      "Requirements": [
+        "Matrix",
+        "graphics",
+        "hsm",
+        "igraph",
+        "stats"
+      ],
+      "Hash": "205faf58cb06fd89a1347c7aa9f9363b"
+    },
     "ggdendro": {
       "Package": "ggdendro",
       "Version": "0.1.23",
@@ -1655,17 +1714,20 @@
     },
     "ggtree": {
       "Package": "ggtree",
-      "Version": "3.2.1",
-      "Source": "Bioconductor",
+      "Version": "3.7.2",
+      "Source": "GitHub",
       "Remotes": "GuangchuangYu/treeio",
-      "git_url": "https://git.bioconductor.org/packages/ggtree",
-      "git_branch": "RELEASE_3_14",
-      "git_last_commit": "d3747e6",
-      "git_last_commit_date": "2021-11-14",
+      "RemoteType": "github",
+      "RemoteHost": "api.github.com",
+      "RemoteRepo": "ggtree",
+      "RemoteUsername": "YuLab-SMU",
+      "RemoteRef": "HEAD",
+      "RemoteSha": "d1627ba625fb96bddc679f7cb6ae87a9615a3f27",
       "Requirements": [
         "R",
         "ape",
         "aplot",
+        "cli",
         "dplyr",
         "ggfun",
         "ggplot2",
@@ -1675,13 +1737,14 @@
         "purrr",
         "rlang",
         "scales",
+        "stats",
         "tidyr",
         "tidytree",
         "treeio",
         "utils",
         "yulab.utils"
       ],
-      "Hash": "f156c85173024c88e2fdfd63ccca3fd7"
+      "Hash": "32bc8bd5b3b8a7242803bad9addcc713"
     },
     "ggupset": {
       "Package": "ggupset",
@@ -1698,6 +1761,24 @@
         "tibble"
       ],
       "Hash": "8e9eb92bf465601c07d17c5e8b75dce1"
+    },
+    "glmnet": {
+      "Package": "glmnet",
+      "Version": "4.1-7",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Requirements": [
+        "Matrix",
+        "R",
+        "Rcpp",
+        "RcppEigen",
+        "foreach",
+        "methods",
+        "shape",
+        "survival",
+        "utils"
+      ],
+      "Hash": "06f12f72ce94e533751a041cef8b71bc"
     },
     "glue": {
       "Package": "glue",
@@ -1871,6 +1952,16 @@
         "vctrs"
       ],
       "Hash": "b59377caa7ed00fa41808342002138f9"
+    },
+    "hsm": {
+      "Package": "hsm",
+      "Version": "0.2.0",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Requirements": [
+        "R"
+      ],
+      "Hash": "f1d3c12c532ec12752aa8532c4f39990"
     },
     "htmltools": {
       "Package": "htmltools",
@@ -2613,6 +2704,13 @@
       ],
       "Hash": "6b0c222c5071efe0f3baf3dae9aa40e2"
     },
+    "plogr": {
+      "Package": "plogr",
+      "Version": "0.2.0",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Hash": "09eb987710984fc2905c7129c7d85e65"
+    },
     "plotly": {
       "Package": "plotly",
       "Version": "4.10.1",
@@ -3148,6 +3246,19 @@
       ],
       "Hash": "4cee64e648b566f9aa2297662e424465"
     },
+    "shape": {
+      "Package": "shape",
+      "Version": "1.4.6",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Requirements": [
+        "R",
+        "grDevices",
+        "graphics",
+        "stats"
+      ],
+      "Hash": "9067f962730f58b14d8ae54ca885509f"
+    },
     "shiny": {
       "Package": "shiny",
       "Version": "1.7.4",
@@ -3477,6 +3588,36 @@
         "xfun"
       ],
       "Hash": "c0f007e2eeed7722ce13d42b84a22e07"
+    },
+    "trac": {
+      "Package": "trac",
+      "Version": "0.0.2",
+      "Source": "GitHub",
+      "Remotes": "jacobbien/ggb",
+      "RemoteType": "github",
+      "RemoteHost": "api.github.com",
+      "RemoteRepo": "trac",
+      "RemoteUsername": "viettr",
+      "RemoteRef": "HEAD",
+      "RemoteSha": "aa19e831d328f3537c1539fe62cbfc30632ffb26",
+      "Requirements": [
+        "Matrix",
+        "R",
+        "ape",
+        "dplyr",
+        "ggb",
+        "ggplot2",
+        "glmnet",
+        "igraph",
+        "magrittr",
+        "purrr",
+        "reticulate",
+        "rlang",
+        "stringr",
+        "tibble",
+        "tidyr"
+      ],
+      "Hash": "aa6decbbb800998cfadc1fc15fb1104a"
     },
     "treeio": {
       "Package": "treeio",

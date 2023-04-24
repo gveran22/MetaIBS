@@ -22,10 +22,12 @@ A bash script to execute the logratio analysis is provided in the corresponding 
 | [`10_DA-analysis/DA_analysis_run.ipynb`](./10_DA-analysis/DA_analysis_run.ipynb)                         |                  -                  | Differential abundance analysis of all datasets individually (run models and create intermediate results)                                       |
 | [`10_DA-analysis/DA_analysis_individual_data.ipynb`](./10_DA-analysis/DA_analysis_individual_data.ipynb) | Fig4, FigS8, FigS9, Table2, TableS5 | Differential abundance analysis of all datasets individually (result analysis)                                                                  |
 | [`10_DA-analysis/shared_ASV_run.ipynb`](./10_DA-analysis/shared_ASV_run.ipynb)                           |                  -                  | Differential abundance analysis of shared ASVs between Nagel and Pozuelo datasets (preparation for next chapter)                                |
-
-
+| [`11_shared-classification-analysis/11a_shared_classification.R`](./11_shared-classification-analysis/11a_shared_classification.R)                           |                  -                  | Classification analysis of shared ASVs between Nagel and Pozuelo datasets                       |
+| [`11_shared-classification-analysis/11b_additional_plots.R`](./11_shared-classification-analysis/11b_additional_plots.R)                           |                  -                  | Create supporting figures for the shared ASV analysis                                |
+| [`11_shared-classification-analysis/11c_combine_plots.R`](./11_shared-classification-analysis/11c_combine_plots.R)                           |                  Fig5                  | Combine the figures from the previous scripts in the folder                                |
 <br/>
 
 <p align="center">
 	<img src="https://media.tenor.com/TcSYAlWSHC0AAAAd/bioinformatics-market.gif" height="300"/>
 </p>
+~/MetaIBS/scripts/analysis-combined/11_shared-classification-analysis

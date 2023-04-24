@@ -12,3 +12,4 @@ scripts/analysis-individual/AGP/*.nb.html
 scripts/analysis-individual/Pozuelo-2015/.ipynb_checkpoints/
 scripts/analysis-combined/additional_scripts/
 scripts/analysis-combined/scripts_cluster/
+Dockerfile
