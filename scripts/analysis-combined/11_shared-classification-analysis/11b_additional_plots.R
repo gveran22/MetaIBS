@@ -22,7 +22,7 @@ library(ggupset)
 library(cowplot)
 
 ## 1.2. Data ####
-path_root <- "~/MetaIBS" # CHANGE THIS ROOT DIRECTORY ON YOUR COMPUTER
+path_root <- "~/Projects/MetaIBS" # CHANGE THIS ROOT DIRECTORY ON YOUR COMPUTER
 path_intermed <- paste0(path_root,
                         "/data/analysis-combined/11_shared_classification/")
 path_phylobj <- 
