@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/.idea/IBS_Meta-analysis_16S.iml" filepath="$PROJECT_DIR$/.idea/IBS_Meta-analysis_16S.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/MetaIBS.iml" filepath="$PROJECT_DIR$/.idea/MetaIBS.iml" />
     </modules>
   </component>
 </project>

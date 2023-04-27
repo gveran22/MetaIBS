@@ -2,8 +2,8 @@
 
 This repository contains `scripts` to perform statistical analyses on combined datasets. These scripts were used to make the figures in the paper.
 
-Note: we strongly recommend to run [`04a_LogRatios-Taxa.R`](./04a_LogRatios-Taxa.R) and [`10_DA-analysis/DA_analysis_run.ipynb`](./10_DA-analysis/DA_analysis_run.ipynb) on a high performance computing cluster. 
-A bash script to execute the logratio analysis is provided in the corresponding [data](../../data/analysis-combined/04a_LogRatios-Taxa/) directory. Code for executing the differential abundance analysis in a distributed fashion is available upon request.
+Note: we strongly recommend to run [`04a_LogRatios-Taxa.R`](./04a_LogRatios-Taxa.R), the scCODA/AGP part of[`10_DA-analysis/DA_analysis_run.ipynb`](./10_DA-analysis/DA_analysis_run.ipynb) and the scCODA part of [`10_DA-analysis/shared_ASV_run.ipynb`](./10_DA-analysis/shared_ASV_run.ipynb) on a high performance computing cluster. 
+A bash script to execute the logratio analysis is provided in the corresponding [data](../../data/analysis-combined/04a_LogRatios-Taxa/) directory. Code for executing the differential abundance analysis in a distributed fashion is provided in the [data folder](../../data/analysis-combined/CLUSTER/DA_analysis).
 
 
 | **Script**                                                                                               |         **Paper figure(s)**         | **Short description**                                                                                                                           |
