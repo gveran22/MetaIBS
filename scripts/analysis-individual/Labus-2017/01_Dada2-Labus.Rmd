@@ -478,7 +478,7 @@ saveRDS(seq_infered, file.path(path.data, "01_Dada2-Labus/seq_infered.rds"))
 
 # Taxa & Phyloseq object
 saveRDS(taxa,   file.path(path.data, "01_Dada2-Labus/taxa_labus.rds"))
-saveRDS(physeq, file.path(path.root, "data/analysis-individual/CLUSTER/PhyloTree/input/physeq_labus.rds"))
+saveRDS(physeq, file.path(path.root, "data/analysis-individual/CLUSTER/phylotree/input/physeq_labus.rds"))
 saveRDS(physeq, file.path(path.root, "data/phyloseq-objects/phyloseq-without-phylotree/physeq_labus.rds"))
 ```
 
