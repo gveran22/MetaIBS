@@ -32,6 +32,24 @@
     "Version": "3.14"
   },
   "Packages": {
+    "ANCOMBC": {
+      "Package": "ANCOMBC",
+      "Version": "1.4.0",
+      "Source": "Bioconductor",
+      "git_url": "https://git.bioconductor.org/packages/ANCOMBC",
+      "git_branch": "RELEASE_3_14",
+      "git_last_commit": "b9a7fb1",
+      "git_last_commit_date": "2021-10-26",
+      "Requirements": [
+        "MASS",
+        "Rdpack",
+        "microbiome",
+        "nloptr",
+        "phyloseq",
+        "stats"
+      ],
+      "Hash": "01d19305af91bf6cf081f8a9dfdb18d1"
+    },
     "BH": {
       "Package": "BH",
       "Version": "1.81.0-1",
@@ -345,6 +363,29 @@
       ],
       "Hash": "963ab8fbaf980a5b081ed40419081439"
     },
+    "MicrobiomeStat": {
+      "Package": "MicrobiomeStat",
+      "Version": "1.1",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Requirements": [
+        "MASS",
+        "Matrix",
+        "R",
+        "foreach",
+        "ggplot2",
+        "ggrepel",
+        "lmerTest",
+        "matrixStats",
+        "modeest",
+        "parallel",
+        "phyloseq",
+        "statmod",
+        "stats",
+        "utils"
+      ],
+      "Hash": "db2c0667f3ad68f92a6037d6c1484122"
+    },
     "R6": {
       "Package": "R6",
       "Version": "2.5.1",
@@ -456,7 +497,7 @@
         "stats",
         "utils"
       ],
-      "Hash": "dee7cfd76b4c78bab84e09b74b6d471f"
+      "Hash": "39aed0e5fbb0b775a1752ad7813fc56c"
     },
     "RcppEigen": {
       "Package": "RcppEigen",
@@ -499,6 +540,20 @@
         "Rcpp"
       ],
       "Hash": "c232938949fcd8126034419cc529333a"
+    },
+    "Rdpack": {
+      "Package": "Rdpack",
+      "Version": "2.4",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Requirements": [
+        "R",
+        "methods",
+        "rbibutils",
+        "tools",
+        "utils"
+      ],
+      "Hash": "0ddbe51591ab1d3e7362e0da3727c837"
     },
     "Rhdf5lib": {
       "Package": "Rhdf5lib",
@@ -980,6 +1035,20 @@
       ],
       "Hash": "3f038e5ac7f41d4ac41ce658c85e3042"
     },
+    "clue": {
+      "Package": "clue",
+      "Version": "0.3-64",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Requirements": [
+        "R",
+        "cluster",
+        "graphics",
+        "methods",
+        "stats"
+      ],
+      "Hash": "f013e45eb656a4bb17b39cb24827a51f"
+    },
     "cluster": {
       "Package": "cluster",
       "Version": "2.1.4",
@@ -1349,6 +1418,27 @@
       ],
       "Hash": "4b68aa51edd89a0e044a66e75ae3cc6c"
     },
+    "fBasics": {
+      "Package": "fBasics",
+      "Version": "4022.94",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Requirements": [
+        "MASS",
+        "R",
+        "grDevices",
+        "graphics",
+        "gss",
+        "methods",
+        "spatial",
+        "stabledist",
+        "stats",
+        "timeDate",
+        "timeSeries",
+        "utils"
+      ],
+      "Hash": "6995d354e6cfe1bfd3fef9c71f1ec894"
+    },
     "fansi": {
       "Package": "fansi",
       "Version": "1.0.4",
@@ -1527,9 +1617,9 @@
       "Source": "GitHub",
       "RemoteType": "github",
       "RemoteHost": "api.github.com",
-      "RemoteRepo": "ggb",
       "RemoteUsername": "jacobbien",
-      "RemoteRef": "HEAD",
+      "RemoteRepo": "ggb",
+      "RemoteRef": "master",
       "RemoteSha": "76a00af23715c349e81a50e3fa646123f9f4c80d",
       "Requirements": [
         "Matrix",
@@ -1538,7 +1628,7 @@
         "igraph",
         "stats"
       ],
-      "Hash": "205faf58cb06fd89a1347c7aa9f9363b"
+      "Hash": "77eec21c48923e32b4de562c9c94823e"
     },
     "ggdendro": {
       "Package": "ggdendro",
@@ -1714,20 +1804,18 @@
     },
     "ggtree": {
       "Package": "ggtree",
-      "Version": "3.7.2",
-      "Source": "GitHub",
+      "Version": "3.2.1",
+      "Source": "Bioconductor",
+      "RemoteType": "bioconductor",
       "Remotes": "GuangchuangYu/treeio",
-      "RemoteType": "github",
-      "RemoteHost": "api.github.com",
-      "RemoteRepo": "ggtree",
-      "RemoteUsername": "YuLab-SMU",
-      "RemoteRef": "HEAD",
-      "RemoteSha": "d1627ba625fb96bddc679f7cb6ae87a9615a3f27",
+      "git_url": "https://git.bioconductor.org/packages/ggtree",
+      "git_branch": "RELEASE_3_14",
+      "git_last_commit": "d3747e6",
+      "git_last_commit_date": "2021-11-14",
       "Requirements": [
         "R",
         "ape",
         "aplot",
-        "cli",
         "dplyr",
         "ggfun",
         "ggplot2",
@@ -1737,14 +1825,31 @@
         "purrr",
         "rlang",
         "scales",
-        "stats",
         "tidyr",
         "tidytree",
         "treeio",
         "utils",
         "yulab.utils"
       ],
-      "Hash": "32bc8bd5b3b8a7242803bad9addcc713"
+      "Hash": "c06d1d4b6b9c6be846276d74ff8c1596"
+    },
+    "ggtreeExtra": {
+      "Package": "ggtreeExtra",
+      "Version": "1.4.2",
+      "Source": "Bioconductor",
+      "git_url": "https://git.bioconductor.org/packages/ggtreeExtra",
+      "git_branch": "RELEASE_3_14",
+      "git_last_commit": "c5bde8b",
+      "git_last_commit_date": "2022-03-06",
+      "Requirements": [
+        "ggnewscale",
+        "ggplot2",
+        "ggtree",
+        "rlang",
+        "stats",
+        "utils"
+      ],
+      "Hash": "1447c9a03742ce2d64a006498eb1568b"
     },
     "ggupset": {
       "Package": "ggupset",
@@ -1870,6 +1975,17 @@
       ],
       "Hash": "5b79228594f02385d4df4979284879ae"
     },
+    "gss": {
+      "Package": "gss",
+      "Version": "2.2-4",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Requirements": [
+        "R",
+        "stats"
+      ],
+      "Hash": "9a50bc1b941c56575ff3432e84673ef7"
+    },
     "gtable": {
       "Package": "gtable",
       "Version": "0.3.3",
@@ -1956,12 +2072,17 @@
     "hsm": {
       "Package": "hsm",
       "Version": "0.2.0",
-      "Source": "Repository",
-      "Repository": "CRAN",
+      "Source": "GitHub",
+      "RemoteType": "github",
+      "RemoteHost": "api.github.com",
+      "RemoteUsername": "yanxht",
+      "RemoteRepo": "hsm",
+      "RemoteRef": "master",
+      "RemoteSha": "c74ba4d8251c6f800655ea2bf683d51c0279bd1b",
       "Requirements": [
         "R"
       ],
-      "Hash": "f1d3c12c532ec12752aa8532c4f39990"
+      "Hash": "1e7949955c0cc8e239146b55b289a506"
     },
     "htmltools": {
       "Package": "htmltools",
@@ -2277,6 +2398,22 @@
       ],
       "Hash": "d4cc4256e96d6d1e6798d316ffa0b761"
     },
+    "lmerTest": {
+      "Package": "lmerTest",
+      "Version": "3.1-3",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Requirements": [
+        "MASS",
+        "R",
+        "ggplot2",
+        "lme4",
+        "methods",
+        "numDeriv",
+        "stats"
+      ],
+      "Hash": "f04948de84602afc23bfa9f5427e954d"
+    },
     "lubridate": {
       "Package": "lubridate",
       "Version": "1.9.2",
@@ -2406,6 +2543,21 @@
         "Rcpp"
       ],
       "Hash": "587ce77fd3c7bada7eadb2d18b62930d"
+    },
+    "modeest": {
+      "Package": "modeest",
+      "Version": "2.4.0",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Requirements": [
+        "R",
+        "fBasics",
+        "stable",
+        "stabledist",
+        "statip",
+        "stats"
+      ],
+      "Hash": "af93fbfa4f5fceb8d36d736ebc4b0982"
     },
     "modelr": {
       "Package": "modelr",
@@ -2918,7 +3070,7 @@
         "stats",
         "survival"
       ],
-      "Hash": "b8b2b861526c344a7e16e5991fa5a4ab"
+      "Hash": "6cdf5a3dc958f55529b0401a8e5869e3"
     },
     "ragg": {
       "Package": "ragg",
@@ -2940,6 +3092,18 @@
         "R"
       ],
       "Hash": "5e3c5dc0b071b21fa128676560dbe94d"
+    },
+    "rbibutils": {
+      "Package": "rbibutils",
+      "Version": "2.2.13",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Requirements": [
+        "R",
+        "tools",
+        "utils"
+      ],
+      "Hash": "62e3171e3c0ac826602aae0944ad0372"
     },
     "readr": {
       "Package": "readr",
@@ -3125,6 +3289,29 @@
         "yaml"
       ],
       "Hash": "493df4ae51e2e984952ea4d5c75786a3"
+    },
+    "rmutil": {
+      "Package": "rmutil",
+      "Version": "1.1.10",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Requirements": [
+        "R"
+      ],
+      "Hash": "79c22a87416140a5c2252be2f89938dd"
+    },
+    "rpart": {
+      "Package": "rpart",
+      "Version": "4.1.16",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Requirements": [
+        "R",
+        "grDevices",
+        "graphics",
+        "stats"
+      ],
+      "Hash": "ea3ca1d9473daabb3cd0f1b4f974c1ed"
     },
     "rprojroot": {
       "Package": "rprojroot",
@@ -3341,6 +3528,67 @@
         "utils"
       ],
       "Hash": "6674e075a078d9c3bde8ba800367347c"
+    },
+    "spatial": {
+      "Package": "spatial",
+      "Version": "7.3-15",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Requirements": [
+        "R",
+        "graphics",
+        "stats",
+        "utils"
+      ],
+      "Hash": "c23666fdb7789c8a45e65340bb334607"
+    },
+    "stable": {
+      "Package": "stable",
+      "Version": "1.1.6",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Requirements": [
+        "R",
+        "rmutil"
+      ],
+      "Hash": "9348898e2aeea4a23610d8e098b232c2"
+    },
+    "stabledist": {
+      "Package": "stabledist",
+      "Version": "0.7-1",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Requirements": [
+        "R",
+        "stats"
+      ],
+      "Hash": "dfd9740f06248fb6721d38df2e14ed7b"
+    },
+    "statip": {
+      "Package": "statip",
+      "Version": "0.2.3",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Requirements": [
+        "R",
+        "clue",
+        "graphics",
+        "rpart",
+        "stats"
+      ],
+      "Hash": "e8f836ea3cd631116a3dc23e1a452538"
+    },
+    "statmod": {
+      "Package": "statmod",
+      "Version": "1.5.0",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Requirements": [
+        "R",
+        "graphics",
+        "stats"
+      ],
+      "Hash": "26e158d12052c279bdd4ba858b80fb1f"
     },
     "stringi": {
       "Package": "stringi",
@@ -3568,6 +3816,36 @@
       ],
       "Hash": "c328568cd14ea89a83bd4ca7f54ae07e"
     },
+    "timeDate": {
+      "Package": "timeDate",
+      "Version": "4022.108",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Requirements": [
+        "R",
+        "graphics",
+        "methods",
+        "stats",
+        "utils"
+      ],
+      "Hash": "3f7918d2b36c17ffe07cddba6458453e"
+    },
+    "timeSeries": {
+      "Package": "timeSeries",
+      "Version": "4021.105",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Requirements": [
+        "R",
+        "grDevices",
+        "graphics",
+        "methods",
+        "stats",
+        "timeDate",
+        "utils"
+      ],
+      "Hash": "4ec75676928e078644f30959c7171add"
+    },
     "timechange": {
       "Package": "timechange",
       "Version": "0.2.0",
@@ -3591,15 +3869,15 @@
     },
     "trac": {
       "Package": "trac",
-      "Version": "0.0.2",
+      "Version": "0.0.1",
       "Source": "GitHub",
-      "Remotes": "jacobbien/ggb",
       "RemoteType": "github",
       "RemoteHost": "api.github.com",
+      "RemoteUsername": "jacobbien",
       "RemoteRepo": "trac",
-      "RemoteUsername": "viettr",
-      "RemoteRef": "HEAD",
-      "RemoteSha": "aa19e831d328f3537c1539fe62cbfc30632ffb26",
+      "RemoteRef": "master",
+      "RemoteSha": "b6b9f4c08391d618152c4e02caf9eb4d6798aed8",
+      "Remotes": "jacobbien/ggb",
       "Requirements": [
         "Matrix",
         "R",
@@ -3607,7 +3885,6 @@
         "dplyr",
         "ggb",
         "ggplot2",
-        "glmnet",
         "igraph",
         "magrittr",
         "purrr",
@@ -3617,7 +3894,7 @@
         "tibble",
         "tidyr"
       ],
-      "Hash": "aa6decbbb800998cfadc1fc15fb1104a"
+      "Hash": "af7a8ee09b7589f4ad3cc4386e72fa22"
     },
     "treeio": {
       "Package": "treeio",
