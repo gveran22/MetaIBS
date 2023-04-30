@@ -8,12 +8,12 @@ This repository contains all the data and code used for the meta-analysis, and c
 </p>
 
 <u>Table of contents</u>:
-- [Meta-analysis overview](https://github.com/bio-datascience/MetaIBS#meta-analysis-overview-)
-- [Structure of this repository](https://github.com/bio-datascience/MetaIBS#structure-of-the-repository-)
+- [Meta-analysis overview](https://github.com/bio-datascience/MetaIBS#meta-analysis-overview)
+- [Structure of this repository](https://github.com/bio-datascience/MetaIBS#structure-of-the-repository)
 - [Requirements](https://github.com/bio-datascience/MetaIBS#requirements)
-- [How to use this repository](https://github.com/bio-datascience/MetaIBS#how-to-use-this-repository-)
-	- [Reproduce figures from the paper](https://github.com/bio-datascience/MetaIBS#reproduce-figures-from-the-paper-)
-	- [Extend meta-analysis by adding your own datasets](https://github.com/bio-datascience/MetaIBS#extend-the-meta-analysis-by-adding-your-own-datasets-)
+- [How to use this repository](https://github.com/bio-datascience/MetaIBS#how-to-use-this-repository)
+	- [Reproduce figures from the paper](https://github.com/bio-datascience/MetaIBS#reproduce-figures-from-the-paper)
+	- [Extend meta-analysis by adding your own datasets](https://github.com/bio-datascience/MetaIBS#extend-the-meta-analysis-by-adding-your-own-datasets)
 
 <br/>
 
