@@ -72,7 +72,7 @@ First, we import the fastq files containing the raw reads. The samples were down
 
 ```{r quality-check, echo=TRUE, results="hide", message=FALSE}
 # Save the path to the directory containing the fastq zipped files
-path.fastq <- file.path(path.labus, "download-Labus-samples")
+path.fastq <- file.path(path.data, "raw_fastq")
 # list.files(path.fastq) # check we are in the right directory
 
 # fastq filenames have format: SAMPLENAME.fastq.gz

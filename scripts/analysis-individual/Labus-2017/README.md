@@ -7,7 +7,7 @@ Labus et al. (_Microbiome_, 2017) - [Differences in gut microbial composition co
 ## Download samples
 
 The raw fastq files are accessible on the SRA or ENA with the PRJNA373876 accession number. To download samples, you can either:
-- from your terminal, go into the [download-Labus-samples](download-Labus-samples/) directory and execute the [download_fastq_labus.sh](download-Labus-samples/download_fastq_labus.sh) file;
+- from your terminal, go into the [data_empty/analysis-individual/Labus-2017/raw_fastq/](data_empty/analysis-individual/Labus-2017/raw_fastq/) directory and follow the instructions of the `README.md` file to download samples from the ENA;
 - download directly the fastq files we have deposited on Zenodo (ADD LINK)
 
 
