@@ -39,7 +39,7 @@ library(stringr)
 # ROOT DIRECTORY (to modify on your computer)
 path.root <- "~/Projects/MetaIBS"
 path.fukui  <- file.path(path.root, "scripts/analysis-individual/Fukui-2020")
-path.data   <- file.path(path.root, "data/analysis-individual/Fukui-2020")
+path.data   <- file.path(path.root, "data/analysis-individual/Fukui-2020") # REPLACE WITH data_empty/analysis-individual/Fukui-2020
 ```
 
 
@@ -74,7 +74,7 @@ PRJNA637763.
 
 ```{r quality-check, echo=TRUE, results="hide"}
 # Save the path to the directory containing the fastq zipped files
-path.fastq <- file.path(path.fukui, "download-Fukui-samples")
+path.fastq <- file.path(path.data, "raw_fastq")
 # list.files(path.fastq) # check we are in the right directory
 
 # fastq filenames have format: SAMPLENAME.fastq.gz

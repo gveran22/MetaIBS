@@ -1,3 +1,3 @@
 # raw_fastq (Fukui)
 
-This directory contains `.fastq` files downloaded from the SRA with accession number PRJNA637763.
+The fastq files were downloaded with the SRA-toolkit by executing the `download_fastq_fukui.sh` script (the sra-toolkit downloaded the list of samples in `list_files_fukui.txt`).

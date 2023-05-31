@@ -54,6 +54,6 @@ head(metadata_table)
 # SAVE DATAFRAME 
 write.csv(metadata_table, file.path(path.data, "00_Metadata-Fukui/Metadata-Fukui.csv"))
 
-# Export list of files to download
-write.table(metadata_table$Run, file.path(path.scripts, "download-Fukui-samples/list_files_fukui.txt"),
+# Export list of files to download to data/ directory
+write.table(metadata_table$Run, file.path(path.data, "raw_fastq/list_files_fukui.txt"),
             sep="\t", row.names=FALSE, col.names=FALSE, quote=FALSE)
