@@ -7,7 +7,7 @@ Fukui (_J. Clin. Med_) - [Usefulness of Machine Learning-Based Gut Microbiome An
 ## Download samples
 
 The raw fastq files are accessible on the SRA or ENA with the PRJNA637763 accession number. To download samples, you can either:
-- from your terminal, go into the [download-Fukui-samples](download-Fukui-samples/) directory and execute the [download_fastq_fukui.sh](download-Fukui-samples/download_fastq_fukui.sh) file;
+- run the `00_Metadata-Fukui.R` script to export the list of samples to download, and then from your terminal go into your [data_empty/analysis-individual/Fukui-2020/raw_fastq/](data_empty/analysis-individual/Fukui-2020/raw_fastq/) directory to execute the [download_fastq_fukui.sh](data_empty/analysis-individual/Fukui-2020/raw_fastq/download_fastq_fukui.sh) file;
 - obtain directly the fastq files from [data/analysis-individual/Fukui-2020/raw_fastq/](../../data/analysis-individual/Fukui-2020/raw_fastq/) if you downloaded our `data` folder we deposited on Zenodo.
 
 
