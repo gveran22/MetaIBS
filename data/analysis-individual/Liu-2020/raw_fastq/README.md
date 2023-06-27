@@ -1,3 +1,5 @@
-To download samples from your terminal, you need to have the SRA-toolkit installed (instructions to download the SRA-toolkit can be found [here](https://github.com/ncbi/sra-tools/wiki/02.-Installing-SRA-Toolkit)), and put the `sra-toolkit/` directory in your home directory, so that the `download_fastq_liu.sh` script can use the sra-toolkit to download the list of samples in `list_files_liu.txt`.
+# raw_fastq (Liu)
 
-As an alternative, you can also download the fastq files directly from our zenodo (ADD LINK).
+The fastq files were downloaded with the SRA-toolkit by executing the `download_fastq_liu.sh` script (the sra-toolkit downloaded the list of samples in `list_files_liu.txt`).
+
+Instructions to download the SRA-toolkit can be found [here](https://github.com/ncbi/sra-tools/wiki/02.-Installing-SRA-Toolkit).
