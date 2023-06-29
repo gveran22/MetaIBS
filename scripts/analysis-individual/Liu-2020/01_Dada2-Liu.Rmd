@@ -49,12 +49,13 @@ path.data <- file.path(path.root, "data/analysis-individual/Liu-2020")
 #__________________________________________________________________________
 
 raw_stats     <- readRDS(file.path(path.data, "01_Dada2-Liu/raw_stats.rds")) # seq depth
+REVpos        <- readRDS(file.path(path.data, "01_Dada2-Liu/reverseprimer_position.rds")) # dataframe with position of reverse primer in every .fastq file (every sample)
 out1          <- readRDS(file.path(path.data, "01_Dada2-Liu/out1.rds")) # out process (primer removal)
 out2          <- readRDS(file.path(path.data, "01_Dada2-Liu/out2.rds")) # out process (QC)
 filt1_samples <- sort(list.files(file.path(path.data, "filtered1"), pattern=".fastq.gz", full.names = TRUE)) # reads with primers removed
 filt2_samples <- sort(list.files(file.path(path.data, "filtered2"), pattern=".fastq.gz", full.names = TRUE)) # quality-filtered reads
 err           <- readRDS(file.path(path.data, "01_Dada2-Liu/err.rds")) # error rates
-seq_infered   <- readRDS(file.path(path.data, "seq_infered.rds")) # inferred ASVs
+seq_infered   <- readRDS(file.path(path.data, "01_Dada2-Liu/seq_infered.rds")) # inferred ASVs
 taxa          <- readRDS(file.path(path.data, "01_Dada2-Liu/taxa_liu.rds")) # taxa
 physeq        <- readRDS(file.path(path.root, "data/analysis-individual/CLUSTER/PhyloTree/input/physeq_liu.rds")) # phyloseq object without phylogenetic tree
 ```
@@ -71,7 +72,7 @@ First, we import the fastq files containing the raw reads. The samples were down
 
 ```{r quality-check, echo=TRUE}
 # Save the path to the directory containing the fastq zipped files
-path.fastq <- file.path(path.liu, "download-Liu-samples/")
+path.fastq <- file.path(path.data, "raw_fastq")
 # list.files(path.fastq) # check we are in the right directory
 
 # fastq filenames have format: SAMPLENAME.fastq.gz
@@ -80,7 +81,7 @@ FNs <- sort(list.files(path.fastq, pattern=".fastq.gz", full.names = TRUE))
 show(FNs[1:5])
 
 # Extract sample names, assuming filenames have format: SAMPLENAME.fastq
-sample.names <- sapply(strsplit(basename(FNs), "_"), `[`, 1)
+sample.names <- sapply(strsplit(basename(FNs), ".fastq.gz"), `[`, 1)
 show(sample.names[1:5]) # saves only the file name (without the path)
 
 # Look at quality of all files
@@ -90,11 +91,11 @@ for (i in 1:4){ # 1:length(FNs)
 
 # Look at nb of reads per sample
 # raw_stats <- data.frame('sample' = sample.names,
-                        # 'reads' = fastqq(FNs)@nReads)
+#                         'reads' = fastqq(FNs)@nReads)
 # min(raw_stats$reads)
 # max(raw_stats$reads)
 # mean(raw_stats$reads)
-# hist(log10(raw_stats$reads))
+# hist(log10(raw_stats$reads), breaks=100)
 ```
 
 We will have a quick peak at the per base sequence content of the reads in some samples, to make sure there is no anomaly (i.e. all reads having the same sequence).
@@ -105,7 +106,6 @@ fseq <- seqTools::fastqq(FNs[10])
 rc <- read_content(fseq)
 plot_read_content(rc) + labs(title = "Per base sequence content")
 plot_read_content(rc) + xlim(0,50) + labs(title = "Per base sequence content")
-# GTGRGGAATATT
 ```
 
 
@@ -149,6 +149,37 @@ for (i in 1:5){ # 1:length(FNs)
 }
 ```
 
+Let's have a quick look at where the reverse complement of the reverse primer is positioned in the reads
+```{r primer-position, fig.width = 5, fig.height = 4, eval=FALSE, echo=TRUE}
+# Function that gets position in which sequence is found
+primerHitsPosition <- function(primer, fn){
+  hits <- as.data.frame(vmatchPattern(primer, sread(readFastq(fn)), fixed = FALSE, max.mismatch = 2))
+  hits <- hits[,c("group", "start")]
+  colnames(hits) <- c("sample", "start")
+  hits$sample <- sapply(strsplit(basename(fn), "_"), `[`, 1)
+  hits$readslength <- seqTools::fastqq(fn)@maxSeqLen
+  return(hits)
+}
+
+# Get position of REV primer
+REVpos <- data.frame()
+for(i in 1:length(FNs)){
+  cat("SAMPLE", i)
+  new <- primerHitsPosition(REV.orients["RevComp"], FNs[[i]])
+  REVpos <- rbind(new, REVpos)
+}
+```
+
+```{r primer-position-plot, fig.width = 5, fig.height = 4}
+ggplot(REVpos, aes(x=start))+
+  geom_density(aes(y=..scaled..)) +
+  xlim(c(0,max(REVpos$readslength)))+
+  labs(x="start position of REV primer", y="proportion of primers starting at x position")
+
+# in how many reads (from all the fastq files) does the reverse primer start before 400bp?
+table(REVpos$start < 400) # only ~1700 out of 6 million
+```
+
 
 
 
@@ -175,7 +206,7 @@ for (i in 1:length(FNs)){
 # Sanity check
 # for (i in 1:5){ # 1:length(FNs_revcomp)
 #   cat("SAMPLE", sample.names[i], "with total number of", raw_stats[i,'reads'], "reads\n\n")
-#   x <-  rbind(ForwardPrimer = sapply(FWD.orients, primerHits, fn = FNs_revcomp[[i]]), 
+#   x <-  rbind(ForwardPrimer = sapply(FWD.orients, primerHits, fn = FNs_revcomp[[i]]),
 #               ReversePrimer = sapply(REV.orients, primerHits, fn = FNs_revcomp[[i]]))
 #   print(x)
 #   cat("\n____________________________________________\n\n")
@@ -196,7 +227,7 @@ out1 <- removePrimers(fn = FNs_revcomp, fout = filt1_revcomp,
                       compress = TRUE, verbose = TRUE)
 
 # REVERSE COMPLEMENT THE FILTERED READS
-filt1_samples <- file.path(path, "filtered1", paste0(sample.names, "_filt1.fastq.gz"))
+filt1_samples <- file.path(path.data, "filtered1", paste0(sample.names, "_filt1.fastq.gz"))
 names(filt1_samples) <- sample.names
 
 # Write reverse complement of the reads
@@ -228,7 +259,7 @@ plot(x=seqleng_bef, y=log10(counts_bef))
 plot(x=seqleng_aft, y=log10(counts_aft))
 ```
 
-We can see that the reads length has a bit reduced (by ~20bp), which suggests only the primer sequence was removed.
+We can see that the reads length has a bit reduced (by ~50bp), which is consistent with the reverse primer position at 400-430bp.
 
 
 ### 3.2. Quality filtering
@@ -236,7 +267,7 @@ Then, we perform a quality filtering of the reads.
 
 ```{r quality-filter, eval = FALSE, echo = TRUE}
 # Place filtered files in a filtered/ subdirectory
-filt2_samples <- file.path(path.data, "filtered2", paste0(sample.names, "_filt.fastq.gz"))
+filt2_samples <- file.path(path.data, "filtered2", paste0(sample.names, "_filt2.fastq.gz"))
 # Assign names for the filtered fastq.gz files
 names(filt2_samples) <- sample.names
 
@@ -250,6 +281,7 @@ out2 <- filterAndTrim(fwd = filt1_samples, filt = filt2_samples,
 Let's look at the output filtered fastq files as sanity check.
 
 ```{r quality-filter-check}
+rownames(out2) <- sample.names
 out2[1:4,] # show how many reads were filtered in each file
 
 # Look at quality profile of filtered files
@@ -269,6 +301,7 @@ for (i in 1:4){
 Now we will build the parametric error model, to be able to infer amplicon sequence variants (ASVs) later on.
 
 ```{r error-rate-estimate, eval = FALSE}
+set.seed(123)
 err <- learnErrors(filt2_samples, multithread=TRUE, randomize=TRUE, verbose = 1)
 ```
 
@@ -372,21 +405,17 @@ track
 
 ```{r seqdepth, echo=FALSE, eval=FALSE, include=FALSE}
 # Save nb of reads per sample before / after dada2 pipeline
-nb.reads <- data.frame("before" = raw_stats$reads,
-                       "after" = rowSums(seqtable.nochim),
-                       "dataset" = "Liu")
-# better alternative? choose!!
-# nb.reads <- as.data.frame(rowSums(seqtable.nochim)) %>%
-#   rename("after"="rowSums(seqtable.nochim)") %>%
-#   mutate("Run"=names(rowSums(seqtable.nochim))) %>%
-#   right_join(raw_stats %>% rename(Run=sample, before=reads),
-#              by="Run") %>%
-#   relocate(before) %>%
-#   relocate(Run) %>%
-#   mutate(after = nafill(after, fill=0),
-#          "dataset" = "AGP")
+nb.reads <- as.data.frame(rowSums(seqtable.nochim)) %>%
+  rename("after"="rowSums(seqtable.nochim)") %>%
+  mutate("Run"=names(rowSums(seqtable.nochim))) %>%
+  right_join(raw_stats %>% rename(Run=sample, before=reads),
+             by="Run") %>%
+  relocate(before) %>%
+  relocate(Run) %>%
+  mutate(after = nafill(after, fill=0),
+         "dataset" = "Liu")
 
-saveRDS(nb.reads, file.path(path.root, "data/analysis-combined/06_QCplot/nbreads_liu.rds")
+saveRDS(nb.reads, file.path(path.root, "data/analysis-combined/06_QCplot/nbreads_liu.rds"))
 ```
 
 
@@ -414,19 +443,19 @@ Extensions: The dada2 package also implements a method to make species level ass
 path.silva <- file.path(path.root, "data/analysis-individual/CLUSTER/taxonomy/silva-taxonomic-ref")
 
 # Assign taxonomy (with silva v138)
-taxa <- assignTaxonomy(seqtable.nochim, file.path(path.silva, "silva_nr_v138_train_set.fa.gz"),
+taxa <- assignTaxonomy(seqtable.nochim, file.path(path.silva, "silva_nr99_v138.1_train_set.fa.gz"),
                        tryRC = TRUE, # try reverse complement of the sequences
                        multithread=TRUE, verbose = TRUE)
 
 # Add species assignment
-taxa <- addSpecies(taxa, file.path(path.silva, "silva_species_assignment_v138.fa.gz"))
+taxa <- addSpecies(taxa, file.path(path.silva, "silva_species_assignment_v138.1.fa.gz"))
 ```
 
 ```{r taxa-sanity-check}
 # Check how the taxonomy table looks like
 taxa.print <- taxa
 rownames(taxa.print) <- NULL # Removing sequence rownames for display only
-head(taxa.print)
+# head(taxa.print)
 
 table(taxa.print[,1], useNA="ifany") # Show the different kingdoms
 
@@ -449,15 +478,8 @@ The preprocessing will be easier to do with ASV, taxonomic and metadata tables c
 ```{r phyloseq-preprocess, echo=TRUE, eval=FALSE}
 #_________________________
 # Import metadata
-metadata <- read.csv(file.path(path.liu, "00_Metadata-Liu/modif_metadata(R).csv")) %>% select(-X)
+metadata <- read.csv(file.path(path.data, "00_Metadata-Liu/Metadata-Liu.csv")) %>% select(-X)
 rownames(metadata) <- metadata$Run
-
-metadata[grep("IBS*",metadata$host_disease), "host_disease"] <- "IBS"
-
-metadata$author <- "Liu"
-metadata$sequencing_tech <- "Illumina single-end"
-metadata$variable_region <- "V3-V4"
-metadata$Collection <- "1st" # only 1 time point per individual
 
 # Remove .fastq extension in seqtable.nochim
 rownames(seqtable.nochim) <- gsub(".fastq.gz", "", rownames(seqtable.nochim))
@@ -481,10 +503,10 @@ physeq <- prune_samples(sample_sums(physeq)>=500, physeq)
 ### 7.2. Quick peek at data analysis
 ```{r plot, fig.width = 10}
 # Absolute abundance
-plot_bar(physeq, fill = "Phylum")+ facet_wrap("host_disease", scales="free_x") +
-  theme(axis.text.x = element_blank(),
-        legend.text = element_text(size=5),
-        legend.key.size = unit(0.2, 'cm'))
+# plot_bar(physeq, fill = "Phylum")+ facet_wrap("host_disease", scales="free_x") +
+#   theme(axis.text.x = element_blank(),
+#         legend.text = element_text(size=5),
+#         legend.key.size = unit(0.2, 'cm'))
 
 # Relative abundance for Phylum
 phylum.table <- physeq %>%
@@ -507,6 +529,7 @@ ggplot(phylum.table, aes(x = Sample,
 ```{r save, eval=FALSE}
 # Save to disk
 saveRDS(raw_stats,   file.path(path.data, "01_Dada2-Liu/raw_stats.rds"))
+saveRDS(REVpos,      file.path(path.data, "01_Dada2-Liu/reverseprimer_position.rds"))
 saveRDS(out1,        file.path(path.data, "01_Dada2-Liu/out1.rds"))
 saveRDS(out2,        file.path(path.data, "01_Dada2-Liu/out2.rds"))
 saveRDS(err,         file.path(path.data, "01_Dada2-Liu/err.rds"))
@@ -515,6 +538,7 @@ saveRDS(seq_infered, file.path(path.data, "01_Dada2-Liu/seq_infered.rds"))
 # Taxa & Phyloseq object
 saveRDS(taxa, file.path(path.data, "01_Dada2-Liu/taxa_liu.rds"))
 saveRDS(physeq, file.path(path.root, "data/analysis-individual/CLUSTER/PhyloTree/input/physeq_liu.rds"))
+saveRDS(physeq, file.path(path.root, "data/phyloseq-objects/phyloseq-without-phylotree/physeq_liu.rds"))
 ```
 
 

@@ -148,7 +148,7 @@ for (i in 1:5){
 }
 ```
 
-Let's have a quick look at where primers are positioned in the forward/reverse reads
+Let's have a quick look at where primers are positioned in the reads
 ```{r primer-position, fig.width = 5, fig.height = 4}
 # Function that gets position in which sequence is found
 primerHitsPosition <- function(primer, fn){
