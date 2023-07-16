@@ -15,7 +15,7 @@ library(tidyverse)
 
 # Data
 path.root <- "~/Projects/MetaIBS" # CHANGE THIS PATH ON YOUR COMPUTER
-path.scripts <- file.path(path.root, "scripts/analysis-individual/Liu-2020")
+# path.scripts <- file.path(path.root, "scripts/analysis-individual/Liu-2020")
 path.data    <- file.path(path.root, "data/analysis-individual/Liu-2020")
 
 # Metadata table downloaded from the SRA
@@ -57,5 +57,5 @@ head(clean.df)
 write.csv(clean.df, file.path(path.data, "00_Metadata-Liu/Metadata-Liu.csv"))
 
 # Export the list of Runs to download
-write.table(clean.df$Run, file.path(path.scripts, "download-Liu-samples/list_files_liu.txt"),
+write.table(clean.df$Run, file.path(path.data, "raw_fastq/list_files_liu.txt"),
             sep="\t", row.names=FALSE, col.names=FALSE, quote=FALSE)

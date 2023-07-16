@@ -19,7 +19,7 @@ Liu et al. (_BMC Microbiology_, 2020) - [Microbial and metabolomic profiles in c
 - V3-V4 variable regions (about 450bp)
 - FWD - 338F - 5’ - ACTCCTACGGGAGGCAGCA - 3’
 - REV -  806R - 5’ - GGACTACHVGGGTWTCTAAT - 3’
-- reverse complement of the reverse primer is found at the very end of >95% of the reads
+- reverse complement of the reverse primer is found at the very end of the reads
 
 ## Filtering
 - **primers removal** - not applied (requires a forward primer)
@@ -30,18 +30,18 @@ Liu et al. (_BMC Microbiology_, 2020) - [Microbial and metabolomic profiles in c
 
 ## Construct ASV table
 ### a) Infer sequence variants
-- 14,605 amplicon sequence variants (ASVs)
+- 15,292 amplicon sequence variants (ASVs)
 
 ### b) Remove chimeras
-- 5,551 seq variants (but still >90% reads kept)
+- 5,580 seq variants (but still >90% reads kept)
 
 ### c) Assign taxonomy
 Taxonomy assigned with Silva v138.
-- Bacteria - 5,546
+- Bacteria - 5,576
 - Archaea - 4
-- Eukaryota - 1
+- Eukaryota - 0
 
-All unassigned phyla were removed (n=17), samples below 500 total reads (n=0). The final ASV table contains **5,534 sequence variants**.
+All unassigned phyla were removed (n=13), samples below 500 total reads (n=0). The final ASV table contains **5,567 sequence variants**.
 
 ## Metadata
 - age
