@@ -75,5 +75,13 @@ head(clean.df)
 write.csv(clean.df, file.path(path.data, "00_Metadata-LoPresti/Metadata-LoPresti.csv"))
 
 # Export the list of Runs to download
-write.table(clean.df$Run, file.path(path.data, "raw_fastq/list_files_lopresti.txt"),
+# Open the filereport downloaded from the ENA
+ena_table <- read.csv(file.path(path.data, "raw_fastq/filereport_read_run_PRJNA391149_tsv.txt"), header=T, sep="\t")
+table(ena_table$run_accession %in% clean.df$Run, useNA="ifany") # 163 samples of interest and 87 that we don't want to download
+ena_table <- ena_table[ena_table$run_accession %in% clean.df$Run,]
+dim(ena_table) # 163 rows
+# Export the list of links to download the Runs from ENA
+write.table(ena_table$fastq_ftp, file.path(path.data, "raw_fastq/list_files_lopresti.txt"),
             sep="\t", row.names=FALSE, col.names=FALSE, quote=FALSE)
+
+
