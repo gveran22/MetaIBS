@@ -23,7 +23,7 @@ Lo Presti et al. (_Frontiers in Microbiology_, 2019) - [Fecal and mucosal microb
 - V1-V3 variable regions (about 450bp)
 - FWD - 28F - 5’ - TTTGATCNTGGCTCAG - 3’
 - REV -  519R - 5’ - GTNTTACNGCGGCKGCTG - 3’
-- forward primer found at the beginning of most of the reads (in its forward orientation)
+- forward primer found at the beginning of the reads (in its forward orientation)
 
 ## Filtering
 - **primers removal** - \~84% reads kept per sample.
@@ -44,7 +44,7 @@ Taxonomy assigned with Silva v138.
 - Bacteria - 1,085
 - Archaea - 0
 - Eukaryota - 0
-There was 0 unassigned phyla. There were 106 samples with total read count below 500. The final ASV table contains **1,085 sequence variants**.
+There was 0 unassigned phyla. There were 106 samples with total read count below 500. The final ASV table contains **806 sequence variants** (many ASVs were present in samples with low total count).
 
 ## Metadata
 - age
