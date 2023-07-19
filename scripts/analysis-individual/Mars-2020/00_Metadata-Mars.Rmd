@@ -29,7 +29,7 @@ library(tidyverse)
 
 ## 1.2. Data
 ```{r import-data}
-path <- "~/Projects/MetaIBS/scripts/analysis-individual/Mars-2020"
+path <- "~/Projects/MetaIBS/data/analysis-individual/Mars-2020"
 
 # Metadata table downloaded from the SRA
 sra_metadata <- read.csv(file.path(path, "00_Metadata-Mars/MarsSraRunTable.txt"), header=TRUE, sep = ",")
@@ -114,7 +114,10 @@ clean.df <- left_join(sraDF, suppDF, by=c("host_ID", "time_point")) %>%
   mutate(sample_type = "sigmoid") %>%
   rename(Collection = "time_point") %>%
   mutate(Collection=replace(Collection, Collection=="1", "1st"),
-         Collection=replace(Collection, Collection=="2", "2nd"))
+         Collection=replace(Collection, Collection=="2", "2nd")) %>%
+  mutate(author = "Mars",
+         sequencing_tech = "Illumina paired-end",
+         variable_region = "V4")
 head(clean.df)
 dim(clean.df) # 72 samples
 ```
@@ -126,12 +129,36 @@ dim(clean.df) # 72 samples
 # 4. SAVE METADATA
 ******************
 
-```{r save-data, echo=TRUE, eval=FALSE}
+## 4.1. Get list of links to wget fastq files from ENA
+```{r save-data1}
+# Open the filereport downloaded from the ENA
+ena_table <- read.csv(file.path(path, "raw_fastq/filereport_read_run_PRJEB37924_tsv.txt"), header=T, sep="\t")
+table(ena_table$run_accession %in% clean.df$Run, useNA="ifany") # 72 samples of interest and 532 that we don't want to download
+ena_table <- ena_table[ena_table$run_accession %in% clean.df$Run,]
+dim(ena_table) # 72 rows
+head(ena_table)
+# the fastq_ftp column contains both forward & reverse reads separated by ";"
+ena_tableF <- ena_table[,c("run_accession", "fastq_ftp")]
+ena_tableF$fastq_ftp <- gsub(";.*", "", ena_tableF$fastq_ftp)
+ena_tableR <- ena_table[,c("run_accession", "fastq_ftp")]
+ena_tableR$fastq_ftp <- gsub(".*;", "", ena_tableR$fastq_ftp)
+ena_table_final <- rbind(ena_tableF, ena_tableR)
+head(ena_table_final[order(ena_table_final$run_accession),])
+table(ena_table_final$run_accession, useNA="ifany") # should all appear twice
+```
+
+
+## 4.2. Export metadata & fastq file links
+```{r save-data2, echo=TRUE, eval=FALSE}
 # Export metadata table
 write.csv(clean.df, file.path(path, "00_Metadata-Mars/modif_metadata(R).csv"))
 
-# Export the list of Runs to download
-write.table(clean.df$Run, file.path(path, "download-Mars-samples/list_files_mars.txt"),
+# Export the list of Runs to download from SRA
+# write.table(clean.df$Run, file.path(path, "raw_fastq/list_files_mars.txt"),
+#             sep="\t", row.names=FALSE, col.names=FALSE, quote=FALSE)
+
+# Export the list of links to download the Runs from ENA
+write.table(ena_table_final$fastq_ftp, file.path(path, "raw_fastq/list_files_mars.txt"),
             sep="\t", row.names=FALSE, col.names=FALSE, quote=FALSE)
 ```
 
