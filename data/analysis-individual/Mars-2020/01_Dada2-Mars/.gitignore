@@ -1,0 +1,12 @@
+FWD_out1.rds
+REV_out1.rds
+errF.rds
+errR.rds
+forwardreads_primerposition.rds
+infered_seq_F.rds
+infered_seq_R.rds
+mergers.rds
+out2.rds
+raw_stats.rds
+reversereads_primerposition.rds
+taxa_mars.rds
