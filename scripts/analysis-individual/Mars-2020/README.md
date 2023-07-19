@@ -7,8 +7,8 @@ Mars et al. (_Cell_, 2020) - [Longitudinal Multi-omics Reveals Subset-Specific M
 ## Download samples
 
 The raw fastq files are accessible on the SRA or ENA with the PRJEB37924 accession number. To download samples, you can either:
-- from your terminal, go into the [download-Mars-samples](download-Mars-samples/) directory and execute the [download_fastq_mars.sh](download-Mars-samples/download_fastq_mars.sh) file;
-- download directly the fastq files we have deposited on Zenodo (ADD LINK)
+- from your terminal, go into the [data_empty/analysis-individual/Mars-2020/raw_fastq/](data_empty/analysis-individual/Mars-2020/raw_fastq/) directory and follow the instructions of the `README.md` file to download samples from the ENA;
+- obtain directly the fastq files from the `data/` folder we have deposited in the on Zenodo (ADD LINK)
 
 
 ## Preprocess fastq files into ASV and taxonomic tables

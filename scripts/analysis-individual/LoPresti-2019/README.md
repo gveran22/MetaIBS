@@ -8,7 +8,7 @@ Lo Presti et al. (_Frontiers in Microbiology_, 2019) - [Fecal and mucosal microb
 
 The raw fastq files are accessible on the SRA or ENA with the PRJNA391149 accession number. To download samples, you can either:
 - from your terminal, go into the [data_empty/analysis-individual/LoPresti-2019/raw_fastq/](data_empty/analysis-individual/LoPresti-2019/raw_fastq/) directory and follow the instructions of the `README.md` file to download samples from the ENA;
-- download directly the fastq files we have deposited on Zenodo (ADD LINK)
+- obtain directly the fastq files from the `data/` folder we have deposited in the on Zenodo (ADD LINK)
 
 
 ## Preprocess fastq files into ASV and taxonomic tables
