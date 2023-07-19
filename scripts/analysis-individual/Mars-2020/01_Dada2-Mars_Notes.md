@@ -29,28 +29,28 @@ However, from the metadata table downloaded on the SRA, there are **72 total sam
 - V4 variable region (about 250bp)
 - FWD - F515 - 5’ - GTGCCAGCMGCCGCGGTAA - 3’
 - REV - R806 - 5’ - GGACTACHVGGGTWTCTAAT - 3’
-- forward primer found at the beginning of forward reads, and reverse complement of the reverse primer found at the end of the forward reads (the opposite is true for reverse reads). Primers found in >90% of reads.
+- forward primer found at the beginning of forward reads, and reverse complement of the reverse primer found at the end-ish of the forward reads (the opposite is true for reverse reads). Primers found in >90% of reads.
 
 ## Filtering
-- **primer removal**: fastq files deposited on the SRA/ENA databases don't contain Ilumina headers, which are needed to merge paired reads later on. Thus, primer sequences could not be removed (the first 20bp and last 30bp were trimmed instead).
-- **quality filtering**: \~64% of reads are kept.
+- **primer removal**: \~89% of forward reads kept, \~79% of reverse reads kept.
+- **quality filtering**: \~70% of reads are kept.
 
 ## Learn error rates
 - parametric error model fits data
 
 ## Construct ASV table
 ### a) Infer sequence variants
-- 1,738 amplicon sequence variants (ASVs)
+- 1,548 amplicon sequence variants (ASVs)
 
 ### b) Remove chimeras
-- 1,678 seq variants (but still >99% reads kept)
+- 1,529 seq variants (but still >99% reads kept)
 
 ### c) Assign taxonomy
 Taxonomy assigned with Silva v138.
-- Bacteria - 1,560
-- Archaea - 4
-- Eukaryota - 74
-There was 117 unassigned phyla, and 3 samples below 500 reads. The final ASV table contains **1,561 sequence variants**.
+- Bacteria - 1,526
+- Archaea - 3
+- Eukaryota - 0
+There was no unassigned phyla, and 3 samples below 500 reads. The final ASV table contains **1,524 sequence variants**.
 
 ## Metadata
 - IBS subtype
