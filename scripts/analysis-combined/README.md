@@ -25,6 +25,7 @@ A bash script to execute the logratio analysis is provided in the corresponding 
 | [`11_shared-classification-analysis/11a_shared_classification.R`](./11_shared-classification-analysis/11a_shared_classification.R)                           |                  -                  | Classification analysis of shared ASVs between Nagel and Pozuelo datasets                       |
 | [`11_shared-classification-analysis/11b_additional_plots.R`](./11_shared-classification-analysis/11b_additional_plots.R)                           |                  -                  | Create supporting figures for the shared ASV analysis                                |
 | [`11_shared-classification-analysis/11c_combine_plots.R`](./11_shared-classification-analysis/11c_combine_plots.R)                           |                  Fig5                  | Combine the figures from the previous scripts in the folder                                |
+| [`12_composiitonal_mean_test.R`](./12_composiitonal_mean_test.R)                           |                                       | Employ compositional mean test for IBS/healthy within datasets and similarity across datasets.                                |
 <br/>
 
 <p align="center">
