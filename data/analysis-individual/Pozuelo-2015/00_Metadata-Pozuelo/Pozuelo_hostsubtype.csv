@@ -1,4 +1,4 @@
-Run,BioSample,Sample-Name,host_subtype,host_ID
+Run,BioSample,Sample Name,host_subtype,host_ID
 SRR1763540,SAMN03223990,MO.59.2,IBS-M,MO.59.2
 SRR1763554,SAMN03223991,MO.60.2,IBS-D,MO.60.2
 SRR1763557,SAMN03223992,MO.61.2,IBS-D,MO.61.2
