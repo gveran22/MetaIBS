@@ -9,13 +9,13 @@ Pozuelo et al. (_Scientific Reports_, 2015) - [Reduction of butyrate- and methan
 - **290 total**
 |                | IBS | Healthy |
 | -------------- | ---:| ------: |
-| Time point 1   | 125 |   66    |
-| Time point 2   |  77 |   22    |
-|   **Total**    | **202** | **88** |
+| Time point 1   | 113 |   66    |
+| Time point 2   |  72 |   22    |
+|   **Total**    | **185** | **88** |
 
 ## Data Quality
 - **Technology** - Illumina MiSeq, single end
-- **Nb of reads per sample** - mean of 59,556 reads per sample (23,370 - 96,888)
+- **Nb of reads per sample** - mean of 59,319 reads per sample (23,370 - 96,888)
 - **Read length** - ~300 bp
 - **Quality** - excellent
 
@@ -27,24 +27,24 @@ Pozuelo et al. (_Scientific Reports_, 2015) - [Reduction of butyrate- and methan
 
 ## Filtering
 - **primers removal** - \~94% reads kept per sample.
-- **quality filter** - \~100% reads kept per sample.
+- **quality filter** - \~99.97% reads kept per sample.
 
 ## Learn error rates
 - parametric error model fits data
 
 ## Construct ASV table
 ### a) Infer sequence variants
-- 57,879 amplicon sequence variants (ASVs)
+- 57,122 amplicon sequence variants (ASVs)
 
 ### b) Remove chimeras
-- 23,849 seq variants (but still >77% reads kept)
+- 23,628 seq variants (but still >77% reads kept)
 
 ### c) Assign taxonomy
 Taxonomy assigned with Silva v138.
-- Bacteria - 23,752
+- Bacteria - 23,581
 - Archaea - 21
-- Eukaryota - 36
-There was 572 unassigned phyla. The final ASV table contains **23,257 sequence variants**.
+- Eukaryota - 0
+There was 527 unassigned phyla. The final ASV table contains **23,101 sequence variants** in the phyloseq object.
 
 ## Metadata
 - 1st or 2nd collection time (1 month apart)

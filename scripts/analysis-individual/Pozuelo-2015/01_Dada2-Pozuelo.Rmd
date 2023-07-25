@@ -43,15 +43,16 @@ path.data    <- file.path(path.root, "data/analysis-individual/Pozuelo-2015")
 ```
 
 ```{r html-import, echo = FALSE}
-#_____________________________________________________________________
+#__________________________________________________________________________
 #____________ THIS IS ONLY FOR (quicker) PDF/HTML OUTPUT __________________
-#_____________________________________________________________________
+#__________________________________________________________________________
 
 raw_stats     <- readRDS(file.path(path.data, "01_Dada2-Pozuelo/raw_stats.rds")) # seq depth
+REVpos        <- readRDS(file.path(path.data, "01_Dada2-Pozuelo/reverseprimer_position.rds")) # positions REV primer
 out1          <- readRDS(file.path(path.data, "01_Dada2-Pozuelo/out1.rds")) # out process (primer removal)
 out2          <- readRDS(file.path(path.data, "01_Dada2-Pozuelo/out2.rds")) # out process (QC)
-filt1_samples <- sort(list.files(file.path(path, "filtered1"), pattern=".fastq.gz", full.names = TRUE)) # reads with primers removed
-filt2_samples <- sort(list.files(file.path(path, "filtered2"), pattern=".fastq.gz", full.names = TRUE)) # quality-filtered reads
+filt1_samples <- sort(list.files(file.path(path.data, "filtered1"), pattern="filt1.fastq.gz", full.names = TRUE)) # reads with primers removed
+filt2_samples <- sort(list.files(file.path(path.data, "filtered2"), pattern="filt2.fastq.gz", full.names = TRUE)) # quality-filtered reads
 err           <- readRDS(file.path(path.data, "01_Dada2-Pozuelo/err.rds")) # error rates
 seq_infered   <- readRDS(file.path(path.data, "01_Dada2-Pozuelo/seq_infered.rds")) # infered ASVs
 taxa          <- readRDS(file.path(path.data, "01_Dada2-Pozuelo/taxa_pozuelo.rds")) # taxa
@@ -70,16 +71,16 @@ First, we import the fastq files containing the raw reads. The samples were down
 
 ```{r quality-check, echo=TRUE}
 # Save the path to the directory containing the fastq zipped files
-path.fastq <- file.path(path.pozuelo, "download-Pozuelo-samples/")
+path.fastq <- file.path(path.data, "raw_fastq")
 # list.files(path.fastq) # check we are in the right directory
 
 # fastq filenames have format: SAMPLENAME.fastq.gz
 # Saves the whole directory path to each file name
-FNs <- sort(list.files(path.fastq, pattern=".fastq", full.names = TRUE))
+FNs <- sort(list.files(path.fastq, pattern=".fastq.gz", full.names = TRUE))
 show(FNs[1:5])
 
 # Extract sample names, assuming filenames have format: SAMPLENAME.fastq
-sample.names <- sapply(strsplit(basename(FNs), "[.]"), `[`, 1)
+sample.names <- sapply(strsplit(basename(FNs), ".fastq.gz"), `[`, 1)
 show(sample.names[1:5]) # saves only the file name (without the path)
 
 # Look at quality of all files
@@ -146,6 +147,34 @@ for (i in 1:5){
 }
 ```
 
+Let's have a quick look at where the reverse primer is positioned in the reads.
+```{r primer-position, fig.width = 5, fig.height = 4, eval=FALSE, echo=TRUE}
+# Function that gets position in which sequence is found
+primerHitsPosition <- function(primer, fn){
+  hits <- as.data.frame(vmatchPattern(primer, sread(readFastq(fn)), fixed = FALSE, max.mismatch = 2))
+  hits <- hits[,c("group", "start")]
+  colnames(hits) <- c("sample", "start")
+  hits$sample <- sapply(strsplit(basename(fn), "_"), `[`, 1)
+  hits$readslength <- seqTools::fastqq(fn)@maxSeqLen
+  return(hits)
+}
+
+# Get position of REV primer
+REVpos <- data.frame()
+for(i in 1:length(FNs)){
+  cat("SAMPLE", i)
+  new <- primerHitsPosition(REV.orients["RevComp"], FNs[[i]])
+  REVpos <- rbind(new, REVpos)
+}
+```
+
+```{r primer-position-plot, fig.width = 5, fig.height = 4}
+ggplot(REVpos, aes(x=start))+
+  geom_density(aes(y=..scaled..)) +
+  xlim(c(0,max(REVpos$readslength)))+
+  labs(x="start position of REV primer", y="proportion of primers starting at x position")
+```
+
 
 
 
@@ -154,7 +183,8 @@ for (i in 1:5){
 ********************
 
 ### 3.1. Primer removal
-The reads indeed contain the reverse primer. The reverse complement of the reverse primer is found at the **end** of the reads, which is expected.
+The reads indeed contain the reverse primer. The reverse complement of the reverse primer is found at the **end** (end-ish) of the reads, which is expected. Looking at the fastq files, the reverse primer is not at the very end of the reads, it is followed by the Golay barcode and other specific sequences described in the methods of the article (we can notably recognize the reverse complement of the full specific sequences 5’-{CAAGCAGAAGACGGCATACGAGAT} {Golay barcode} {AGTCAGTCAGCC} {reverse primer}-3').
+
 We could not find the forward primer, but we need to give a _primer.fwd_ parameter to the function 'removePrimers'... We will reverse complement the reads, so that the reverse primer can be set as a _primer.fwd_ in the function. Then we will reverse-complement the filtered reads again, so they are kept in their original orientation.
 
 ```{r primer-filter, eval = FALSE, echo = TRUE}
@@ -172,7 +202,7 @@ for (i in 1:length(FNs)){
 
 # KEEP READS WITH PRIMER AND REMOVE PRIMER
 # Place filtered files in a filtered/ subdirectory
-filt1_revcomp <- file.path(path.data, "filtered1(revcomp)", paste0(sample.names, "_filt_revcomp.fastq.gz"))
+filt1_revcomp <- file.path(path.data, "filtered1(revcomp)", paste0(sample.names, "_filt1_revcomp.fastq.gz"))
 # Assign names for the filtered fastq.gz files
 names(filt1_revcomp) <- sample.names
 
@@ -205,8 +235,7 @@ for (i in 1:4){
   show(plotQualityProfile(filt1_samples[i]))
 }
 ```
-
-We can see that the reads length has quite reduced (from ~300bp to ~250bp). Looking at the fastq files, the reverse primer was not at the very end of the reads, it was followed by the Golay barcode and other specific sequences described in the methods of the article (we can notably recognize the reverse complement of the full specific sequences 5’-{CAAGCAGAAGACGGCATACGAGAT} {Golay barcode} {AGTCAGTCAGCC} {reverse primer}-3').
+We can see that the reads length has quite reduced (from ~300bp to ~250bp), which is consistent with the position of the reverse primer.
 
 
 ### 3.2. Quality filtering
@@ -247,6 +276,7 @@ for (i in 1:4){
 Now we will build the parametric error model, to be able to infer amplicon sequence variants (ASVs) later on.
 
 ```{r error-rate-estimate, eval = FALSE}
+set.seed(123)
 err <- learnErrors(filt2_samples, multithread=TRUE, randomize=TRUE, verbose = 1)
 ```
 
@@ -266,7 +296,7 @@ De-replication is a common step in almost all modern ASV inference (or OTU picki
 seq_infered <- vector("list", length(sample.names))
 names(seq_infered) <- sample.names
 
-# Iterate through the 290 samples
+# Iterate through the 273 samples
 for(sampl in sample.names) {
   cat("Processing:", sampl, "\n")
   derep <- derepFastq(filt2_samples[[sampl]]) # dereplicate the reads in the sample
@@ -290,7 +320,7 @@ We can now construct an amplicon sequence variant table (ASV) table, a higher-re
 # Make sequence table from the infered sequence variants
 seqtable <- makeSequenceTable(seq_infered)
 
-# We should have 290 samples (290 rows)
+# We should have 273 samples (273 rows)
 dim(seqtable)
 
 # Inspect distribution of sequence lengths
@@ -348,35 +378,15 @@ track
 
 
 ```{r seqdepth, echo=FALSE, eval=FALSE, include=FALSE}
-# Import metadata to remove the 17 samples that are not HC/IBS
-# metadata_table <- read.csv(file.path(path.data, "00_Metadata-Pozuelo/Pozuelo-Metadata.csv"), header = TRUE, sep = ",") %>% select(-X)
-# rownames(metadata_table) <- metadata_table$Run
-# samples_to_remove <- rownames(metadata_table[metadata_table$host_disease == "TO-DISCARD",])
-# # length(samples_to_remove) # 17
-
 # Save nb of reads per sample before / after dada2 pipeline
-nb.reads <- data.frame("before" = raw_stats$reads,
-                       "after" = rowSums(seqtable.nochim),
-                       "dataset" = "Pozuelo")
-
-# better alternative? choose!!
-# nb.reads <- as.data.frame(rowSums(seqtable.nochim)) %>%
-#   rename("after"="rowSums(seqtable.nochim)") %>%
-#   mutate("Run"=names(rowSums(seqtable.nochim))) %>%
-#   right_join(raw_stats %>% rename(Run=sample, before=reads),
-#              by="Run") %>%
-#   relocate(before) %>%
-#   relocate(Run) %>%
-#   mutate(after = nafill(after, fill=0),
-#          "dataset" = "AGP")
-
-# Remove the samples that are neither healthy nor IBS
-# nb.reads <- nb.reads[!rownames(nb.reads) %in% samples_to_remove,]
-# # dim(nb.reads) # 273
-
-# Sanity check
-# test <- merge(nb.reads, metadata_table, by="row.names")
-# table(test$host_disease) # 88 HC and 185 IBS
+nb.reads <- data.frame("after"=rowSums(seqtable.nochim)) %>%
+  mutate("Run"=names(rowSums(seqtable.nochim))) %>%
+  right_join(raw_stats %>% dplyr::rename(Run=sample, before=reads),
+             by="Run") %>%
+  relocate(before) %>%
+  relocate(Run) %>%
+  mutate(after = nafill(after, fill=0),
+         "dataset" = "Pozuelo")
 
 # Save
 saveRDS(nb.reads, file.path(path.root, "data/analysis-combined/06_QCplot/nbreads_pozuelo.rds"))
@@ -407,12 +417,12 @@ Extensions: The dada2 package also implements a method to make species level ass
 path.silva <- file.path(path.root, "data/analysis-individual/CLUSTER/taxonomy/silva-taxonomic-ref")
 
 # Assign taxonomy (with silva v138)
-taxa <- assignTaxonomy(seqtable.nochim, file.path(path.silva, "silva_nr_v138_train_set.fa.gz"),
+taxa <- assignTaxonomy(seqtable.nochim, file.path(path.silva, "silva_nr99_v138.1_train_set.fa.gz"),
                        tryRC = TRUE, # try reverse complement of the sequences
                        multithread=TRUE, verbose = TRUE)
 
 # Add species assignment
-taxa <- addSpecies(taxa, file.path(path.silva, "silva_species_assignment_v138.fa.gz"))
+taxa <- addSpecies(taxa, file.path(path.silva, "silva_species_assignment_v138.1.fa.gz"))
 ```
 
 ```{r taxa-sanity-check}
@@ -421,11 +431,8 @@ taxa.print <- taxa
 rownames(taxa.print) <- NULL # Removing sequence rownames for display only
 head(taxa.print)
 
-table(taxa.print[,1]) # Show the different kingdoms
-taxa.print[taxa.print[,1] == 'Eukaryota',2] # the eukaryota are either Euglenozoa, or unknown
-
-table(taxa.print[,2]) # Show the different phyla
-table(is.na(taxa.print[,2])) # is there any NA phyla?
+table(taxa.print[,1], useNA="ifany") # Show the different kingdoms
+table(taxa.print[,2], useNA="ifany") # Show the different phyla
 ```
 
 
@@ -443,11 +450,8 @@ The preprocessing will be easier to do with ASV, taxonomic and metadata tables c
 ```{r phyloseq-preprocess, echo=TRUE, eval=FALSE}
 #_________________________
 # Import metadata
-metadata_table <- read.csv(file.path(path.data, "00_Metadata-Pozuelo/Pozuelo-Metadata.csv"), header = TRUE, sep = ",") %>% select(-X)
-rownames(metadata_table) <- metadata_table$Run
+metadata_table <- read.csv(file.path(path.data, "00_Metadata-Pozuelo/Metadata-Pozuelo.csv"), header = TRUE, sep = ",", row.names=1)
 
-# Remove .fastq extension in seqtable.nochim
-# rownames(seqtable.nochim) <- gsub(".fastq", "", rownames(seqtable.nochim))
 
 #_________________________
 # Create phyloseq object
@@ -455,21 +459,18 @@ physeq <- phyloseq(otu_table(seqtable.nochim, taxa_are_rows=FALSE), # by default
                    sample_data(metadata_table), 
                    tax_table(taxa))
 
-# Remove samples that are not IBS or healthy
-physeq <- subset_samples(physeq, host_subtype != "TO-DISCARD") # n=273
-physeq <- prune_taxa(taxa_sums(physeq)>0, physeq)
-# Remove taxa that are eukaryota, or have unassigned Phyla
-physeq <- subset_taxa(physeq, Kingdom != "Eukaryota")
+# Remove taxa that have unassigned Kingdom or Phyla
+physeq <- subset_taxa(physeq, !is.na(Kingdom))
 physeq <- subset_taxa(physeq, !is.na(Phylum))
 # Remove samples with less than 500 reads
 physeq <- prune_samples(sample_sums(physeq)>=500, physeq)
-# Some taxa might have been present only in these low-count samples, so we will make sure to remove taxa that are absent in all samples
-physeq <- prune_taxa(taxa_sums(physeq)>0, physeq)
+# Some taxa might have been present only in these low-count samples, so we will make sure to remove taxa that are absent in all samples (no sample was lost, so no need to run this)
+# physeq <- prune_taxa(taxa_sums(physeq)>0, physeq)
 ```
 
 
 ### 7.2. Quick peek at data analysis
-```{r plot, fig.width = 10}
+```{r plot, fig.width = 10, fig.height=6}
 # Absolute abundance
 # plot_bar(physeq, fill = "Phylum")+ facet_wrap("host_disease", scales="free_x") + theme(axis.text.x = element_blank())
 
@@ -483,7 +484,7 @@ ggplot(phylum.table, aes(x = reorder(Sample, Sample, function(x) mean(phylum.tab
                          y = Abundance, fill = Phylum))+
   facet_wrap(~ host_disease, scales = "free") + # scales = "free" removes empty lines
   geom_bar(stat = "identity") +
-  theme(axis.text.x = element_text(size = 5, angle = -90))+
+  theme(axis.text.x = element_blank())+
   labs(x = "Samples", y = "Relative abundance")
 ```
 
@@ -492,6 +493,7 @@ ggplot(phylum.table, aes(x = reorder(Sample, Sample, function(x) mean(phylum.tab
 ```{r save, eval=FALSE}
 # Save to disk
 saveRDS(raw_stats,   file.path(path.data, "01_Dada2-Pozuelo/raw_stats.rds"))
+saveRDS(REVpos,      file.path(path.data, "01_Dada2-Pozuelo/reverseprimer_position.rds"))
 saveRDS(out1,        file.path(path.data, "01_Dada2-Pozuelo/out1.rds"))
 saveRDS(out2,        file.path(path.data, "01_Dada2-Pozuelo/out2.rds"))
 saveRDS(err,         file.path(path.data, "01_Dada2-Pozuelo/err.rds"))
@@ -500,6 +502,7 @@ saveRDS(seq_infered, file.path(path.data, "01_Dada2-Pozuelo/seq_infered.rds"))
 # Taxa & Phyloseq object
 saveRDS(taxa,   file.path(path.data, "01_Dada2-Pozuelo/taxa_pozuelo.rds"))
 saveRDS(physeq, file.path(path.root, "data/analysis-individual/CLUSTER/PhyloTree/input/physeq_pozuelo.rds"))
+saveRDS(physeq, file.path(path.root, "data/phyloseq-objects/phyloseq-without-phylotree/physeq_pozuelo.rds"))
 ```
 
 
