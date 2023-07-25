@@ -69,8 +69,7 @@ physeq            <- readRDS(file.path(path.root, "data/analysis-individual/CLUS
 ******************
 
 ### 2.1. Fastq quality profiles
-First, we import the fastq files containing the raw reads. The samples were downloaded from the ENA database with the accession number 
-PRJNA637763.
+First, we import the fastq files containing the raw reads. The samples were downloaded from the SRA database with the accession number PRJNA637763.
 
 ```{r quality-check, echo=TRUE, results="hide"}
 # Save the path to the directory containing the fastq zipped files

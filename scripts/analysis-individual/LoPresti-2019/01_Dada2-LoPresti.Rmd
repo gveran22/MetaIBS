@@ -71,7 +71,7 @@ First, we import the fastq files containing the raw reads. The samples were down
 
 ```{r quality-check, echo=TRUE, results="hide"}
 # Save the path to the directory containing the fastq zipped files
-path.fastq <- file.path(path.data, "raw_fastq/")
+path.fastq <- file.path(path.data, "raw_fastq")
 # list.files(path.fastq) # check we are in the right directory
 
 # fastq filenames have format: SAMPLENAME.fastq.gz
@@ -159,7 +159,7 @@ primerHitsPosition <- function(primer, fn){
   return(hits)
 }
 
-# Get position of REV primer
+# Get position of FWD primer
 FWDpos <- data.frame()
 for(i in 1:length(FNs)){
   cat("SAMPLE", i)
@@ -355,10 +355,9 @@ track
 
 ```{r seqdepth, echo=FALSE, eval=FALSE, include=FALSE}
 # Save nb of reads per sample before / after dada2 pipeline
-nb.reads <- as.data.frame(rowSums(seqtable.nochim)) %>%
-  rename("after"="rowSums(seqtable.nochim)") %>%
+nb.reads <- data.frame("after"=rowSums(seqtable.nochim)) %>%
   mutate("Run"=rownames(seqtable.nochim)) %>%
-  right_join(raw_stats %>% rename(Run=sample, before=reads),
+  right_join(raw_stats %>% dplyr::rename(Run=sample, before=reads),
              by="Run") %>%
   relocate(before) %>%
   relocate(Run) %>%
