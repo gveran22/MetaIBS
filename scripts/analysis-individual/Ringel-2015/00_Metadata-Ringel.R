@@ -57,11 +57,3 @@ dim(ena_table) # 76 rows
 # Export the list of links to download the Runs from ENA
 write.table(ena_table$fastq_ftp, file.path(path, "raw_fastq/list_files_ringel.txt"),
             sep="\t", row.names=FALSE, col.names=FALSE, quote=FALSE)
-
-
-
-
-
-# Export list of files to download
-write.table(sampledf$Run, file.path(path, "download-Ringel-samples/list_files_ringel.txt"),
-            sep="\t", row.names=FALSE, col.names=FALSE, quote=FALSE)
