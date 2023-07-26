@@ -358,8 +358,7 @@ track
 
 ```{r seqdepth, echo=TRUE, eval=FALSE}
 # Save nb of reads per sample before / after dada2 pipeline
-nb.reads <- as.data.frame(rowSums(seqtable.nochim)) %>%
-  dplyr::rename("after"="rowSums(seqtable.nochim)") %>%
+nb.reads <- data.frame("after"=rowSums(seqtable.nochim)) %>%
   mutate("Run"=names(rowSums(seqtable.nochim))) %>%
   right_join(raw_stats %>% dplyr::rename(Run=sample, before=reads),
              by="Run") %>%
