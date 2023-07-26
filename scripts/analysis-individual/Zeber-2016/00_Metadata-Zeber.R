@@ -12,7 +12,7 @@
 library(tidyverse)
 
 # Data
-path <- "~/Projects/MetaIBS/scripts/analysis-individual/Zeber-2016"
+path <- "~/Projects/MetaIBS/data/analysis-individual/Zeber-2016"
 sraDF <- read.table(file.path(path, "00_Metadata-Zeber/ZeberSraRunTable.txt"), header = TRUE, sep = ",")
 additional_metadata <- read.table(file.path(path, "00_Metadata-Zeber/metadata_sex.txt"), header=FALSE)
 colnames(additional_metadata) <- c("title", "host_sex")
@@ -61,11 +61,20 @@ sampledf <- sraDF %>%
 sampledf <- as.data.frame(sampledf)
 rownames(sampledf) <- sampledf$Run
 
+# sanity check
+table(sampledf$host_disease, useNA="ifany")
+
 
 #____________________________________________________________________
 # SAVE DATAFRAME 
 write.csv(sampledf, file.path(path, "00_Metadata-Zeber/Metadata-Zeber.csv"))
 
-# Export list of files to download
-write.table(sampledf$Run, file.path(path, "download-Zeber-samples/list_files_zeber.txt"),
+# Export the list of Runs to download
+# Open the filereport downloaded from the ENA
+ena_table <- read.csv(file.path(path, "raw_fastq/filereport_read_run_PRJEB11252_tsv.txt"), header=T, sep="\t")
+table(ena_table$run_accession %in% sampledf$Run, useNA="ifany") # 90 samples of interest and 85 that we don't want to download
+ena_table <- ena_table[ena_table$run_accession %in% sampledf$Run,]
+dim(ena_table) # 90 rows
+# Export the list of links to download the Runs from ENA
+write.table(ena_table$fastq_ftp, file.path(path, "raw_fastq/list_files_zeber.txt"),
             sep="\t", row.names=FALSE, col.names=FALSE, quote=FALSE)

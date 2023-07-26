@@ -7,8 +7,8 @@ Zeber-Lubecka et al. (_Gut Microbes_, 2016) - [Limited prolonged effects of rifa
 ## Download samples
 
 The raw fastq files are accessible on the SRA or ENA with the PRJEB11252 accession number. To download samples, you can either:
-- from your terminal, go into the [download-Zeber-samples](download-Zeber-samples/) directory and execute the [download_fastq_zeber.sh](download-Zeber-samples/download_fastq_zeber.sh) file;
-- download directly the fastq files we have deposited on Zenodo (ADD LINK)
+- from your terminal, go into the [data_empty/analysis-individual/Zeber-2016/raw_fastq/](data_empty/analysis-individual/Zeber-2016/raw_fastq/) directory and follow the instructions of the `README.md` file to download samples from the ENA;
+- obtain directly the fastq files from the `data/` folder we have deposited in the on Zenodo (ADD LINK)
 
 
 ## Preprocess fastq files into ASV and taxonomic tables
