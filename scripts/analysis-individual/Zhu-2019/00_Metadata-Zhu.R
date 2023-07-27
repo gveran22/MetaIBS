@@ -12,7 +12,7 @@
 library(tidyverse)
 
 # Data
-path <- "~/Projects/MetaIBS/scripts/analysis-individual/Zhu-2019" # CHANGE THIS PATH ON YOUR COMPUTER
+path <- "~/Projects/MetaIBS/data/analysis-individual/Zhu-2019" # CHANGE THIS PATH ON YOUR COMPUTER
 sraDF <- read.table(file.path(path, "00_Metadata-Zhu/ZhuSraRunTable.txt"), header = TRUE, sep = ",")
 
 
@@ -25,7 +25,7 @@ head(sraDF)
 
 # Keep relevant data
 sampledf <- sraDF[, c("Run", "Sample.Name", "Age", "sex")]
-rownames(sampledf) <- paste(sraDF$Run) # have the same sample.names
+rownames(sampledf) <- sraDF$Run
 colnames(sampledf) <- c("Run", "host_disease", "host_age", "host_sex")
 
 # Simplify data
@@ -47,6 +47,20 @@ sampledf$variable_region <- "V4"
 # SAVE DATAFRAME 
 write.csv(sampledf, file.path(path, "00_Metadata-Zhu/Metadata-Zhu.csv"))
 
-# Export list of files to download
-write.table(sampledf$Run, file.path(path, "download-Zhu-samples/list_files_zhu.txt"),
+# Open the filereport downloaded from the ENA
+ena_table <- read.csv(file.path(path, "raw_fastq/filereport_read_run_PRJNA566284_tsv.txt"), header=T, sep="\t")
+table(ena_table$run_accession %in% sampledf$Run, useNA="ifany") # all samples are present
+dim(ena_table) # 29 rows
+head(ena_table)
+# the fastq_ftp column contains both forward & reverse reads separated by ";"
+ena_tableF <- ena_table[,c("run_accession", "fastq_ftp")]
+ena_tableF$fastq_ftp <- gsub(";.*", "", ena_tableF$fastq_ftp)
+ena_tableR <- ena_table[,c("run_accession", "fastq_ftp")]
+ena_tableR$fastq_ftp <- gsub(".*;", "", ena_tableR$fastq_ftp)
+ena_table_final <- rbind(ena_tableF, ena_tableR)
+head(ena_table_final[order(ena_table_final$run_accession),])
+table(ena_table_final$run_accession, useNA="ifany") # should all appear twice
+
+# Export the list of links to download the Runs from ENA
+write.table(ena_table_final$fastq_ftp, file.path(path, "raw_fastq/list_files_zhu.txt"),
             sep="\t", row.names=FALSE, col.names=FALSE, quote=FALSE)
