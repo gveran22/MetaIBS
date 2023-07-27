@@ -50,7 +50,7 @@ path.data   <- file.path(path.root, "data/analysis-individual/Zeber-2016")
 
 raw_stats     <- readRDS(file.path(path.data, "01_Dada2-Zeber/raw_stats.rds")) # seq depth
 out           <- readRDS(file.path(path.data, "01_Dada2-Zeber/out.rds")) # out process (QC)
-filt2_samples <- sort(list.files(file.path(path, "filtered2"), pattern=".fastq.gz", full.names = TRUE)) # quality-filtered reads
+filt2_samples <- sort(list.files(file.path(path.data, "filtered2"), pattern=".fastq.gz", full.names = TRUE)) # quality-filtered reads
 err           <- readRDS(file.path(path.data, "01_Dada2-Zeber/error_rates.rds")) # error rates
 err_new       <- readRDS(file.path(path.data, "01_Dada2-Zeber/error_rates_modified.rds")) # modified error rates
 seq_infered   <- readRDS(file.path(path.data, "01_Dada2-Zeber/seq_infered.rds")) # inferred ASVs
@@ -70,7 +70,7 @@ First, we import the fastq files containing the raw reads. The samples were down
 
 ```{r quality-check, echo=TRUE, results="hide"}
 # Save the path to the directory containing the fastq zipped files
-path.fastq <- file.path(path.zeber, "download-Zeber-samples")
+path.fastq <- file.path(path.data, "raw_fastq")
 # list.files(path.fastq) # check we are in the right directory
 
 # fastq filenames have format: SAMPLENAME.fastq.gz
@@ -79,7 +79,7 @@ FNs <- sort(list.files(path.fastq, pattern=".fastq.gz", full.names = TRUE))
 show(FNs[1:5])
 
 # Extract sample names, assuming filenames have format: SAMPLENAME.fastq.gz
-sample.names <- sapply(strsplit(basename(FNs), "_"), `[`, 1)
+sample.names <- sapply(strsplit(basename(FNs), ".fastq.gz"), `[`, 1)
 show(sample.names[1:5])
 
 # Look at quality of all files
@@ -125,7 +125,7 @@ We perform a quality filtering of the reads.
 
 ```{r filter-trim, eval = FALSE, echo = TRUE}
 # Place filtered files in a filtered/ subdirectory
-filt2_samples <- file.path(path.data, "filtered2", paste0(sample.names, "_filt.fastq.gz"))
+filt2_samples <- file.path(path.data, "filtered2", paste0(sample.names, "_filt2.fastq.gz"))
 # Assign names for the filtered fastq.gz files
 names(filt2_samples) <- sample.names
 
@@ -162,6 +162,7 @@ for (i in 1:4){
 Now we will build the parametric error model, to be able to infer amplicon sequence variants (ASVs) later on.
 
 ```{r error-rate-estimate, eval = FALSE}
+set.seed(123)
 err <- learnErrors(filt2_samples, multithread=TRUE, randomize=TRUE, verbose = 1)
 ```
 
@@ -176,18 +177,18 @@ As the error rate model doesn't fit well the observations for high quality score
 # Modify error rate model
 err_new <- err
 
-err_new$err_out['A2C','40':'45'] <- 0.0025
-err_new$err_out['A2G','40':'45'] <- 0.01
-err_new$err_out['A2T','39':'45'] <- 0.0025
-err_new$err_out['C2A','40':'45'] <- 0.002
-err_new$err_out['C2G','39':'45'] <- 0.002
+err_new$err_out['A2C','40':'45'] <- 0.003
+err_new$err_out['A2G','40':'45'] <- 0.012
+err_new$err_out['A2T','39':'45'] <- 0.003
+err_new$err_out['C2A','40':'45'] <- 0.003
+err_new$err_out['C2G','39':'45'] <- 0.003
 err_new$err_out['C2T','39':'45'] <- 0.007
 err_new$err_out['G2A','39':'45'] <- 0.0075
-err_new$err_out['G2C','39':'45'] <- 0.002
-err_new$err_out['G2T','39':'45'] <- 0.0015
-err_new$err_out['T2A','39':'45'] <- 0.003
+err_new$err_out['G2C','39':'45'] <- 0.0025
+err_new$err_out['G2T','39':'45'] <- 0.002
+err_new$err_out['T2A','39':'45'] <- 0.004
 err_new$err_out['T2C','40':'45'] <- 0.01
-err_new$err_out['T2G','40':'45'] <- 0.0035
+err_new$err_out['T2G','40':'45'] <- 0.004
 ```
 
 ```{r plot-new-errors, fig.height = 5, fig.width = 5}
@@ -278,19 +279,14 @@ track
 
 ```{r seqdepth, echo=FALSE, eval=FALSE, include=FALSE}
 # Save nb of reads per sample before / after dada2 pipeline
-nb.reads <- data.frame("before" = raw_stats$reads,
-                       "after" = rowSums(seqtable.nochim),
-                       "dataset" = "Zeber")
-# better alternative? choose!!
-# nb.reads <- as.data.frame(rowSums(seqtable.nochim)) %>%
-#   rename("after"="rowSums(seqtable.nochim)") %>%
-#   mutate("Run"=names(rowSums(seqtable.nochim))) %>%
-#   right_join(raw_stats %>% rename(Run=sample, before=reads),
-#              by="Run") %>%
-#   relocate(before) %>%
-#   relocate(Run) %>%
-#   mutate(after = nafill(after, fill=0),
-#          "dataset" = "AGP")
+nb.reads <- data.frame("after"=rowSums(seqtable.nochim)) %>%
+  mutate("Run"=names(rowSums(seqtable.nochim))) %>%
+  right_join(raw_stats %>% dplyr::rename(Run=sample, before=reads),
+             by="Run") %>%
+  relocate(before) %>%
+  relocate(Run) %>%
+  mutate(after = nafill(after, fill=0),
+         "dataset" = "Zeber")
 
 saveRDS(nb.reads, file.path(path.root, "data/analysis-combined/06_QCplot/nbreads_zeber.rds")
 ```
@@ -320,12 +316,12 @@ Extensions: The dada2 package also implements a method to make species level ass
 path.silva <- file.path(path.root, "data/analysis-individual/CLUSTER/taxonomy/silva-taxonomic-ref")
 
 # Assign taxonomy (with silva v138)
-taxa <- assignTaxonomy(seqtable.nochim, file.path(path.silva, "silva_nr_v138_train_set.fa.gz",
+taxa <- assignTaxonomy(seqtable.nochim, file.path(path.silva, "silva_nr99_v138.1_train_set.fa.gz"),
                        tryRC = TRUE, # try reverse complement of the sequences
                        multithread=TRUE, verbose = TRUE)
 
 # Add species assignment
-taxa <- addSpecies(taxa, file.path(path.root, "silva_species_assignment_v138.fa.gz")
+taxa <- addSpecies(taxa, file.path(path.silva, "silva_species_assignment_v138.1.fa.gz"))
 ```
 
 
@@ -335,9 +331,8 @@ taxa.print <- taxa
 rownames(taxa.print) <- NULL # Removing sequence rownames for display only
 head(taxa.print)
 
-table(taxa.print[,1]) # Show the different kingdoms (should be only bacteria)
-table(taxa.print[,2]) # Show the different phyla
-table(is.na(taxa.print[,2])) # is there any NA phyla?
+table(taxa.print[,1], useNA="ifany") # Show the different kingdoms (should be only bacteria)
+table(taxa.print[,2], useNA="ifany") # Show the different phyla
 ```
 
 
@@ -354,11 +349,7 @@ The preprocessing will be easier to do with ASV, taxonomic and metadata tables c
 
 ```{r phyloseq-object, eval=FALSE}
 # Import metadata
-metadata_table <- read.csv(file.path(path.zeber, "00_Metadata-Zeber/Metadata-Zeber.csv"))
-
-# Remove the fastq.gz extension in sample names in seqtable.nochim
-rownames(seqtable.nochim) <-  gsub(".fastq.gz$", "", rownames(seqtable.nochim))
-
+metadata_table <- read.csv(file.path(path.data, "00_Metadata-Zeber/Metadata-Zeber.csv"), row.names = 1)
 
 #_________________________
 # Create phyloseq object
@@ -405,6 +396,7 @@ saveRDS(seq_infered, file.path(path.data, "01_Dada2-Zeber/seq_infered.rds"))
 # Taxa & Phyloseq object
 saveRDS(taxa,   file.path(path.data, "01_Dada2-Zeber/taxa_zeber.rds"))
 saveRDS(physeq, file.path(path.root, "data/analysis-individual/CLUSTER/PhyloTree/input/physeq_zeber.rds"))
+saveRDS(physeq, file.path(path.root, "data/phyloseq-objects/phyloseq-without-phylotree/physeq_zeber.rds"))
 ```
 
 
