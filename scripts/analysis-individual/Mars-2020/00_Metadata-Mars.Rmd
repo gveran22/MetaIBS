@@ -153,10 +153,6 @@ table(ena_table_final$run_accession, useNA="ifany") # should all appear twice
 # Export metadata table
 write.csv(clean.df, file.path(path, "00_Metadata-Mars/modif_metadata(R).csv"))
 
-# Export the list of Runs to download from SRA
-# write.table(clean.df$Run, file.path(path, "raw_fastq/list_files_mars.txt"),
-#             sep="\t", row.names=FALSE, col.names=FALSE, quote=FALSE)
-
 # Export the list of links to download the Runs from ENA
 write.table(ena_table_final$fastq_ftp, file.path(path, "raw_fastq/list_files_mars.txt"),
             sep="\t", row.names=FALSE, col.names=FALSE, quote=FALSE)
