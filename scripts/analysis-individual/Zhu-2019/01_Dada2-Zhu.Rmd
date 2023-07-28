@@ -49,15 +49,17 @@ path.data <- file.path(path.root, "data/analysis-individual/Zhu-2019")
 #__________________________________________________________________________
 
 raw_stats         <- readRDS(file.path(path.data, "01_Dada2-Zhu/raw_stats.rds")) # seq depth
+FWDpos.FWDread    <- readRDS(file.path(path.data, "01_Dada2-Zhu/forwardreads_primerposition.rds"))
+FWDpos.REVread    <- readRDS(file.path(path.data, "01_Dada2-Zhu/reversereads_primerposition.rds"))
 out2              <- readRDS(file.path(path.data, "01_Dada2-Zhu/out2.rds")) # out process (QC)
-FWD.filt2_samples <- file.path(path, "filtered2", paste0(sample.names, "_1_filt.fastq.gz")) # quality-filtered reads (FWD)
-REV.filt2_samples <- file.path(path, "filtered2", paste0(sample.names, "_2_filt.fastq.gz")) # quality-filtered reads (REV)
+FWD.filt2_samples <- sort(list.files(file.path(path.data, "filtered2"), pattern="_1_filt2.fastq.gz", full.names = TRUE)) # quality-filtered reads (FWD)
+REV.filt2_samples <- sort(list.files(file.path(path.data, "filtered2"), pattern="_2_filt2.fastq.gz", full.names = TRUE)) # quality-filtered reads (REV)
 errF              <- readRDS(file.path(path.data, "01_Dada2-Zhu/errF.rds")) # error rates F
 errR              <- readRDS(file.path(path.data, "01_Dada2-Zhu/errR.rds")) # error rates R
 dadaFs            <- readRDS(file.path(path.data, "01_Dada2-Zhu/infered_seq_F.rds")) # inferred ASVs F
 dadaRs            <- readRDS(file.path(path.data, "01_Dada2-Zhu/infered_seq_R.rds")) # inferred ASVs R
 mergers           <- readRDS(file.path(path.data, "01_Dada2-Zhu/mergers.rds")) # mergers
-taxa              <- readRDS(file.path(path.data, "01_Dada2-Zhu/taxa_zhu.rds")) # taxa
+taxa              <- readRDS(file.path(path.data, "01_Dada2-Zhu/taxa_zhu_longASV.rds")) # taxa
 taxa.small        <- readRDS(file.path(path.data, "01_Dada2-Zhu/taxa_zhu_shortASV.rds")) # taxa from trimmed ASVs
 physeq            <- readRDS(file.path(path.data, "01_Dada2-Zhu/physeq_zhu_longASV.rds")) # phyloseq object without phylogenetic tree
 physeq.small      <- readRDS(file.path(path.root, "data/analysis-individual/CLUSTER/PhyloTree/input/physeq_zhu.rds")) # phyloseq object without phylogenetic tree (and with trimmed ASVs)
@@ -75,7 +77,7 @@ First, we import the fastq files containing the raw reads. The samples were down
 
 ```{r, quality-check, echo=TRUE, results="hide"}
 # Save the path to the directory containing the fastq zipped files
-path.fastq <- file.path(path.zhu, "download-Zhu-samples")
+path.fastq <- file.path(path.data, "raw_fastq")
 # list.files(path.fastq) # check we are in the right directory
 
 # fastq filenames have format: SAMPLENAME.fastq.gz
@@ -159,6 +161,59 @@ for (i in 6:9){
 }
 ```
 
+Let's have a quick look at where primers are positioned in the forward/reverse reads
+```{r primer-position, eval=FALSE, echo=TRUE}
+# Function that gets position in which sequence is found
+primerHitsPosition <- function(primer, fn){
+  hits <- as.data.frame(vmatchPattern(primer, sread(readFastq(fn)), fixed = FALSE, max.mismatch = 2))
+  hits <- hits[,c("group", "start")]
+  colnames(hits) <- c("sample", "start")
+  hits$sample <- sapply(strsplit(basename(fn), "_"), `[`, 1)
+  hits$readslength <- seqTools::fastqq(fn)@maxSeqLen
+  return(hits)
+}
+
+# Get position of primers in forward reads
+FWDpos.FWDread <- data.frame()
+for(i in 1:length(fnFs)){
+  cat("SAMPLE", i)
+  newF <- primerHitsPosition(FWD.orients["Forward"], fnFs[[i]])
+  FWDpos.FWDread <- rbind(newF, FWDpos.FWDread)
+}
+
+# Get position of REV primers
+FWDpos.REVread <- data.frame()
+for(i in 1:length(fnRs)){
+  cat("SAMPLE", i)
+  newF <- primerHitsPosition(FWD.orients["RevComp"], fnRs[[i]])
+  FWDpos.REVread <- rbind(newF, FWDpos.REVread)
+}
+# add metadata info on samples
+metadata_table <- read.csv(file.path(path.data, "00_Metadata-Zhu/Metadata-Zhu.csv"), row.names=1)
+FWDpos.REVread <- FWDpos.REVread %>%
+  left_join(metadata_table[,c("Run", "host_disease")], by=join_by("sample"=="Run"))
+```
+
+```{r primer-position-plot, fig.width = 5, fig.height = 4}
+# FORWARD READS
+ggplot(FWDpos.FWDread, aes(x=start))+
+  geom_density() +
+  xlim(c(0,max(FWDpos.FWDread$readslength)))+
+  labs(x="start position of primer", y="density of primers starting at x position", title="FORWARD READS")
+
+# REVERSE READS
+ggplot(FWDpos.REVread, aes(x=start))+
+  geom_density() +
+  facet_wrap(~sample)+ # weird pattern...
+  xlim(c(0,max(FWDpos.REVread$readslength)))+
+  labs(x="start position of primer", y="density of primers starting at x position", title="REVERSE READS")
+
+ggplot(FWDpos.REVread, aes(x=start))+
+  geom_density() +
+  facet_wrap(~host_disease)+ # seems like it's determined by host_disease...
+  xlim(c(0,max(FWDpos.REVread$readslength)))+
+  labs(x="start position of primer", y="density of primers starting at x position", title="REVERSE READS")
+```
 
 
 
@@ -167,10 +222,8 @@ for (i in 6:9){
 ********************
 
 ### 3.1. Primer removal
-The forward reads indeed contain the forward primer (in the middle of the reads), and the reverse reads contain the revcomp of the forward primer (which makes sense, it shows the forward primer is found at the *end* of the reverse reads).
-Ideally, to follow the standardized pipeline, we should (1) filter out reads not containing any primer and (2) trim the primers. However, the fastq files deposited on the SRA/ENA databases do not contain Illumina headers. Thus, during the merging step of paired reads later on, the Dada2 package won't be able to match paired-reads.
-
-We will simply perform a quality filtering of the reads.
+The forward reads indeed contain the forward primer (in the middle of the reads), and the reverse reads contain the revcomp of the forward primer (which makes sense, it shows the forward primer is found at the *end* of the reverse reads). But only half the samples contain a primer in the reverse reads (seems like it's the healthy samples).
+Ideally, to follow the standardized pipeline, we should (1) filter out reads not containing any primer and (2) trim the primers. However, we would lose all of our IBS samples in step 1. Thus, we will simply perform a quality filtering of the reads (step 2).
 
 
 ### 3.2. Quality filtering
@@ -178,8 +231,8 @@ Then, we perform a quality filtering of the reads.
 
 ```{r filter-trim, eval = FALSE, echo = TRUE}
 # Place filtered files in a filtered/ subdirectory
-FWD.filt2_samples <- file.path(path.data, "filtered2", paste0(sample.names, "_1_filt.fastq.gz")) # FWD reads
-REV.filt2_samples <- file.path(path.data, "filtered2", paste0(sample.names, "_2_filt.fastq.gz")) # REV reads
+FWD.filt2_samples <- file.path(path.data, "filtered2", paste0(sample.names, "_1_filt2.fastq.gz")) # FWD reads
+REV.filt2_samples <- file.path(path.data, "filtered2", paste0(sample.names, "_2_filt2.fastq.gz")) # REV reads
 # Assign names for the filtered fastq.gz files
 names(FWD.filt2_samples) <- sample.names
 names(REV.filt2_samples) <- sample.names
@@ -217,7 +270,9 @@ for (i in 1:3){
 Now we will build the parametric error model, to be able to infer amplicon sequence variants (ASVs) later on.
 
 ```{r error-rate-estimate, eval = FALSE}
+set.seed(123)
 errF <- learnErrors(FWD.filt2_samples, multithread=TRUE, randomize=TRUE, verbose = 1)
+set.seed(123)
 errR <- learnErrors(REV.filt2_samples, multithread=TRUE, randomize=TRUE, verbose = 1)
 ```
 
@@ -373,8 +428,8 @@ track <- cbind(out2,
                sapply(dadaFs, getN),
                sapply(dadaRs, getN),
                sapply(mergers, getN),
-               rowSums(seqtable.nochim),
-               lapply(rowSums(seqtable.nochim)*100/out2[,1], as.integer))
+               rowSums(seqtable.small.nochim),
+               lapply(rowSums(seqtable.small.nochim)*100/out2[,1], as.integer))
 
 # Assign column and row names
 colnames(track) <- c("input", "quality-filt", "denoisedF", "denoisedR", 'merged', 'nonchim', "%input->output")
@@ -386,19 +441,14 @@ track
 
 ```{r seqdepth, echo=FALSE, eval=FALSE, include=FALSE}
 # Save nb of reads per sample before / after dada2 pipeline
-nb.reads <- data.frame("before" = raw_stats$reads,
-                       "after" = rowSums(seqtable.nochim),
-                       "dataset" = "Zhu")
-# better alternative? choose!!
-# nb.reads <- as.data.frame(rowSums(seqtable.nochim)) %>%
-#   rename("after"="rowSums(seqtable.nochim)") %>%
-#   mutate("Run"=names(rowSums(seqtable.nochim))) %>%
-#   right_join(raw_stats %>% rename(Run=sample, before=reads),
-#              by="Run") %>%
-#   relocate(before) %>%
-#   relocate(Run) %>%
-#   mutate(after = nafill(after, fill=0),
-#          "dataset" = "AGP")
+nb.reads <- data.frame("after"=rowSums(seqtable.small.nochim)) %>%
+  mutate("Run"=names(rowSums(seqtable.small.nochim))) %>%
+  right_join(raw_stats %>% dplyr::rename(Run=sample, before=reads),
+             by="Run") %>%
+  relocate(before) %>%
+  relocate(Run) %>%
+  mutate(after = nafill(after, fill=0),
+         "dataset" = "Zhu")
 
 saveRDS(nb.reads, file.path(path.root, "data/analysis-combined/06_QCplot/nbreads_zhu.rds"))
 ```
@@ -415,7 +465,7 @@ Extensions: The dada2 package also implements a method to make species level ass
 
 ```{r assign-taxonomy-on-cluster, eval=FALSE, echo=FALSE, include=FALSE}
 # In case you prefer to assign taxonomy on a computer cluster (in other words run this chunk on a computer cluster), you can export the ASV table
-# saveRDS(seqtable.nochim, file.path(path.root, "data/analysis-individual/CLUSTER/taxonomy/input/seqtablenochim_zhu.rds"))
+# saveRDS(seqtable.small.nochim, file.path(path.root, "data/analysis-individual/CLUSTER/taxonomy/input/seqtablenochim_zhu.rds"))
 
 # then you can :
 # 1. copy the "data/analysis-individual/CLUSTER/taxonomy/" directory to your cluster (where there is the input data & R scripts to assign taxonomy)
@@ -429,18 +479,18 @@ Extensions: The dada2 package also implements a method to make species level ass
 path.silva <- file.path(path.root, "data/analysis-individual/CLUSTER/taxonomy/silva-taxonomic-ref")
 
 # Assign taxonomy (with silva v138)
-taxa <- assignTaxonomy(seqtable.nochim, file.path(path.silva, "silva_nr_v138_train_set.fa.gz"),
+taxa <- assignTaxonomy(seqtable.nochim, file.path(path.silva, "silva_nr99_v138.1_train_set.fa.gz"),
                        tryRC = TRUE, # try reverse complement of the sequences
                        multithread=TRUE, verbose = TRUE)
-
 # Add species assignment
-taxa <- addSpecies(taxa, file.path(path.silva, "silva_species_assignment_v138.fa.gz"))
+taxa <- addSpecies(taxa, file.path(path.silva, "silva_species_assignment_v138.1.fa.gz"))
+
 
 # Same with our optimized seqtable
-taxa.small <- assignTaxonomy(seqtable.small.nochim, file.path(path.silva, "silva_nr_v138_train_set.fa.gz"),
+taxa.small <- assignTaxonomy(seqtable.small.nochim, file.path(path.silva, "silva_nr99_v138.1_train_set.fa.gz"),
                             tryRC = TRUE, # try reverse complement of the sequences
                             multithread=TRUE, verbose = TRUE)
-taxa.small <- addSpecies(taxa.small, file.path(path.silva, "silva_species_assignment_v138.fa.gz"))
+taxa.small <- addSpecies(taxa.small, file.path(path.silva, "silva_species_assignment_v138.1.fa.gz"))
 ```
 
 ```{r taxtable-check}
@@ -449,11 +499,8 @@ taxa.print <- taxa
 rownames(taxa.print) <- NULL # Removing sequence rownames for display only
 head(taxa.print)
 
-table(taxa.print[,1]) # Show the different kingdoms (should be only bacteria)
-taxa.print[taxa.print[,1] == 'Eukaryota',2] # the eukaryota are all NAs
-
-table(taxa.print[,2]) # Show the different phyla
-table(is.na(taxa.print[,2])) # is there any NA phyla?
+table(taxa.print[,1], useNA="ifany") # Show the different kingdoms
+table(taxa.print[,2], useNA="ifany") # Show the different phyla
 ```
 
 ```{r taxtable-check2}
@@ -462,10 +509,8 @@ taxa.small.print <- taxa.small
 rownames(taxa.small.print) <- NULL
 head(taxa.small.print)
 
-table(taxa.small.print[,1]) # Show the different kingdoms (should be only bacteria)
-
-table(taxa.small.print[,2]) # Show the different phyla
-table(is.na(taxa.small.print[,2])) # is there any NA phyla?
+table(taxa.small.print[,1], useNA="ifany") # Show the different kingdoms
+table(taxa.small.print[,2], useNA="ifany") # Show the different phyla
 ```
 
 
@@ -482,10 +527,10 @@ taxa.small.df$asv <- rownames(taxa.small.df)
 asv.df.nochim <- asv.df[asv.df$pre_cut %in% rownames(taxa.df),]
 colnames(asv.df.nochim) <- c("asvID", "asv_precut", "asv_postcut")
 # Sanity checks
-# table(duplicated(asv.df.nochim$post_cut))
-# dim(asv.df.nochim)
-# table(asv.df.nochim$pre_cut %in% rownames(taxa))
-# table(asv.df.nochim$post_cut %in% rownames(taxa.small)) # 59 ASVs post-cut are not in the taxonomic table (probably because they are chimeras)
+# table(duplicated(asv.df.nochim$asv_postcut))
+# dim(asv.df.nochim) # should be 1057
+# table(asv.df.nochim$asv_precut %in% rownames(taxa))
+# table(asv.df.nochim$asv_postcut %in% rownames(taxa.small)) # 56 ASVs post-cut are not in the taxonomic table (probably because they are chimeras)
 
 # Compare taxonomic assignment pre/post-cut (phylum level)
 compare.df <- merge(asv.df.nochim, taxa.df[,c("Phylum", "asv")], by.x="asv_precut", by.y="asv") # pre-cut phylum
@@ -493,14 +538,14 @@ colnames(compare.df)[4] <- "Phylum_precut"
 compare.df <- merge(x=compare.df, y=taxa.small.df[,c("Phylum", "asv")], by.x="asv_postcut", by.y="asv") # post-cut phylum
 colnames(compare.df)[5] <- "Phylum_postcut"
 
-# The 59 ASVs present in pre-cut but not in post-cut were removed (59 rows were deleted)
+# The 56 ASVs present in pre-cut but not in post-cut were removed (59 rows were deleted)
 dim(compare.df)
 
 # How many rows (ASVs) have different phylum?
-table(compare.df$Phylum_precut != compare.df$Phylum_postcut, useNA="ifany") # 29 ASVs assigned to different phyla
+table(compare.df$Phylum_precut == compare.df$Phylum_postcut, useNA="ifany") # 26 ASVs assigned to different phyla
 phylum.all <- compare.df %>%
   select(asvID, Phylum_precut, Phylum_postcut) %>%
-  rename(precut=Phylum_precut, postcut=Phylum_postcut) %>%
+  dplyr::rename(precut=Phylum_precut, postcut=Phylum_postcut) %>%
   mutate(diff=ifelse(precut != postcut, TRUE, FALSE)) %>%
   tidyr::pivot_longer(!c(asvID, diff), names_to="cut", values_to="Phylum")
   
@@ -528,10 +573,10 @@ colnames(compare.df.genus)[5] <- "Genus_postcut"
 dim(compare.df.genus)
 
 # How many rows (ASVs) have different phylum?
-table(compare.df.genus$Genus_precut != compare.df.genus$Genus_postcut, useNA="ifany") # 22 ASVs assigned to diff. genus, but many more NAs
+table(compare.df.genus$Genus_precut == compare.df.genus$Genus_postcut, useNA="ifany") # 31 ASVs assigned to diff. genus, but many more NAs
 genus.all <- compare.df.genus %>%
   select(asvID, Genus_precut, Genus_postcut) %>%
-  rename(precut=Genus_precut, postcut=Genus_postcut) %>%
+  dplyr::rename(precut=Genus_precut, postcut=Genus_postcut) %>%
   mutate(diff=ifelse(precut != postcut, TRUE, FALSE)) %>%
   tidyr::pivot_longer(!c(asvID, diff), names_to="cut", values_to="Genus")
 
@@ -566,19 +611,19 @@ The preprocessing will be easier to do with ASV, taxonomic and metadata tables c
 ```{r phyloseq-object, echo=TRUE, eval=FALSE}
 #_________________________
 # Import metadata
-metadata_table <- read.csv(file.path(path.zhu, "00_Metadata-Zhu/Metadata-Zhu.csv"))
+metadata_table <- read.csv(file.path(path.data, "00_Metadata-Zhu/Metadata-Zhu.csv"), row.names=1)
 
 #_________________________
 # Create phyloseq object
 physeq <- phyloseq(otu_table(seqtable.nochim, taxa_are_rows=FALSE), # by default, in otu_table the ASVs are in rows
-                  sample_data(sampledf), 
+                  sample_data(metadata_table), 
                   tax_table(taxa))
 physeq.small <- phyloseq(otu_table(seqtable.small.nochim, taxa_are_rows=FALSE),
-                  sample_data(sampledf), 
+                  sample_data(metadata_table), 
                   tax_table(taxa.small))
 
 # Remove taxa that are eukaryota, or have unassigned Phyla
-physeq <- subset_taxa(physeq, Kingdom != "Eukaryota")
+physeq <- subset_taxa(physeq, !is.na(Kingdom))
 physeq <- subset_taxa(physeq, !is.na(Phylum))
 # Remove samples with less than 500 reads
 physeq <- prune_samples(sample_sums(physeq)>=500, physeq)
@@ -586,7 +631,7 @@ physeq <- prune_samples(sample_sums(physeq)>=500, physeq)
 # physeq <- prune_taxa(taxa_sums(physeq)>0, physeq)
 
 # Remove taxa that are eukaryota, or have unassigned Phyla
-physeq.small <- subset_taxa(physeq.small, Kingdom != "Eukaryota")
+physeq.small <- subset_taxa(physeq.small, !is.na(Kingdom))
 physeq.small <- subset_taxa(physeq.small, !is.na(Phylum))
 # Remove samples with less than 500 reads
 physeq.small <- prune_samples(sample_sums(physeq.small)>=500, physeq.small)
@@ -596,7 +641,7 @@ physeq.small <- prune_samples(sample_sums(physeq.small)>=500, physeq.small)
 ### 7.2. Quick peek at data analysis
 ```{r plot, fig.width = 10, fig.height = 5}
 # Absolute abundance
-plot_bar(physeq, fill = "Phylum")+ facet_wrap("host_disease", scales="free_x") + theme(axis.text.x = element_blank())
+# plot_bar(physeq, fill = "Phylum")+ facet_wrap("host_disease", scales="free_x") + theme(axis.text.x = element_blank())
 
 # Relative abundance for Phylum
 phylum.table <- physeq %>%
@@ -613,7 +658,7 @@ ggplot(phylum.table, aes(x = Sample, y = Abundance, fill = Phylum))+
 
 ```{r plot-2, fig.width = 10, fig.height = 5}
 # Absolute abundance
-plot_bar(physeq.small, fill = "Phylum")+ facet_wrap("host_disease", scales="free_x") + theme(axis.text.x = element_blank())
+# plot_bar(physeq.small, fill = "Phylum")+ facet_wrap("host_disease", scales="free_x") + theme(axis.text.x = element_blank())
 
 # Relative abundance for Phylum
 phylum.table <- physeq.small %>%
@@ -634,21 +679,24 @@ For any further analysis, we will be doing it on the _physeq_shortASV_ object, a
 ### 7.3. Save to disk
 ```{r, eval=FALSE}
 # Save to disk
-saveRDS(raw_stats, file.path(path.data, "01_Dada2-Zhu/raw_stats.rds"))
-saveRDS(out2,      file.path(path.data, "01_Dada2-Zhu/out2.rds"))
-saveRDS(errF,      file.path(path.data, "01_Dada2-Zhu/errF.rds"))
-saveRDS(errR,      file.path(path.data, "01_Dada2-Zhu/errR.rds"))
-saveRDS(dadaFs,    file.path(path.data, "01_Dada2-Zhu/infered_seq_F.rds"))
-saveRDS(dadaRs,    file.path(path.data, "01_Dada2-Zhu/infered_seq_R.rds"))
-saveRDS(mergers,   file.path(path.data, "01_Dada2-Zhu/mergers.rds"))
+saveRDS(raw_stats,      file.path(path.data, "01_Dada2-Zhu/raw_stats.rds"))
+saveRDS(FWDpos.FWDread, file.path(path.data, "01_Dada2-Zhu/forwardreads_primerposition.rds"))
+saveRDS(FWDpos.REVread, file.path(path.data, "01_Dada2-Zhu/reversereads_primerposition.rds"))
+saveRDS(out2,           file.path(path.data, "01_Dada2-Zhu/out2.rds"))
+saveRDS(errF,           file.path(path.data, "01_Dada2-Zhu/errF.rds"))
+saveRDS(errR,           file.path(path.data, "01_Dada2-Zhu/errR.rds"))
+saveRDS(dadaFs,         file.path(path.data, "01_Dada2-Zhu/infered_seq_F.rds"))
+saveRDS(dadaRs,         file.path(path.data, "01_Dada2-Zhu/infered_seq_R.rds"))
+saveRDS(mergers,        file.path(path.data, "01_Dada2-Zhu/mergers.rds"))
 
 
 # Taxa & Phyloseq object
-saveRDS(taxa,       file.path(path.data, "01_Dada2-Zhu/taxa_zhu.rds"))
-saveRDS(taxa.small, file.path(path.data, "01_Dada2-Zhu/taxa_zhu_shortASV.rds")
+saveRDS(taxa,       file.path(path.data, "01_Dada2-Zhu/taxa_zhu_longASV.rds"))
+saveRDS(taxa.small, file.path(path.data, "01_Dada2-Zhu/taxa_zhu_shortASV.rds"))
 
-saveRDS(physeq,       file.path(path, "01_Dada2-Zhu/physeq_zhu_longASV.rds"))
-saveRDS(physeq.small, file.path(path.root, "data/analysis-individual/CLUSTER/PhyloTree/input/physeq_zhu.rds") # phyloseq object with shorter ASVs
+saveRDS(physeq,       file.path(path.data, "01_Dada2-Zhu/physeq_zhu_longASV.rds"))
+saveRDS(physeq.small, file.path(path.root, "data/analysis-individual/CLUSTER/PhyloTree/input/physeq_zhu.rds")) # phyloseq object with shorter ASVs
+saveRDS(physeq.small, file.path(path.root, "data/phyloseq-objects/phyloseq-without-phylotree/physeq_zhu.rds"))
 ```
 
 

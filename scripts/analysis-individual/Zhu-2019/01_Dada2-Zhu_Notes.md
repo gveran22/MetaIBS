@@ -27,7 +27,7 @@ Zhu (_Frontiers in Cellular and Infection Microbiology_, 2019) - [Identification
 
 
 ## Filtering
-- **primer removal**: fastq files deposited on the SRA/ENA databases don't contain Ilumina headers, which are needed to merge paired reads later on (if there is a different number of forward and reverse reads for each sample). Thus, primer sequences could not be removed.
+- **primer removal**: as about half the samples don't contain any primers in the reverse reads, primers were not removed. However, we will try to cut the FWD primer from the infered ASVs later on.
 - **quality filtering**: \~80% of reads are kept
 
 ## Learn error rates
@@ -35,18 +35,19 @@ Zhu (_Frontiers in Cellular and Infection Microbiology_, 2019) - [Identification
 
 ## Construct ASV table
 ### a) Infer sequence variants
-- 5,448 amplicon sequence variants (ASVs)
+- 5,307 amplicon sequence variants (ASVs)
+The reads are much longer than the V4 region (~400 bp instead of expected 250bp). We didn't remove primers previously, but we know that the FWD primer was found in the middle of the FWD reads, so we cut off any sequence preceding the FWD primer in the inferred ASVs. The new (shortened) ASVs had duplicates, and we removed any ASV longer than 300bp, so we ended up with **1,631 ASVs** (all of them around 250bp).
 
 ### b) Remove chimeras
-- 1,070 seq variants (but still >89% reads kept)
+- 672 seq variants (but still >94% reads kept)
 
 ### c) Assign taxonomy
 Taxonomy assigned with Silva v138.
-- Bacteria - 1,055
+- Bacteria - 672
 - Archaea - 0
-- Eukaryota - 15
+- Eukaryota - 0
 
-All Eukaryota or unassigned phyla were removed (n=19). The final ASV table contains **1,051 sequence variants**.
+All Eukaryota or unassigned phyla were removed (n=0). The final ASV table contains **672 sequence variants**.
 
 ## Metadata
 - age
