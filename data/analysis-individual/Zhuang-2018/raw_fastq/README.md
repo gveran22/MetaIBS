@@ -1,3 +1,8 @@
-To download samples from your terminal, you need to have the SRA-toolkit installed (instructions to download the SRA-toolkit can be found [here](https://github.com/ncbi/sra-tools/wiki/02.-Installing-SRA-Toolkit)), and put the `sra-toolkit/` directory in your home directory, so that the `download_fastq_zhuang.sh` script can use the sra-toolkit to download the list of samples in `list_files_zhuang.txt`.
+# raw_fastq (Zhuang)
 
-As an alternative, you can also download the fastq files directly from our zenodo (ADD LINK).
+We downloaded the `.fastq` files directly from the [ENA database](https://www.ebi.ac.uk/ena/browser/view/PRJNA475187), following these steps:
+1. Downloading the table with the list of links to .fastq files: clicked on "TSV" next to "Download report";
+2. Moving the downloaded `filereport_read_run_PRJNA475187_tsv.txt` file to this current directory;
+3. Subsetting this table to the 29 samples of interest in the [00_Metadata-Zhuang.R](../../../../scripts/analysis-individual/Zhuang-2018/00_Metadata-Zhuang.R) script;
+4. Exporting the list of `.fastq.gz` links to the `list_files_zhuang.txt`;
+5. Executing the `download_fastq_zhuang.sh` bash script (which uses `wget`).
