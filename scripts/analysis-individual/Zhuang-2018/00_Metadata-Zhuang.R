@@ -12,7 +12,7 @@
 library(tidyverse)
 
 # Data
-path <- "~/Projects/MetaIBS/scripts/analysis-individual/Zhuang-2018"
+path <- "~/Projects/MetaIBS/data/analysis-individual/Zhuang-2018"
 sraDF <- read.table(file.path(path, "00_Metadata-Zhuang/ZhuangSraRunTable.txt"), header = TRUE, sep = ",")
 
 
@@ -25,9 +25,9 @@ colnames(sraDF)
 # Keep relevant data
 sampledf <- sraDF %>%
   as_tibble() %>%
-  select(Run, Library.Name) %>%
+  dplyr::select(Run, Library.Name) %>%
   mutate(host_subtype=sub("_.*", "", Library.Name)) %>%
-  rename(host_ID=Library.Name) %>%
+  dplyr::rename(host_ID=Library.Name) %>%
   # Keep only healthy/IBS samples
   filter(host_subtype %in% c("HC", "IBS")) %>%
   # Rename host_subtype values
@@ -46,6 +46,21 @@ rownames(sampledf) <- sampledf$Run
 # SAVE DATAFRAME 
 write.csv(sampledf, file.path(path, "00_Metadata-Zhuang/Metadata-Zhuang.csv"))
 
-# Export list of files to download
-write.table(sampledf$Run, file.path(path, "download-Zhuang-samples/list_files_zhuang.txt"),
+# Open the filereport downloaded from the ENA
+ena_table <- read.csv(file.path(path, "raw_fastq/filereport_read_run_PRJNA475187_tsv.txt"), header=T, sep="\t")
+table(ena_table$run_accession %in% sampledf$Run, useNA="ifany") # 30 samples of interest
+ena_table <- ena_table[ena_table$run_accession %in% sampledf$Run,]
+dim(ena_table) # 30 rows, like sraDF
+head(ena_table)
+# the fastq_ftp column contains both forward & reverse reads separated by ";"
+ena_tableF <- ena_table[,c("run_accession", "fastq_ftp")]
+ena_tableF$fastq_ftp <- gsub(";.*", "", ena_tableF$fastq_ftp)
+ena_tableR <- ena_table[,c("run_accession", "fastq_ftp")]
+ena_tableR$fastq_ftp <- gsub(".*;", "", ena_tableR$fastq_ftp)
+ena_table_final <- rbind(ena_tableF, ena_tableR)
+head(ena_table_final[order(ena_table_final$run_accession),])
+table(ena_table_final$run_accession, useNA="ifany") # should all appear twice
+
+# Export the list of links to download the Runs from ENA
+write.table(ena_table_final$fastq_ftp, file.path(path, "raw_fastq/list_files_zhuang.txt"),
             sep="\t", row.names=FALSE, col.names=FALSE, quote=FALSE)
