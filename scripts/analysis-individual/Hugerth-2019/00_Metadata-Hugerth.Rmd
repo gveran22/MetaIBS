@@ -31,18 +31,18 @@ library(tidyverse)
 ```{r import-data}
 # ROOT DIRECTORY (to modify on your computer)
 path.root <- "~/Projects/MetaIBS"
-path.metadata <- file.path(path.root, "scripts/analysis-individual/Hugerth-2019/00_Metadata-Hugerth")
+path.data <- file.path(path.root, "data/analysis-individual/Hugerth-2019")
 
 # Metadata table downloaded from the SRA
-sra_metadata <- read.csv(file.path(path.metadata, "HugerthSraRunTable.txt"), header=TRUE, sep = ",")
+sra_metadata <- read.csv(file.path(path.data, "00_Metadata-Hugerth/HugerthSraRunTable.txt"), header=TRUE, sep = ",")
 head(sra_metadata)
 
 # Import the supplementary ASV table from the paper
-paper_supp <- read_excel(file.path(path.metadata, "Paper_Samples/ASV_table_PAPER.xlsx"))
+paper_supp <- read_excel(file.path(path.data, "00_Metadata-Hugerth/ASV_table_PAPER.xlsx"))
 head(paper_supp)
 
 # Import the "suggested" runs from the paper (samples ERS3379832-ERS3380418)
-paper_runs <- read.csv(file.path(path.metadata, "paper_suggested.csv"), header=TRUE, sep = ",")
+paper_runs <- read.csv(file.path(path.data, "00_Metadata-Hugerth/paper_suggested.csv"), header=TRUE, sep = ",")
 head(paper_runs)
 ```
 
@@ -111,11 +111,11 @@ dim(paperDF) # there are 561 rows (as there are 561 samples in the paper)
 
 # We need to "split" the sample names
 paperDF <- paperDF %>%
-  separate(col=raw_names, into=c("sequencing_run", "Extraction_Plate", "host_subject_ID", "host_body_product"), sep="_", remove=FALSE) %>%
+  separate(col=raw_names, into=c("sequencing_run", "extraction_plate", "host_ID", "sample_type"), sep="_", remove=FALSE) %>%
   # rename columns
-  rename_with(tolower) %>%
-  rename(host_ID=host_subject_id,
-         sample_type=host_body_product) %>%
+  # rename_with(tolower) %>%
+  # rename(host_ID=host_subject_id,
+  #        sample_type=host_body_product) %>%
   # cleanup
   mutate(sequencing_run=gsub("X", "", sequencing_run),
          extraction_plate=gsub("[.]", "-", extraction_plate),
@@ -151,7 +151,12 @@ paperDF %>%
 paperDF %>%
   filter(is.na(Run))
 # => 4 samples are unassigned (not deposited on SRA database?...)
-
+# Looking into sra_metadata, it looks like
+# subject 3967 has one biopsy (seqrun 170519, extraction plate 27-583) & one stool (seqrun 180406, extraction plate 27-2001) sample
+# subject 4149 has one biopsy (seqrun 170519, extraction plate 27-583) & one stool (seqrun 180406, extraction plate 27-2001) sample
+# subject 4206 has one biopsy (seqrun 170519, extraction plate 27-587) & one stool (seqrun 180406, extraction plate 27-2001) sample
+# subject 4339 has one biopsy (seqrun 170519, extraction plate 27-587) & one stool (seqrun 180406, extraction plate 27-2001) sample
+# so it makes sense that these 4 samples from the paper supp. ASV table don't have an equivalent into the SRA metadata
 
 # DISEASE PHENOTYPE OF THE SAMPLES INCLUDED IN PAPER
 paperDF %>%
@@ -166,7 +171,7 @@ paperDF %>%
 ## 2.3. Samples to download as indicated in paper
 Another way to verify which samples were included in the analysis of the paper, is that *the paper indicates to download samples ERS3379832-ERS3380418*. That's a total of 587 samples. Considering that there are 26 control samples, that would mean there are 561 IBS or healthy samples (which matches the number of samples analyzed in the paper).
 
-Now, the _SraRunInfo.csv_ file for samples ERS3379832-ERS3380418 was downloaded on the SRA database. Let's import it, and compare the Run numbers from that file, with the Run numbers we indirectly obtained from the supplementary ASV table.
+Now, the _paper_suggested.csv_ file for samples ERS3379832-ERS3380418 was downloaded on the SRA database. Let's import it, and compare the Run numbers from that file, with the Run numbers we indirectly obtained from the supplementary ASV table.
 
 ```{r suggested-runs}
 # CLEANUP PAPERRUNS DF
@@ -175,9 +180,9 @@ paperRuns.DF <- paper_runs %>%
   # add SRA metadata to have info on samples ERS3379832-ERS3380418
   left_join(sra_metadata, by="Run") %>%
   # do same cleanup as for sraDF
-  select(c(col, "Sample")) %>%
+  dplyr::select(c(col, "Sample")) %>%
   filter(environment_.biome. != "bioreactor") %>% 
-  select(-environment_.biome.) %>%
+  dplyr::select(-environment_.biome.) %>%
   rename_with(tolower) %>%
   rename(Run=run,
          sample_type=host_body_product,
@@ -355,7 +360,7 @@ We need to identify samples belonging to the same individual based on their demo
 - **less stringent**: samples belong to the same individual if they have the same BMI, age, disease, collection_date (y-m-d). For the few samples with inconsistent gender, we will check if we have more than 2 samples and thus we can infer the most likely gender (_most frequent gender reported_), or if we should replace by _NA_ values.
 <br/>
 <br/>
-![Schematic representation of the filtering process](./00_Metadata-Hugerth/Metadata_Strategy.jpeg)
+![Schematic representation of the filtering process](/Users/enigma/Projects/MetaIBS/data/analysis-individual/Hugerth-2019/00_Metadata-Hugerth/Metadata_Strategy.jpeg)
 <br/>
 <br/>
 
@@ -363,14 +368,14 @@ We need to identify samples belonging to the same individual based on their demo
 #_____________________________________________
 # BUILD NEW METADATA TABLE
 clean.df <- metadata %>%
-  # 1) STRINGENT FILTERING: group_by same BMI, age, gender, disease
+  # 1) STRINGENT FILTERING: group_by same BMI, age, disease, collection date & gender
   group_by(host_bmi, host_age, host_disease, coldate_y, coldate_m, host_sex) %>%
-  mutate(ID_stringent=group_indices()) %>%
+  mutate(ID_stringent=dplyr::cur_group_id()) %>%
   ungroup() %>%
   
-  # 2) LESS STRINGENT FILTERING: group_by same BMI, age, disease & collection date
+  # 2) LESS STRINGENT FILTERING: group_by same BMI, age, disease, collection date
   group_by(host_bmi, host_age, host_disease, collection_date) %>%
-  mutate(ID_flexibl=group_indices()) %>%
+  mutate(ID_flexibl=dplyr::cur_group_id()) %>%
   ungroup() %>%
   # > change gender when inconsistent for each individual
   group_by(ID_flexibl) %>%
@@ -380,6 +385,7 @@ clean.df <- metadata %>%
   # --> if inconsistent gender and only 2 samples, replace gender by NA
   mutate(sex_flexibl=case_when(n_distinct(host_sex)>1 & n_distinct(Run)==2 ~ NA_character_,
                             TRUE ~ sex_flexibl)) %>%
+  ungroup() %>%
   
   # 3) REMODEL DATAFRAME
   # change column order
@@ -428,7 +434,7 @@ clean.df %>%
   tally(n_distinct(sample_type)) %>%
   # keep only individuals with 2 distinct sample_type
   filter(n > 1) %>%
-  dim()
+  nrow()
 # 163 individuals with paired samples
 
 # FLEXIBLE FILTERING
@@ -438,9 +444,35 @@ clean.df %>%
   tally(n_distinct(sample_type)) %>%
   # keep only individuals with 2 distinct sample_type
   filter(n > 1) %>%
-  dim()
+  nrow()
 # 140 individuals with paired samples
 ```
+
+For the sake of being rigorous/cautious, we will keep the **stringent** filtering option: samples with different gender will be considered as different individuals.
+```{r}
+# Finish cleaning up metadata
+clean.df <- clean.df %>%
+  # designate sex_stringent and ID_stringent as host_sex and host_ID
+  rename(host_ID=ID_stringent,
+         host_sex=sex_stringent) %>%
+  # add some necessary columns
+  mutate(host_subtype=ifelse(host_disease=="Healthy", "HC", "IBS-unspecified"),
+         Collection="1st",
+         author="Hugerth",
+         sequencing_tech="Illumina paired-end",
+         variable_region="V3-V4") %>%
+  # reorder some columns
+  relocate(Run) %>%
+  relocate(c(host_ID,host_disease, host_subtype, sample_type, host_age, host_bmi, host_sex, host_psy, Collection, author, sequencing_tech, variable_region), .after=Run)
+
+# Sanity checks
+table(clean.df[,c("host_disease", "host_subtype")], useNA="ifany")
+table(clean.df$sample_type, useNA="ifany")
+table(clean.df$host_sex, useNA="ifany")
+summary(clean.df$host_bmi)
+summary(clean.df$host_age)
+```
+
 
 
 
@@ -448,13 +480,32 @@ clean.df %>%
 # 5. SAVE METADATA
 ******************
 
-```{r save-data, echo=TRUE, eval=FALSE}
-# Save the metadata
-# write.table(clean.df, file.path(path.root, "data_local/analysis-individual/Hugerth-2019/00_Metadata-Hugerth/modif_metadata(R).csv"))
-write.table(clean.df, file.path(path.metadata, "Metadata-Hugerth.csv"))
+## 5.1. Get list of links to wget fastq files from ENA
+```{r savedata1}
+# Open the filereport downloaded from the ENA
+ena_table <- read.csv(file.path(path.data, "raw_fastq/filereport_read_run_PRJEB31817_tsv.txt"), header=T, sep="\t")
+table(ena_table$run_accession %in% clean.df$Run, useNA="ifany") # 607 samples of interest
+ena_table <- ena_table[ena_table$run_accession %in% clean.df$Run,]
+dim(ena_table) # 607 rows, like clean.df
+head(ena_table)
+# the fastq_ftp column contains both forward & reverse reads separated by ";"
+ena_tableF <- ena_table[,c("run_accession", "fastq_ftp")]
+ena_tableF$fastq_ftp <- gsub(";.*", "", ena_tableF$fastq_ftp)
+ena_tableR <- ena_table[,c("run_accession", "fastq_ftp")]
+ena_tableR$fastq_ftp <- gsub(".*;", "", ena_tableR$fastq_ftp)
+ena_table_final <- rbind(ena_tableF, ena_tableR)
+head(ena_table_final[order(ena_table_final$run_accession),])
+table(ena_table_final$run_accession, useNA="ifany") # should all appear twice
+```
 
-# Export the list of Runs to download
-write.table(clean.df$Run, file.path(path.root, "scripts/analysis-individual/Hugerth-2019/download-Hugerth-samples/list_files_hugerth.txt"),
+
+## 5.2. Export metadata & fastq file links
+```{r savedata2, echo=TRUE, eval=FALSE}
+# Save the metadata
+write.csv(clean.df, file.path(path.data, "00_Metadata-Hugerth/Metadata-Hugerth.csv"))
+
+# Export the list of links to download the Runs from ENA
+write.table(ena_table_final$fastq_ftp, file.path(path.data, "raw_fastq/list_files_hugerth.txt"),
             sep="\t", row.names=FALSE, col.names=FALSE, quote=FALSE)
 ```
 
