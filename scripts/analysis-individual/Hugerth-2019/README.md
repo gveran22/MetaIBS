@@ -7,15 +7,17 @@ Hugerth (_Gut Microbiota_, 2019) - [No distinct microbiome signature of irritabl
 ## Choose samples of interest to download
 
 The Hugerth dataset sequenced not only healthy/IBS samples, but also samples from individuals with other gut diseases. We thus first investigated the different metadata tables provided in [00_Metadata-Hugerth.Rmd](00_Metadata-Hugerth.Rmd). You can look at the html version of that script [here](./html_outputs/00_Metadata-Hugerth.html). The outputs of this R script are:
-- a [list of runs](./download-Hugerth-samples/list_files_hugerth.txt) (e.g. ERR3548557, ERR358558, ...) to download with the SRA toolkit;
-- a metadata dataframe exported as a .csv file (in the [00_Metadata-Hugerth](00_Metadata-Hugerth/) directory, as "Metadata-Hugerth.csv")
+- a [list of runs](../../../data/analysis-individual/Hugerth-2019/raw_fastq/list_files_hugerth.txt) (e.g. ERR3548557, ERR358558, ...) to download from the ENA;
+- a metadata dataframe exported as a .csv file (in the [00_Metadata-Hugerth](../../../data/analysis-individual/Hugerth-2019/00_Metadata-Hugerth/) directory, as "Metadata-Hugerth.csv")
+
 
 
 ## Download samples
 
 The raw fastq files are accessible on the SRA or ENA with the PRJEB31817 accession number. To download samples, you can either:
-- from your terminal, go into the [download-Hugerth-samples](download-Hugerth-samples/) directory and execute the [download_fastq_hugerth.sh](download-Hugerth-samples/download_fastq_hugerth.sh) file;
-- download directly the fastq files we have deposited on Zenodo (ADD LINK)
+- from your terminal, go into the [data_empty/analysis-individual/Hugerth-2019/raw_fastq/](../../../data_empty/analysis-individual/Hugerth-2019/raw_fastq/) directory and follow the instructions of the `README.md` file to download samples from the ENA;
+- obtain directly the fastq files from the `data/` folder we have deposited in the on Zenodo (ADD LINK)
+
 
 
 ## Preprocess fastq files into ASV and taxonomic tables

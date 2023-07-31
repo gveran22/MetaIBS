@@ -31,7 +31,7 @@ A few samples have some reads with reverse complement of forward/reverse primer 
 
 ## Filtering
 - **primers removal** - \~98% reads kept
-- **quality filter** - \~72% reads kept => 3 samples had no identifier to allow to match forward & reverse reads (ERR3586004, ERR3586042 and ERR3586312 were removed).
+- **quality filter** - \~72% reads kept => 3 samples had no identifier to allow to match forward & reverse reads (ERR3586005, ERR3586042 and ERR3586312 were removed).
 
 
 ## Learn error rates
@@ -39,18 +39,18 @@ A few samples have some reads with reverse complement of forward/reverse primer 
 
 ## Construct ASV table
 ### a) Infer sequence variants
-- 16,438 amplicon sequence variants (ASVs)
+- 16,478 amplicon sequence variants (ASVs)
 
 ### b) Remove chimeras
-- 5,893 seq variants (but still >97% reads kept)
+- 5,902 seq variants (but still >97% reads kept)
 
 ### c) Assign taxonomy
 Taxonomy assigned with Silva v138.
-- Bacteria - 5,888
-- Archaea - 5
+- Bacteria - 5,896
+- Archaea - 6
 - Eukaryota - 0
 
-All unassigned phyla were removed (n=16), samples below 500 total reads (n=79). The final ASV table contains **5,877 sequence variants**.
+All unassigned phyla were removed (n=12), samples below 500 total reads (n=79). The final ASV table contains **5,885 sequence variants**.
 
 ## Metadata
 - age
