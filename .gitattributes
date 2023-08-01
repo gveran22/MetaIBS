@@ -4,5 +4,6 @@ data/phyloseq-objects/physeq_agp.rds filter=lfs diff=lfs merge=lfs -text
 data/aggregated-tables/AGP-2021/*.csv filter=lfs diff=lfs merge=lfs -text
 data/analysis-combined/05_Common-ASVs/*.csv filter=lfs diff=lfs merge=lfs -text
 data/analysis-combined/04a_LogRatios-Taxa/pseudocounts_aft-agg/*.rds filter=lfs diff=lfs merge=lfs -text
-data/analysis-individual/AGP/00_Metadata-AGP/SraRunTable.csv filter=lfs diff=lfs merge=lfs -text
+data/analysis-individual/AGP/00_Metadata-AGP/AGPSraRunTable.csv filter=lfs diff=lfs merge=lfs -text
 data/analysis-individual/AGP/00_Metadata-AGP/correctedt2.tsv filter=lfs diff=lfs merge=lfs -text
+data/analysis-individual/AGP/raw_fastq/filereport_read_run_PRJEB11419_tsv.txt filter=lfs diff=lfs merge=lfs -text
