@@ -1,8 +1,8 @@
-##########################
+# *************************
 # Purpose: select IBS and healthy samples from American Gut Project fecal data
 # Date: April 2021
 # Author: Salomé Carcy
-##########################
+# *************************
 
 
 
@@ -23,12 +23,12 @@ path <- "~/Projects/MetaIBS"
 
 # This csv file was downloaded from the SRA
 # with the accession number PRJEB11419
-sradf <- read.csv(file.path(path, "scripts/analysis-individual/AGP/00_Metadata-AGP/SraRunTable.csv"))
+sradf <- read.csv(file.path(path, "data/analysis-individual/AGP/00_Metadata-AGP/AGPSraRunTable.csv"))
 # head(sradf)
 
 # This tsv file was downloaded from the figshare
 # link shared by the paper from McDonald et al., 2018
-paperdf <- read_tsv(file.path(path, "scripts/analysis-individual/AGP/00_Metadata-AGP/correctedt2.tsv"))
+paperdf <- read_tsv(file.path(path, "data/analysis-individual/AGP/00_Metadata-AGP/correctedt2.tsv"))
 # head(paperdf)
 
 # Compare two tables
@@ -69,7 +69,7 @@ sradf <- sradf %>%
 # - no diabetes
 sradf %>%
   # SUBSET_HEALTHY
-  # filter(subset_healthy == TRUE) %>%
+  filter(subset_healthy == TRUE) %>%
   # SAME SUBSET (theoretically)
   # filter(subset_age == TRUE) %>%
   # filter(bmi_cat %in% c("Normal", "Overweight")) %>%
@@ -178,10 +178,17 @@ ibsDF <- subsetdf %>%
 # 645 IBS
 
 # We have too many healthy samples, so we will randomly select ~645 healthy samples
+set.seed(123)
 healthyDF <- healthyDF %>%
   sample_n(size=nrow(ibsDF))
 
 # Verify there is an equal distribution in age & bmi
+# df.temp <- rbind(data.frame("host_disease"="Healthy", "host_age"=healthyDF$host_age, "host_bmi"=healthyDF$host_bmi),
+#                  data.frame("host_disease"="IBS", "host_age"=ibsDF$host_age, "host_bmi"=ibsDF$host_bmi))
+# ggplot(df.temp)+
+#   geom_density(aes(x=host_age, color=host_disease))
+# ggplot(df.temp)+
+#   geom_density(aes(x=host_bmi, color=host_disease))
 t.test(healthyDF$host_age, ibsDF$host_age)
 t.test(healthyDF$host_bmi, ibsDF$host_bmi)
 
@@ -200,16 +207,16 @@ metadata <- bind_rows(healthyDF, ibsDF) %>%
   # Bowel movement
   mutate(bowel_movement_frequency=replace(bowel_movement_frequency, bowel_movement_frequency %in% c("","Not provided","Unspecified"), "Unknown")) %>%
   mutate(bowel_movement_quality=replace(bowel_movement_quality,
-                                        bowel_movement_quality %in% c("",grep("know", unique(metadata$bowel_movement_quality), value=TRUE), "Unspecified", "Not provided"),
+                                        bowel_movement_quality %in% c("",grep("know", unique(bowel_movement_quality), value=TRUE), "Unspecified", "Not provided"),
                                         "Unknown"),
          bowel_movement_quality=replace(bowel_movement_quality,
-                                        bowel_movement_quality %in% grep("constipated", unique(metadata$bowel_movement_quality), value=TRUE),
+                                        bowel_movement_quality %in% grep("constipated", unique(bowel_movement_quality), value=TRUE),
                                         "Constipated"),
          bowel_movement_quality=replace(bowel_movement_quality,
-                                        bowel_movement_quality %in% grep("diarrhea", unique(metadata$bowel_movement_quality), value=TRUE),
+                                        bowel_movement_quality %in% grep("diarrhea", unique(bowel_movement_quality), value=TRUE),
                                         "Diarrhea"),
          bowel_movement_quality=replace(bowel_movement_quality,
-                                        bowel_movement_quality %in% grep("normal", unique(metadata$bowel_movement_quality), value=TRUE),
+                                        bowel_movement_quality %in% grep("normal", unique(bowel_movement_quality), value=TRUE),
                                         "Normal")) %>%
   # Small intestinal bacterial overgrowth (sibo)
   mutate(sibo=replace(sibo, sibo %in% c("", "Diagnosed by an alternative medicine practitioner", "Not provided", "Self-diagnosed", "Unspecified"), "Unknown"),
@@ -232,21 +239,36 @@ metadata <- bind_rows(healthyDF, ibsDF) %>%
   mutate(clinical_condition=replace(clinical_condition, clinical_condition=="Diagnosed by a medical professional (doctor, physician assistant)", "Clinical condition"),
          clinical_condition=replace(clinical_condition, clinical_condition=="I do not have this condition", "Normal"),
          clinical_condition=replace(clinical_condition, !clinical_condition %in% c("Clinical condition", "Normal"), "Unknown")) %>%
-  
   # Remove useless columns
-  select(-c(ibs, subset_healthy)) %>%
-  relocate(host_disease, .before=host_age)
+  select(-c(ibs, subset_healthy, pcr_primers..exp.)) %>%
+  relocate(host_disease, .before=host_age) %>%
+  # Add last useful columns
+  mutate(host_subtype=ifelse(host_disease=="Healthy", "HC", "IBS-unspecified"),
+         Collection="1st",
+         sample_type="stool",
+         author="AGP",
+         sequencing_tech="Illumina single-end",
+         variable_region="V4")
 
-  
+rownames(metadata) <- metadata$Run
+
+
 # ----
 
 # **************
 # ---- SAVE ----
 # **************
 
-# Export the list of Runs to download
-write.table(metadata$Run, "./scripts/analysis-individual/AGP/download-AGP-samples/list_files.txt", sep="\t",
-            row.names=FALSE, col.names=FALSE, quote=FALSE)
-
 # Export the metadata table
-write.csv(metadata, "./scripts/analysis-individual/AGP/00_Metadata-AGP/Metadata-AGP.csv")
+write.csv(metadata, "./data/analysis-individual/AGP/00_Metadata-AGP/Metadata-AGP.csv")
+
+# Open the filereport downloaded from the ENA
+ena_table <- read.csv(file.path(path, "data/analysis-individual/AGP/raw_fastq/filereport_read_run_PRJEB11419_tsv.txt"), header=T, sep="\t")
+table(ena_table$run_accession %in% metadata$Run, useNA="ifany") # 1290 samples of interest
+ena_table <- ena_table[ena_table$run_accession %in% metadata$Run,]
+dim(ena_table) # 1290 rows, like metadata
+# Export the list of links to download the Runs from ENA
+write.table(ena_table$fastq_ftp, file.path(path, "data/analysis-individual/AGP/raw_fastq/list_files_agp.txt"),
+            sep="\t", row.names=FALSE, col.names=FALSE, quote=FALSE)
+
+
