@@ -50,9 +50,10 @@ path.data <- file.path(path.root, "data/analysis-individual/AGP")
 
 raw_stats     <- readRDS(file.path(path.data, "01_Dada2-AGP/raw_stats.rds")) # seq depth
 out2          <- readRDS(file.path(path.data, "01_Dada2-AGP/out2.rds")) # out process
-filt2_samples <- sort(list.files(file.path(path.data, "filtered_fastq"), pattern=".fastq.gz", full.names = TRUE)) # quality-filtered reads
+filt2_samples <- sort(list.files(file.path(path.data, "filtered2"), pattern="_filt2.fastq.gz", full.names = TRUE)) # quality-filtered reads
 err           <- readRDS(file.path(path.data, "01_Dada2-AGP/err.rds")) # error rates
 seq_infered   <- readRDS(file.path(path.data, "01_Dada2-AGP/seq_infered.rds")) # inferred ASVs
+track         <- readRDS(file.path(path.data, "01_Dada2-AGP/track.rds"))
 taxa          <- readRDS(file.path(path.data, "01_Dada2-AGP/taxa_agp_with_bloom.rds")) # taxa
 physeq        <- readRDS(file.path(path.data, "01_Dada2-AGP/physeq_agp_with_bloom.rds")) # phyloseq object
 ```
@@ -69,8 +70,8 @@ First, we import the fastq files containing the raw reads. The samples were down
 
 ```{r quality-check, echo=TRUE}
 # Save the path to the directory containing the fastq zipped files
-path.fastq <- file.path(path.agp, "download-AGP-samples/")
-# list.files(path) # check we are in the right directory
+path.fastq <- file.path(path.data, "raw_fastq")
+# list.files(path.fastq) # check we are in the right directory
 
 # fastq filenames have format: SAMPLENAME.fastq.gz
 # Saves the whole directory path to each file name
@@ -78,7 +79,7 @@ FNs <- sort(list.files(path.fastq, pattern=".fastq.gz", full.names = TRUE))
 show(FNs[1:5])
 
 # Extract sample names, assuming filenames have format: SAMPLENAME.fastq
-sample.names <- sapply(strsplit(basename(FNs), "_"), `[`, 1)
+sample.names <- sapply(strsplit(basename(FNs), ".fastq.gz"), `[`, 1)
 show(sample.names[1:5]) # saves only the file name (without the path)
 
 # Look at quality of all files
@@ -92,7 +93,7 @@ for (i in 1:4){ # 1:length(FNs)
 # min(raw_stats$reads)
 # max(raw_stats$reads)
 # mean(raw_stats$reads)
-# hist(log10(raw_stats$reads))
+hist(raw_stats$reads, breaks=100)
 ```
 
 We will have a quick peak at the per base sequence content of the reads in some samples, to make sure there is no anomaly (i.e. all reads having the same sequence).
@@ -111,12 +112,18 @@ Now, we will look whether the reads still contain the primers.
 
 ```{r primer-check, eval = TRUE, message=FALSE}
 # Import metadata, that contains the primer sequences
-metadata <- read.csv(file.path(path.agp, "00_Metadata-AGP/SraRunTable.csv"))
-table(metadata$pcr_primers..exp.)
+sraDF <- read.csv(file.path(path.data, "00_Metadata-AGP/AGPSraRunTable.csv"))
+metadata <- read.csv(file.path(path.data, "00_Metadata-AGP/Metadata-AGP.csv"), row.names=1)
+table(sraDF[sraDF$Run %in% metadata$Run,"pcr_primers..exp."], useNA="ifany")
+# There are two sets of primers:
+# FWD:GTGCCAGCMGCCGCGGTAA
+# FWD:GTGYCAGCMGCCGCGGTAA
+# REV:GGACTACHVGGGTWTCTAAT
+# REV:GGACTACNVGGGTWTCTAAT
 
 # V4
 FWD <- "GTGYCAGCMGCCGCGGTAA"  # 515F primer sequence
-REV <- "GGACTACHVGGGTWTCTAAT" # 806R primer sequence
+REV <- "GGACTACNVGGGTWTCTAAT" # 806R primer sequence
 
 # Function that, from the primer sequence, will return all combinations possible (complement, reverse complement, ...)
 allOrients <- function(primer) {
@@ -159,7 +166,7 @@ for (i in 1:4){ # 1:length(FNs)
 ********************
 
 ### 3.1. Primer removal
-The reads do not contain any primer. We will go forward directly with the quality filtering.
+The reads barely contain any primer. We will go forward directly with the quality filtering.
 
 
 ### 3.2. Quality filtering
@@ -167,7 +174,7 @@ Then, we perform a quality filtering of the reads.
 
 ```{r quality-filter, eval = FALSE, echo = TRUE}
 # Place filtered files in a filtered/ subdirectory
-filt2_samples <- file.path(path.data, "filtered_fastq", paste0(sample.names, "_filt.fastq.gz"))
+filt2_samples <- file.path(path.data, "filtered2", paste0(sample.names, "_filt2.fastq.gz"))
 # Assign names for the filtered fastq.gz files
 names(filt2_samples) <- sample.names
 
@@ -181,15 +188,15 @@ out2 <- filterAndTrim(fwd = FNs, filt = filt2_samples,
 
 
 # Update list of filtered files
-FNs_filt <- sort(list.files(file.path(path.data, "filtered_fastq"), pattern=".fastq.gz", full.names = TRUE))
-sample.names_filt <- sapply(strsplit(basename(FNs_filt), "_"), `[`, 1)
+FNs_filt <- sort(list.files(file.path(path.data, "filtered2"), pattern="_filt2.fastq.gz", full.names = TRUE))
+sample.names_filt <- sapply(strsplit(basename(FNs_filt), "_filt2.fastq.gz"), `[`, 1)
 names(FNs_filt) <- sample.names_filt
-
+length(FNs_filt) # 1240
 ```
 
-About ~35 samples had a large number of reads but none of them passed the quality filter. Let's inspect quickly the quality profile of some of them.
+50 samples had 0 reads post quality filter. About ~30 of them had a large number of reads but none of them passed the quality filter. Let's inspect quickly the quality profile of some of them.
 ```{r quality-filter-plots}
-for (i in 195:234){ # printing 2 samples before & after the "abnormal samples", that actually passed the quality filter (as comparison)
+for (i in 196:199){ # printing 2 samples before the "abnormal samples", that actually passed the quality filter (as comparison)
   show(plotQualityProfile(FNs[i]))
 }
 ```
@@ -227,7 +234,7 @@ De-replication is a common step in almost all modern ASV inference (or OTU picki
 seq_infered <- vector("list", length(sample.names_filt))
 names(seq_infered) <- sample.names_filt # names of each row will be the sample names
 
-# Iterate through the 1242 samples
+# Iterate through the 1240 samples
 for(sampl in sample.names_filt) {
   cat("Processing:", sampl, "\n") # print which sample is being processed
   derep <- derepFastq(FNs_filt[[sampl]]) # dereplicate the reads in the sample
@@ -251,7 +258,7 @@ We can now construct an amplicon sequence variant table (ASV) table, a higher-re
 # Make sequence table from the infered sequence variants
 seqtable <- makeSequenceTable(seq_infered)
 
-# We should have 1242 samples (1242 rows)
+# We should have 1240 samples (1240 rows)
 dim(seqtable)
 
 # Inspect distribution of sequence lengths
@@ -281,12 +288,12 @@ sum(seqtable.nochim)/sum(seqtable)
 
 Sanity check before assigning taxonomy.
 
-```{r reads-filtered-sanity-check}
+```{r reads-filtered-sanity-check, eval=FALSE, echo=TRUE}
 # Function that counts nb of reads
 getN <- function(x) sum(getUniques(x))
 
 # Table that will count number of reads for each process of interest (input reads, filtered reads, denoised reads, non chimera reads)
-rownames(out2) <- sapply(strsplit(rownames(out2), "_"), `[`, 1)
+rownames(out2) <- sapply(strsplit(rownames(out2), ".fastq.gz"), `[`, 1)
 track <- out2 %>%
   as.data.frame() %>%
   mutate(Run=rownames(out2)) %>%
@@ -304,17 +311,19 @@ track <- out2 %>%
             by="Run") %>%
   relocate(Run) %>%
   mutate("%input->output"=as.integer(nonchim*100/input))
+```
 
+```{r reads-filtered-sanity-check2}
 # Show final table: for each row/sample, we have shown the initial number of reads, filtered reads, denoised reads, and non chimera reads
 track
 ```
 
+
 ```{r seqdepth, echo=TRUE, eval=FALSE, include=FALSE}
 # Save nb of reads per sample before / after dada2 pipeline
-nb.reads <- as.data.frame(rowSums(seqtable.nochim)) %>%
-  rename("after"="rowSums(seqtable.nochim)") %>%
+nb.reads <- data.frame("after"=rowSums(seqtable.nochim)) %>%
   mutate("Run"=names(rowSums(seqtable.nochim))) %>%
-  right_join(raw_stats %>% rename(Run=sample, before=reads),
+  right_join(raw_stats %>% dplyr::rename(Run=sample, before=reads),
              by="Run") %>%
   relocate(before) %>%
   relocate(Run) %>%
@@ -350,12 +359,12 @@ Extensions: The dada2 package also implements a method to make species level ass
 path.silva <- file.path(path.root, "data/analysis-individual/CLUSTER/taxonomy/silva-taxonomic-ref")
 
 # Assign taxonomy (with silva v138)
-taxa <- assignTaxonomy(seqtable.nochim, file.path(path.silva, "silva_nr_v138_train_set.fa.gz"),
+taxa <- assignTaxonomy(seqtable.nochim, file.path(path.silva, "silva_nr99_v138.1_train_set.fa.gz"),
                        tryRC = TRUE, # try reverse complement of the sequences
                        multithread=TRUE, verbose = TRUE)
 
 # Add species assignment
-taxa <- addSpecies(taxa, file.path(path.silva, "silva_species_assignment_v138.fa.gz"))
+taxa <- addSpecies(taxa, file.path(path.silva, "silva_species_assignment_v138.1.fa.gz"))
 ```
 
 ```{r taxa-sanity-check}
@@ -364,10 +373,8 @@ taxa.print <- taxa
 rownames(taxa.print) <- NULL # Removing sequence rownames for display only
 head(taxa.print)
 
-table(taxa.print[,1]) # Show the different kingdoms
-
-table(taxa.print[,2]) # Show the different phyla
-table(is.na(taxa.print[,2])) # is there any NA phyla?
+table(taxa.print[,1], useNA="ifany") # Show the different kingdoms
+table(taxa.print[,2], useNA="ifany") # Show the different phyla
 ```
 
 
@@ -385,27 +392,13 @@ The preprocessing will be easier to do with ASV, taxonomic and metadata tables c
 ```{r phyloseq-preprocess, echo=TRUE, eval=FALSE}
 #_________________________
 # Import metadata
-metadata <- read.csv(file.path(path.agp, "00_Metadata-AGP/Metadata-AGP.csv"))
+metadata <- read.csv(file.path(path.data, "00_Metadata-AGP/Metadata-AGP.csv"), row.names=1)
 
-# Keep relevant covariates
-sampledf <- metadata %>%
-  select(-"pcr_primers..exp.") %>%
-  select(-"X")
-rownames(sampledf) <- sampledf$Run
-
-sampledf[sampledf$host_disease == "Healthy", "host_subtype"] <- "HC"
-sampledf[sampledf$host_disease == "IBS", "host_subtype"] <- "IBS-unspecified"
-
-sampledf$Collection <- "1st" # only 1 time point per individual
-sampledf$sample_type <- "stool"
-sampledf$author <- "AGP"
-sampledf$sequencing_tech <- "Illumina single-end"
-sampledf$variable_region <- "V4"
 
 #_________________________
 # Create phyloseq object
 physeq <- phyloseq(otu_table(seqtable.nochim, taxa_are_rows=FALSE), # by default, in otu_table the sequence variants are in rows
-                   sample_data(sampledf), 
+                   sample_data(metadata), 
                    tax_table(taxa))
 
 # Remove taxa that are eukaryota, or have unassigned Phyla
@@ -437,7 +430,6 @@ ggplot(phylum.table, aes(x = reorder(Sample, Sample, function(x) mean(phylum.tab
         legend.text = element_text(size=6),
         legend.key.size = unit(0.3, 'cm'))+
   labs(x = "Samples", y = "Relative abundance")
-
 ```
 
 
@@ -459,7 +451,7 @@ names(allASV) <- paste0("ASV", 1:length(allASV))
 
 # 1 - Identify ASVs to keep (ones that are not bloom sequences) in the ASVs that are 150bp
 shortASV <- allASV[nchar(allASV) == 150]
-shortASV_tokeep <- names( shortASV[!(shortASV %in% bloom)] ) # 8,903
+shortASV_tokeep <- names( shortASV[!(shortASV %in% bloom)] ) # 9,297 ASVs
 
 # 2 - Identify ASVs to keep (ones that are not bloom sequences) in the ASVs that are 151bp
 longASV <- allASV[nchar(allASV) == 151]
@@ -469,10 +461,10 @@ longASV_trim2 <- subseq(longASV, start=2, width=150) # range 2 - 151
 longASV_tokeep1 <- names( longASV_trim1[!(longASV_trim1 %in% bloom)] ) # bloom seqs in 1 - 150 range
 longASV_tokeep2 <- names( longASV_trim2[!(longASV_trim2 %in% bloom)] ) # bloom seqs in 2 - 151 range
 
-longASV_tokeep <- intersect(longASV_tokeep1, longASV_tokeep2)
+longASV_tokeep <- intersect(longASV_tokeep1, longASV_tokeep2) # 7,800 ASVs
 
 # 3 - Combine and get the **sequences** to keep (not the names)
-ASV_to_keep <- allASV[c(shortASV_tokeep, longASV_tokeep)]
+ASV_to_keep <- allASV[c(shortASV_tokeep, longASV_tokeep)] # 17,097 ASVs
 
 # Check taxonomic classification of these bloom sequences
 tax_table(physeq) %>%
@@ -484,8 +476,9 @@ tax_table(physeq) %>%
 
 # Remove unwanted taxa (bloom)
 physeq.filt <- prune_taxa(ASV_to_keep, physeq)
-physeq.filt <- prune_samples(sample_sums(physeq.filt)>=500, physeq.filt) # 16,767 ASVs and 1,183 samples
+physeq.filt <- prune_samples(sample_sums(physeq.filt)>=500, physeq.filt) # 17,097 ASVs and 1,191 samples
 physeq.filt <- prune_taxa(taxa_sums(physeq.filt)>0, physeq.filt) # remove taxa absent in all samples
+print(physeq.filt) # 1,191 samples and 17,078 ASVs
 
 phylum.table.filt <- physeq.filt %>%
   tax_glom(taxrank = "Phylum") %>%                     # agglomerate at phylum level
@@ -513,12 +506,14 @@ gridExtra::grid.arrange(a, b, ncol=2, widths=c(0.3,0.7))
 
 
 ### 7.4. Save to disk
-```{r save, eval=FALSE}
+```{r save, eval=FALSE, echo=TRUE}
 # Save to disk (for quicker html output)
 saveRDS(raw_stats,   file.path(path.data, "01_Dada2-AGP/raw_stats.rds"))
 saveRDS(out2,        file.path(path.data, "01_Dada2-AGP/out2.rds"))
 saveRDS(err,         file.path(path.data, "01_Dada2-AGP/err.rds"))
 saveRDS(seq_infered, file.path(path.data, "01_Dada2-AGP/seq_infered.rds"))
+saveRDS(track,       file.path(path.data, "01_Dada2-AGP/track.rds"))
+
 
 # Taxa & Phyloseq object (before removing bloom sequences)
 saveRDS(taxa,   file.path(path.data, "01_Dada2-AGP/taxa_agp_with_bloom.rds"))
@@ -526,7 +521,8 @@ saveRDS(physeq, file.path(path.data, "01_Dada2-AGP/physeq_agp_with_bloom.rds")) 
 
 # Taxa & Phyloseq object (after removing bloom sequences => final)
 saveRDS(tax_table(physeq.filt), file.path(path.data, "01_Dada2-AGP/taxa_agp_without_bloom.rds"))
-saveRDS(physeq.filt, file.path(path.root, "data/analysis-individual/CLUSTER/phylotree/input/physeq_agp.rds"))
+saveRDS(physeq.filt,            file.path(path.root, "data/analysis-individual/CLUSTER/phylotree/input/physeq_agp.rds"))
+saveRDS(physeq.filt,            file.path(path.root, "data/phyloseq-objects/phyloseq-without-phylotree/physeq_agp.rds"))
 ```
 
 

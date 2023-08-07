@@ -11,7 +11,7 @@ IBS and healthy samples were selected out of the pool of >30,000 samples deposit
 
 ## Data Quality
 - **Technology** - Illumina MiSeq (single-end)
-- **Nb of reads per sample** - mean of 30,914 reads per sample (1 - 502,121)
+- **Nb of reads per sample** - mean of 30,469 reads per sample (1 - 344,010)
 - **Read length** - ~150 bp
 - **Quality** - excellent
 
@@ -33,18 +33,23 @@ IBS and healthy samples were selected out of the pool of >30,000 samples deposit
 
 ## Construct ASV table
 ### a) Infer sequence variants
-- 28,348 amplicon sequence variants (ASVs)
+- 27,989 amplicon sequence variants (ASVs)
 
 ### b) Remove chimeras
-- 18,673 seq variants (but still >95% reads kept)
+- 18,659 seq variants (but still >95% reads kept)
 
 ### c) Assign taxonomy
 Taxonomy assigned with Silva v138.
-- Bacteria - 17,143
-- Archaea - 47
-- Eukaryota - 1,083
+- Bacteria - 18,360
+- Archaea - 48
+- Eukaryota - 54
 
-All unassigned phyla were removed (n=1,763), samples below 500 total reads (n=51). The final ASV table contains **16,832 sequence variants**.
+All unassigned phyla were removed (n=1,501), samples below 500 total reads (n=43). The final ASV table contains 17,133 sequence variants.
+
+### d) Remove bloom sequences
+As fecal samples were shipped at room temperature, it is recommended to remove bloom sequences (bacteria that grow at room temperature). We followed recommendations from this paper: https://journals.asm.org/doi/10.1128/mSystems.00199-16#B5
+After removing bloom sequences, the final phyloseq object contained **1,191 samples** and **17,078 ASVs**.
+
 
 ## Metadata
 - age
