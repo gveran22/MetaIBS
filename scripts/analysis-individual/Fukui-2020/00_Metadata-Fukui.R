@@ -54,6 +54,21 @@ head(metadata_table)
 # SAVE DATAFRAME 
 write.csv(metadata_table, file.path(path.data, "00_Metadata-Fukui/Metadata-Fukui.csv"))
 
-# Export list of files to download to data/ directory
-write.table(metadata_table$Run, file.path(path.data, "raw_fastq/list_files_fukui.txt"),
+# Export the list of Runs to download
+# Open the filereport downloaded from the ENA
+ena_table <- read.csv(file.path(path.data, "raw_fastq/filereport_read_run_PRJNA637763_tsv.txt"), header=T, sep="\t")
+table(ena_table$run_accession %in% metadata_table$Run, useNA="ifany") # 111 samples of interest
+dim(ena_table) # 90 rows
+head(ena_table)
+# the fastq_ftp column contains both forward & reverse reads separated by ";"
+ena_tableF <- ena_table[,c("run_accession", "fastq_ftp")]
+ena_tableF$fastq_ftp <- gsub(";.*", "", ena_tableF$fastq_ftp)
+ena_tableR <- ena_table[,c("run_accession", "fastq_ftp")]
+ena_tableR$fastq_ftp <- gsub(".*;", "", ena_tableR$fastq_ftp)
+ena_table_final <- rbind(ena_tableF, ena_tableR)
+head(ena_table_final[order(ena_table_final$run_accession),])
+table(ena_table_final$run_accession, useNA="ifany") # should all appear twice
+
+# Export the list of links to download the Runs from ENA
+write.table(ena_table_final$fastq_ftp, file.path(path.data, "raw_fastq/list_files_fukui.txt"),
             sep="\t", row.names=FALSE, col.names=FALSE, quote=FALSE)
