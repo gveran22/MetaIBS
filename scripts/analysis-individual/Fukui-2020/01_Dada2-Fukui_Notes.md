@@ -22,26 +22,26 @@ Fukui (_J. Clin. Med_) - [Usefulness of Machine Learning-Based Gut Microbiome An
 - forward primer found at the beginning of forward reads (same for reverse primer in reverse reads). Primers found in >95% of reads.
 
 ## Filtering
-- **primer removal**: fastq files deposited on the SRA/ENA databases don't contain Ilumina headers, which are needed to merge paired reads later on (if there is a different number of forward and reverse reads for each sample). Thus, primer sequences could not be removed (the first 25bp were trimmed instead).
-- **quality filtering**: \~86% of reads are kept
+- **primer removal**: \~98% of reads are kept
+- **quality filtering**: \~85% of reads are kept
 
 ## Learn error rates
 - parametric error model fits data
 
 ## Construct ASV table
 ### a) Infer sequence variants
-- 10,129 amplicon sequence variants (ASVs)
+- 10,363 amplicon sequence variants (ASVs)
 
 ### b) Remove chimeras
-- 6,861 seq variants (but still >97% reads kept)
+- 6,801 seq variants (but still >96% reads kept)
 
 ### c) Assign taxonomy
 Taxonomy assigned with Silva v138.
-- Bacteria - 6,861
+- Bacteria - 6,801
 - Archaea - 0
 - Eukaryota - 0
 There were 4 unassigned phyla removed There was 1 sample below 500 total reads.
-The final ASV table contains **6,857 sequence variants**.
+The final ASV table contains **6,797 sequence variants**.
 
 ## Metadata
 - none (IBS vs HC)

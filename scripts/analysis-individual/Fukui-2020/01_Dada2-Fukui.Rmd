@@ -49,9 +49,13 @@ path.data   <- file.path(path.root, "data/analysis-individual/Fukui-2020") # REP
 #_____________________________________________________________________
 
 raw_stats         <- readRDS(file.path(path.data, "01_Dada2-Fukui/raw_stats.rds")) # seq depth
+FWD.out1          <- readRDS(file.path(path.data, "01_Dada2-Fukui/FWD_out1.rds")) # out process (primerfilt-FWD)
+REV.out1          <- readRDS(file.path(path.data, "01_Dada2-Fukui/REV_out1.rds")) # out process (primerfilt-REV)
 out2              <- readRDS(file.path(path.data, "01_Dada2-Fukui/out2.rds")) # out process
-FWD.filt2_samples <- sort(list.files(file.path(path.data, "filtered_fastq"), pattern="_1_filt.fastq.gz", full.names = TRUE)) # quality-filtered reads
-REV.filt2_samples <- sort(list.files(file.path(path.data, "filtered_fastq"), pattern="_2_filt.fastq.gz", full.names = TRUE)) # quality-filtered reads
+FWD.filt1_samples <- sort(list.files(file.path(path.data, "filtered1"), pattern="_1_filt1.fastq.gz", full.names = TRUE)) # primer-trimmed reads (FWD)
+REV.filt1_samples <- sort(list.files(file.path(path.data, "filtered1"), pattern="_2_filt1.fastq.gz", full.names = TRUE)) # primer-trimmed reads (REV)
+FWD.filt2_samples <- sort(list.files(file.path(path.data, "filtered2"), pattern="_1_filt2.fastq.gz", full.names = TRUE)) # quality-filtered reads
+REV.filt2_samples <- sort(list.files(file.path(path.data, "filtered2"), pattern="_2_filt2.fastq.gz", full.names = TRUE)) # quality-filtered reads
 errF              <- readRDS(file.path(path.data, "01_Dada2-Fukui/errF.rds")) # error rates
 errR              <- readRDS(file.path(path.data, "01_Dada2-Fukui/errR.rds")) # error rates
 dadaFs            <- readRDS(file.path(path.data, "01_Dada2-Fukui/infered_seq_F.rds")) # inferred ASVs
@@ -205,10 +209,42 @@ ggplot(REVpos, aes(x=start))+
 ********************
 
 ### 3.1. Primer removal
-The vast majority of the reads contain their respective primers (>95% of reads), and the primers are located at the very beginning of the reads, as expected.
-Ideally, to follow the standardized pipeline, we should (1) filter out reads not containing any primer and (2) trim the primers. However, the fastq files deposited on the SRA/ENA databases do not contain Illumina headers. Thus, during the merging step of paired reads later on, the Dada2 package won't be able to match paired-reads.
+The reads indeed contain the primers (both FWD and REV primers). We will keep only reads containing primers, and then remove the primers!
 
-We will simply perform a quality filtering of the reads, and trim the first 25bp of the reads (primers start at position ~5, and they are 16bp long => 5+16=21, so let's trim 25bp to be safe).
+```{r primer-filter, eval = FALSE, echo = TRUE}
+# KEEP READS WITH PRIMER AND REMOVE PRIMER+BARCODE
+# Place filtered files in a filtered1/ subdirectory
+FWD.filt1_samples <- file.path(path.data, "filtered1", paste0(sample.names, "_1_filt1.fastq.gz")) # FWD reads
+REV.filt1_samples <- file.path(path.data, "filtered1", paste0(sample.names, "_2_filt1.fastq.gz")) # REV reads
+# Assign names for the filtered fastq.gz files
+names(FWD.filt1_samples) <- sample.names
+names(REV.filt1_samples) <- sample.names
+
+# Keep only reads with primers & remove primers
+FWD.out1 <- removePrimers(fn = fnFs, fout = FWD.filt1_samples,
+                          primer.fwd = FWD.orients[["Forward"]],
+                          trim.fwd = TRUE,
+                          orient = FALSE, # re-orient reads if needed
+                          compress = TRUE, verbose = TRUE)
+REV.out1 <- removePrimers(fn = fnRs, fout = REV.filt1_samples,
+                          primer.fwd = REV.orients[["Forward"]],
+                          trim.fwd = TRUE,
+                          orient = FALSE, # re-orient reads if needed
+                          compress = TRUE, verbose = TRUE)
+```
+
+```{r primer-filter-check}
+# Primer removal
+FWD.out1[1:3,]
+REV.out1[1:3,]
+
+# Quality profile after primer removal
+for (i in 1:3){
+  show(plotQualityProfile(FWD.filt1_samples[i]))
+  show(plotQualityProfile(REV.filt1_samples[i]))
+}
+```
+
 
 
 ### 3.2. Quality filtering
@@ -216,19 +252,20 @@ Then, we perform a quality filtering of the reads.
 
 ```{r filter-trim, eval = FALSE, echo = TRUE}
 # Place filtered files in a filtered/ subdirectory
-FWD.filt2_samples <- file.path(path.data, "filtered_fastq", paste0(sample.names, "_1_filt.fastq.gz")) # FWD reads
-REV.filt2_samples <- file.path(path.data, "filtered_fastq", paste0(sample.names, "_2_filt.fastq.gz")) # REV reads
+FWD.filt2_samples <- file.path(path.data, "filtered2", paste0(sample.names, "_1_filt2.fastq.gz")) # FWD reads
+REV.filt2_samples <- file.path(path.data, "filtered2", paste0(sample.names, "_2_filt2.fastq.gz")) # REV reads
 # Assign names for the filtered fastq.gz files
 names(FWD.filt2_samples) <- sample.names
 names(REV.filt2_samples) <- sample.names
 
 # Filter
-out2 <- filterAndTrim(fwd = fnFs, filt = FWD.filt2_samples,
-                      rev = fnRs, filt.rev = REV.filt2_samples,
-                      trimLeft = c(25,25), # trim primers
+out2 <- filterAndTrim(fwd = FWD.filt1_samples, filt = FWD.filt2_samples,
+                      rev = REV.filt1_samples, filt.rev = REV.filt2_samples,
                       maxEE=3, # reads with more than 3 expected errors (sum(10e(-Q/10))) are discarded
                       truncQ=10, # Truncate reads at the first instance of a quality score less than or equal to truncQ.
                       minLen = 150, # Discard reads shorter than 150 bp. This is done after trimming and truncation.
+                      matchIDs = TRUE,
+                      id.field = 1, # we don't have standard illumina header, this will help matching paired FWD/REV reads
                       compress=TRUE, multithread = TRUE, verbose=TRUE)
 ```
 
@@ -257,6 +294,7 @@ Now we will build the parametric error model, to be able to infer amplicon seque
 ```{r error-rate-estimate, eval = FALSE}
 set.seed(123)
 errF <- learnErrors(FWD.filt2_samples, multithread=TRUE, randomize = TRUE, verbose = 1)
+set.seed(123)
 errR <- learnErrors(REV.filt2_samples, multithread=TRUE, randomize = TRUE, verbose = 1)
 ```
 
@@ -352,22 +390,18 @@ Sanity check before assigning taxonomy.
 getN <- function(x) sum(getUniques(x))
 
 # Table that will count number of reads for each process of interest (input reads, filtered reads, denoised reads, non chimera reads)
-track <- cbind(out2,
+track <- cbind(FWD.out1,
+               data.frame("primerfiltR"=REV.out1[,2]),
+               data.frame("qualityfilt"=out2[,2]),
                sapply(dadaFs, getN),
                sapply(dadaRs, getN),
                sapply(mergers, getN),
                rowSums(seqtable.nochim),
-               lapply(rowSums(seqtable.nochim)*100/out2[,1], as.integer))
+               as.integer(rowSums(seqtable.nochim)*100/FWD.out1[,1]))
 
 # Assign column and row names
-colnames(track) <- c("input",
-                     "quality-filt",
-                     "denoisedF",
-                     "denoisedR",
-                     'merged',
-                     'nonchim',
-                     "%input->output")
-rownames(track) <- rownames(seqtable.nochim)
+colnames(track) <- c("input", "primerfiltF", "primerfiltR", "quality-filt", "denoisedF", "denoisedR", 'merged', 'nonchim', "%input->output")
+rownames(track) <- sample.names
 
 # Show final table: for each row/sample, we have shown the initial number of reads, filtered reads, denoised reads, and non chimera reads
 track
@@ -427,9 +461,8 @@ taxa.print <- taxa
 rownames(taxa.print) <- NULL # Removing sequence rownames for display only
 head(taxa.print)
 
-table(taxa.print[,1]) # Show the different kingdoms
-table(taxa.print[,2]) # Show the different Phyla
-table(is.na(taxa.print[,2])) # is there any NA phyla?
+table(taxa.print[,1], useNA="ifany") # Show the different kingdoms
+table(taxa.print[,2], useNA="ifany") # Show the different Phyla
 ```
 
 
@@ -490,6 +523,8 @@ ggplot(phylum.table, aes(x = reorder(Sample, Sample, function(x) mean(phylum.tab
 ```{r save-data, eval=FALSE}
 # Save to disk
 saveRDS(raw_stats, file.path(path.data, "01_Dada2-Fukui/raw_stats.rds"))
+saveRDS(FWD.out1,  file.path(path.data, "01_Dada2-Fukui/FWD_out1.rds"))
+saveRDS(REV.out1,  file.path(path.data, "01_Dada2-Fukui/REV_out1.rds"))
 saveRDS(out2,      file.path(path.data, "01_Dada2-Fukui/out2.rds"))
 saveRDS(errF,      file.path(path.data, "01_Dada2-Fukui/errF.rds"))
 saveRDS(errR,      file.path(path.data, "01_Dada2-Fukui/errR.rds"))
