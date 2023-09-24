@@ -59,6 +59,11 @@ rownames(metadata) <- metadata$Run
 # SAVE DATAFRAME 
 write.csv(metadata, file.path(path.data, "00_Metadata-Labus/Metadata-Labus.csv"))
 
-# No need to export list of files to download, we'll download all .fastq files directly from the ENA
-# write.table(metadata$Run, file.path(path.data, "raw_fastq/list_files_labus.txt"),
-#             sep="\t", row.names=FALSE, col.names=FALSE, quote=FALSE)
+# Export the list of Runs to download
+# Open the filereport downloaded from the ENA
+ena_table <- read.csv(file.path(path.data, "raw_fastq/filereport_read_run_PRJNA373876_tsv.txt"), header=T, sep="\t")
+table(ena_table$run_accession %in% metadata$Run, useNA="ifany") # all 52 samples of interest are there
+dim(ena_table) # 52 rows
+# Export the list of links to download the Runs from ENA
+write.table(ena_table$fastq_ftp, file.path(path.data, "raw_fastq/list_files_labus.txt"),
+            sep="\t", row.names=FALSE, col.names=FALSE, quote=FALSE)

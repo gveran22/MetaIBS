@@ -1,10 +1,8 @@
 # raw_fastq (Labus)
 
-Samples from the Labus dataset on the SRA have weird quality profile (and are 1200bp long...). We thus downloaded the `.fastq` files directly from the [ENA database](https://www.ebi.ac.uk/ena/browser/view/PRJNA373876) instead, and followed these steps:
-1. Downloading the fastq files: clicked on "Download All" above "Generated FASTQ files:FTP";
-2. Moved the `ena_files.zip` to the current directory
-3. Unzipped `ena_files.zip` from our terminal by executing this `unzip_ena_fastq.sh` bash script:
-```
-chmod u+x unzip_ena_fastq.sh 
-./unzip_ena_fastq.sh
-```
+We downloaded the `.fastq` files directly from the [ENA database](https://www.ebi.ac.uk/ena/browser/view/PRJNA373876), following these steps:
+1. Downloading the table with the list of links to .fastq files: clicked on "TSV" next to "Download report";
+2. Moving the downloaded `filereport_read_run_PRJNA373876_tsv.txt` file to this current directory;
+3. Subsetting this table to the 52 samples of interest in the [00_Metadata-Labus.R](../../../../scripts/analysis-individual/Labus-2017/00_Metadata-Labus.R) script;
+4. Exporting the list of `.fastq.gz` links to the `list_files_labus.txt`;
+5. Executing the `download_fastq_labus.sh` bash script (which uses `wget`).
