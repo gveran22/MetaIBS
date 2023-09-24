@@ -57,5 +57,10 @@ head(clean.df)
 write.csv(clean.df, file.path(path.data, "00_Metadata-Liu/Metadata-Liu.csv"))
 
 # Export the list of Runs to download
-write.table(clean.df$Run, file.path(path.data, "raw_fastq/list_files_liu.txt"),
+# Open the filereport downloaded from the ENA
+ena_table <- read.csv(file.path(path.data, "raw_fastq/filereport_read_run_PRJNA544721_tsv.txt"), header=T, sep="\t")
+table(ena_table$run_accession %in% clean.df$Run, useNA="ifany") # all 128 samples of interest are there
+dim(ena_table) # 128 rows
+# Export the list of links to download the Runs from ENA
+write.table(ena_table$fastq_ftp, file.path(path.data, "raw_fastq/list_files_liu.txt"),
             sep="\t", row.names=FALSE, col.names=FALSE, quote=FALSE)
