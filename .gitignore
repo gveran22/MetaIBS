@@ -3,6 +3,7 @@
 data_local/
 standard-RAxML-master/
 .Rproj.user/
+.Rhistory
 *.Rproj
 *.fastq.gz
 *.fastq
