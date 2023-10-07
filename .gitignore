@@ -5,6 +5,7 @@ standard-RAxML-master/
 .Rproj.user/
 *.Rproj
 *.fastq.gz
+*.fastq
 *.fa.gz
 data/analysis-individual/*.rds
 scripts/analysis-combined/plots/

@@ -1,0 +1,3 @@
+# raw_fastq (Nagel)
+
+The raw fastq files were nicely shared by the authors after private inquiry. We demultiplexed samples (2 fastq files in [multiplexed_data](../raw_fastq_multiplexed/multiplexed_data/)) from the terminal using [sabre](https://github.com/najoshi/sabre). We removed samples not of interest (healthy/IBS samples positive for blastocystis, IBD samples), and kept only healthy/IBS samples negative for blastocystis (n=30 samples). These 30 samples are in this current directory.
