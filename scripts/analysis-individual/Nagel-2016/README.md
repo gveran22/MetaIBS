@@ -6,10 +6,11 @@ Nagel et al. (_Microbiome_, 2016) - [Comparison of faecal microbiota in Blastocy
 
 ## Download samples
 
-The raw fastq files were obtained after private inquiry to the authors. We demultiplexed samples from the terminal using [sabre](https://github.com/najoshi/sabre). The code & output from terminal are reported in [00_Demultiplex](00_Demultiplex.txt).
+The raw fastq files were obtained after private inquiry to the authors. We demultiplexed samples from the terminal using [sabre](https://github.com/najoshi/sabre). The raw (multiplexed) fastq files and the code to demultiplex them are reported in [data/.../Nagel-2016/raw_fastq_multiplexed/](../../../data/analysis-individual/Nagel-2016/raw_fastq_multiplexed/).
 
-To download samples, you can either:
-- download directly the (demultiplexed) fastq files we have deposited on Zenodo (ADD LINK)
+To download samples, you will need to download the `data/` directory we have deposited on Zenodo (ADD LINK). Within that directory, you will find:
+- in `data/analysis-individual/Nagel-2016/raw_fastq_multiplexed/` the 2 multiplexed fastq files that authors provided us, that you can demultiplex with a bashscript we have provided within that same folder;
+- in `data/analysis-individual/Nagel-2016/raw_fastq/` the 30 demultiplexed fastq files you can directly use in the [01_Dada2-Nagel.Rmd](01_Dada2-Nagel.Rmd) script.
 
 
 ## Preprocess fastq files into ASV and taxonomic tables

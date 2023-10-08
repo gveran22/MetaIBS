@@ -1,1 +1,0 @@
-This directory should contain raw fastq files (demultiplexed) for the Nagel dataset. You can download them from our Zenodo repository (ADD LINK)
