@@ -3115,11 +3115,13 @@ with the fastq files.</p>
 <pre class="r"><code>path.silva &lt;- file.path(path.root, &quot;data/analysis-individual/CLUSTER/taxonomy/silva-taxonomic-ref&quot;)
 
 # Assign taxonomy (with silva v138)
+set.seed(123)
 taxa &lt;- assignTaxonomy(seqtable.nochim, file.path(path.silva, &quot;silva_nr99_v138.1_train_set.fa.gz&quot;),
                        tryRC = TRUE, # try reverse complement of the sequences
                        multithread=TRUE, verbose = TRUE)
 
 # Add species assignment
+set.seed(123)
 taxa &lt;- addSpecies(taxa, file.path(path.silva, &quot;silva_species_assignment_v138.1.fa.gz&quot;))</code></pre>
 <pre class="r"><code># Check how the taxonomy table looks like
 taxa.print &lt;- taxa
@@ -3146,11 +3148,11 @@ head(taxa.print)</code></pre>
 <pre class="r"><code>table(taxa.print[,2], useNA=&quot;ifany&quot;) # Show the different phyla</code></pre>
 <pre><code>## 
 ##  Actinobacteriota      Bacteroidota  Campylobacterota     Cyanobacteria 
-##               456              3700                 9                95 
+##               457              3700                 9                95 
 ##  Desulfobacterota        Firmicutes    Fusobacteriota   Patescibacteria 
 ##               189              9120                30                10 
 ##    Proteobacteria      Synergistota Verrucomicrobiota              &lt;NA&gt; 
-##               890                27                89                10</code></pre>
+##               890                27                88                10</code></pre>
 <hr />
 </div>
 <div id="last-preprocessing" class="section level1">
