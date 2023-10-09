@@ -40,7 +40,7 @@ Taxonomy assigned with Silva v138.
 - Bacteria - 710
 - Archaea - 0
 - Eukaryota - 0
-There were 3 unassigned phyla. The final ASV table contains **707 sequence variants**.
+There were 2 unassigned phyla. The final ASV table contains **708 sequence variants**.
 
 ## Metadata
 - age
