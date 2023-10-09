@@ -452,11 +452,13 @@ Extensions: The dada2 package also implements a method to make species level ass
 path.silva <- file.path(path.root, "data/analysis-individual/CLUSTER/taxonomy/silva-taxonomic-ref")
 
 # Assign taxonomy (with silva v138)
+set.seed(123)
 taxa <- assignTaxonomy(seqtable.nochim, file.path(path.silva, "silva_nr99_v138.1_train_set.fa.gz"),
                        tryRC = TRUE, # try reverse complement of the sequences
                        multithread=TRUE, verbose = TRUE)
 
 # Add species assignment
+set.seed(123)
 taxa <- addSpecies(taxa, file.path(path.silva, "silva_species_assignment_v138.1.fa.gz"))
 ```
 
@@ -468,7 +470,6 @@ head(taxa.print)
 
 table(taxa.print[,1], useNA="ifany") # Show the different kingdoms (should be only bacteria)
 table(taxa.print[,2], useNA="ifany") # Show the different phyla
-
 ```
 
 
