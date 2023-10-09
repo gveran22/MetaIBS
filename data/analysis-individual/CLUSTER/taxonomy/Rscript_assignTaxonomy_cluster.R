@@ -14,8 +14,8 @@ output.data <- file.path(cluster.wd, "output")
 
 #____________________________________________________________________
 # IMPORT LIBRARIES
-library(phyloseq, lib.loc=lib.loc)
-library(dada2, lib.loc=lib.loc)
+library(phyloseq)
+library(dada2)
 library(stats)
 library(Biostrings)
 library(base)
@@ -26,7 +26,7 @@ library(base)
 
 # Import ASV tables into a list (name of each element is the file name)
 print("... Importing ASV tables into list...")
-datasets  <- list.files(input.data)
+datasets  <- list.files(input.data, pattern=".rds")
 seqtables <- sapply(datasets, function(x) readRDS(file.path(input.data, x)), USE.NAMES=T, simplify=F)
 
 
@@ -46,21 +46,23 @@ for(i in 1:length(seqtables)){
   print(dim(seqtables[[i]]))
   
   # Assign taxonomy
-  taxa <- assignTaxonomy(seqtables[[i]], file.path(cluster.wd, "silva-taxonomic-ref/silva_nr_v138_train_set.fa.gz"),
+  set.seed(123)
+  taxa <- assignTaxonomy(seqtables[[i]], file.path(cluster.wd, "silva-taxonomic-ref/silva_nr99_v138.1_train_set.fa.gz"),
                          tryRC = TRUE, # try reverse complement of the sequences
                          multithread=TRUE, verbose = TRUE)
-  taxa <- addSpecies(taxa, file.path(cluster.wd, "silva-taxonomic-ref/silva_species_assignment_v138.fa.gz"))
+  set.seed(123)
+  taxa <- addSpecies(taxa, file.path(cluster.wd, "silva-taxonomic-ref/silva_species_assignment_v138.1.fa.gz"))
   
   # Sanity check
   taxa.print <- taxa
   rownames(taxa.print) <- NULL # removing sequence rownames for display only
-  head(taxa.print)
-  table(taxa.print[,1]) # Show the different kingdoms (should be only bacteria)
-  table(taxa.print[,2]) # Show the different phyla
+  print(head(taxa.print))
+  print(table(taxa.print[,1], useNA="ifany")) # Show the different kingdoms (should be only bacteria)
+  print(table(taxa.print[,2], useNA="ifany")) # Show the different phyla
   
   # Save taxa table as [path]/taxonomy/output/taxa_NameDataset.rds
   file_name  <- paste0(paste0(paste0(output.data, "/taxa_"), # get [path]/taxonomy/output/taxa_
-                              str_match(datasets[i], "seqtable_(.*?).rds")[,2]), # get NameDataset (in "seqtable_NameDataset.rds")
+                              stringr::str_match(datasets[i], "seqtablenochim_(.*?).rds")[,2]), # get NameDataset (in "seqtable_NameDataset.rds")
                        ".rds")
   saveRDS(taxa, file_name)
 }
