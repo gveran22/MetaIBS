@@ -7,6 +7,7 @@ Lo Presti et al. (_Frontiers in Microbiology_, 2019) - [Fecal and mucosal microb
 
 ## Samples
 - **163 total**
+- 
 |                | IBS | Healthy |
 | -------------- | ---:| ------: |
 |      Stool     |  36 |   40    |
