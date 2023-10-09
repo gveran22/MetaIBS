@@ -50,7 +50,7 @@ Taxonomy assigned with Silva v138.
 - Archaea - 6
 - Eukaryota - 0
 
-All unassigned phyla were removed (n=12), samples below 500 total reads (n=79). The final ASV table contains **5,885 sequence variants**.
+All unassigned phyla were removed (n=11), samples below 500 total reads (n=79). The final ASV table contains **5,886 sequence variants**.
 
 ## Metadata
 - age
