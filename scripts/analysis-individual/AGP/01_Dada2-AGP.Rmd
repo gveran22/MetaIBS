@@ -330,7 +330,7 @@ nb.reads <- data.frame("after"=rowSums(seqtable.nochim)) %>%
   mutate(after = nafill(after, fill=0),
          "dataset" = "AGP")
 
-saveRDS(nb.reads, file.path(path.root, "data/analysis-combined/06_QCplot/nbreads_agp.rds"))
+# saveRDS(nb.reads, file.path(path.root, "data/analysis-combined/06_QCplot/nbreads_agp.rds"))
 ```
 
 
@@ -359,11 +359,13 @@ Extensions: The dada2 package also implements a method to make species level ass
 path.silva <- file.path(path.root, "data/analysis-individual/CLUSTER/taxonomy/silva-taxonomic-ref")
 
 # Assign taxonomy (with silva v138)
+set.seed(123)
 taxa <- assignTaxonomy(seqtable.nochim, file.path(path.silva, "silva_nr99_v138.1_train_set.fa.gz"),
                        tryRC = TRUE, # try reverse complement of the sequences
                        multithread=TRUE, verbose = TRUE)
 
 # Add species assignment
+set.seed(123)
 taxa <- addSpecies(taxa, file.path(path.silva, "silva_species_assignment_v138.1.fa.gz"))
 ```
 
@@ -451,7 +453,7 @@ names(allASV) <- paste0("ASV", 1:length(allASV))
 
 # 1 - Identify ASVs to keep (ones that are not bloom sequences) in the ASVs that are 150bp
 shortASV <- allASV[nchar(allASV) == 150]
-shortASV_tokeep <- names( shortASV[!(shortASV %in% bloom)] ) # 9,297 ASVs
+shortASV_tokeep <- names( shortASV[!(shortASV %in% bloom)] ) # 9,278 ASVs
 
 # 2 - Identify ASVs to keep (ones that are not bloom sequences) in the ASVs that are 151bp
 longASV <- allASV[nchar(allASV) == 151]
@@ -461,10 +463,10 @@ longASV_trim2 <- subseq(longASV, start=2, width=150) # range 2 - 151
 longASV_tokeep1 <- names( longASV_trim1[!(longASV_trim1 %in% bloom)] ) # bloom seqs in 1 - 150 range
 longASV_tokeep2 <- names( longASV_trim2[!(longASV_trim2 %in% bloom)] ) # bloom seqs in 2 - 151 range
 
-longASV_tokeep <- intersect(longASV_tokeep1, longASV_tokeep2) # 7,800 ASVs
+longASV_tokeep <- intersect(longASV_tokeep1, longASV_tokeep2) # 7,797 ASVs
 
 # 3 - Combine and get the **sequences** to keep (not the names)
-ASV_to_keep <- allASV[c(shortASV_tokeep, longASV_tokeep)] # 17,097 ASVs
+ASV_to_keep <- allASV[c(shortASV_tokeep, longASV_tokeep)] # 17,075 ASVs
 
 # Check taxonomic classification of these bloom sequences
 tax_table(physeq) %>%
@@ -476,9 +478,9 @@ tax_table(physeq) %>%
 
 # Remove unwanted taxa (bloom)
 physeq.filt <- prune_taxa(ASV_to_keep, physeq)
-physeq.filt <- prune_samples(sample_sums(physeq.filt)>=500, physeq.filt) # 17,097 ASVs and 1,191 samples
+physeq.filt <- prune_samples(sample_sums(physeq.filt)>=500, physeq.filt) # 17,075 ASVs and 1,191 samples
 physeq.filt <- prune_taxa(taxa_sums(physeq.filt)>0, physeq.filt) # remove taxa absent in all samples
-print(physeq.filt) # 1,191 samples and 17,078 ASVs
+print(physeq.filt) # 1,191 samples and 17,056 ASVs
 
 phylum.table.filt <- physeq.filt %>%
   tax_glom(taxrank = "Phylum") %>%                     # agglomerate at phylum level
