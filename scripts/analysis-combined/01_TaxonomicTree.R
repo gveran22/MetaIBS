@@ -50,14 +50,14 @@ if(length(phyloseqobjects)>2){
 
 
 # Separate fecal & sigmoid samples
-# physeq.fecal <- subset_samples(physeq.all, sample_type == 'stool') # 2,220 samples
-# physeq.fecal <- prune_taxa(taxa_sums(physeq.fecal)>0, physeq.fecal) # remove ASVs that are not present anymore
-# 
-# physeq.sigmoid <- subset_samples(physeq.all, sample_type == 'sigmoid') # 431 samples
-# physeq.sigmoid <- prune_taxa(taxa_sums(physeq.sigmoid)>0, physeq.sigmoid) # remove ASVs that are not present anymore
-# 
-# cat("Nb of fecal samples:", nsamples(physeq.fecal))
-# cat("\nNb of sigmoid samples:", nsamples(physeq.sigmoid))
+physeq.fecal <- subset_samples(physeq.all, sample_type == 'stool') # 2,228 samples
+physeq.fecal <- prune_taxa(taxa_sums(physeq.fecal)>0, physeq.fecal) # remove ASVs that are not present anymore
+
+physeq.sigmoid <- subset_samples(physeq.all, sample_type == 'sigmoid') # 431 samples
+physeq.sigmoid <- prune_taxa(taxa_sums(physeq.sigmoid)>0, physeq.sigmoid) # remove ASVs that are not present anymore
+
+cat("Nb of fecal samples:", nsamples(physeq.fecal))
+cat("Nb of sigmoid samples:", nsamples(physeq.sigmoid))
 
 
 
@@ -204,40 +204,40 @@ nb_ASV_per_genus <- function(physeq){
 
 #______________________
 # Function to get a dataframe with information on average count per sample for each genus
-# count_per_genus <- function(physeq){
-#   # Get relative counts (common-scale normalization: sum per sample==100)
-#   cat("Common-scale normalization...\n")
-#   physeq.CSN <- transform_sample_counts(physeq, function(x) (x*100) / sum(x) )
-#   print(table(sample_sums(physeq.CSN))) # sanity check total of 100 counts per sample
-# 
-#   # Get the mean count per sample for each ASV
-#   cat("\nAverage count of each genus per sample....\n")
-#   meanCountASV <- t(data.frame(as.list(colMeans(otu_table(physeq.CSN)))))
-#   # sum(meanCountASV[,1]) # sanity check should sum to 100
-# 
-#   # Get a dataframe with the average count of each Genus per sample
-#   countGenus.df <- meanCountASV %>%
-#     as.data.frame()%>%
-#     rownames_to_column("ASV") %>%
-#     rename(Count=V1) %>%
-#     # Add taxonomy
-#     left_join(as.data.frame(tax_table(physeq.CSN)) %>%
-#                 rownames_to_column("ASV"),
-#               by="ASV") %>%
-#     # get a column with Life::Kingdom::Phylum::Class::Order::Family::Genus
-#     mutate(leaf = paste("Life", Kingdom, Phylum, Class, Order, Family, Genus, sep = "::")) %>%
-#     # get average count per sample for each Genus
-#     group_by(leaf, Genus) %>%
-#     summarize(count=sum(Count)) %>% # if several ASVs belong to same Genus, need to sum their counts
-#     # about 30,851 ASVs belong to an unknown genus (which represents ~10% of the counts)
-#     filter(!is.na(Genus))
-# 
-#   countGenus.df <- data.frame(count=countGenus.df$count,
-#                               row.names = countGenus.df$leaf)
-# 
-#   # Return dataframe
-#   return(countGenus.df)
-# }
+count_per_genus <- function(physeq){
+  # Get relative counts (common-scale normalization: sum per sample==100)
+  cat("Common-scale normalization...\n")
+  physeq.CSN <- transform_sample_counts(physeq, function(x) (x*100) / sum(x) )
+  print(table(sample_sums(physeq.CSN))) # sanity check total of 100 counts per sample
+
+  # Get the mean count per sample for each ASV
+  cat("\nAverage count of each genus per sample....\n")
+  meanCountASV <- t(data.frame(as.list(colMeans(otu_table(physeq.CSN)))))
+  # sum(meanCountASV[,1]) # sanity check should sum to 100
+
+  # Get a dataframe with the average count of each Genus per sample
+  countGenus.df <- meanCountASV %>%
+    as.data.frame()%>%
+    rownames_to_column("ASV") %>%
+    rename(Count=V1) %>%
+    # Add taxonomy
+    left_join(as.data.frame(tax_table(physeq.CSN)) %>%
+                rownames_to_column("ASV"),
+              by="ASV") %>%
+    # get a column with Life::Kingdom::Phylum::Class::Order::Family::Genus
+    mutate(leaf = paste("Life", Kingdom, Phylum, Class, Order, Family, Genus, sep = "::")) %>%
+    # get average count per sample for each Genus
+    group_by(leaf, Genus) %>%
+    summarize(count=sum(Count)) %>% # if several ASVs belong to same Genus, need to sum their counts
+    # about 30,851 ASVs belong to an unknown genus (which represents ~10% of the counts)
+    filter(!is.na(Genus))
+
+  countGenus.df <- data.frame(count=countGenus.df$count,
+                              row.names = countGenus.df$leaf)
+
+  # Return dataframe
+  return(countGenus.df)
+}
 
 
 #_________________________________
@@ -438,5 +438,5 @@ gheatmap(p3_sigmoid+new_scale_fill(),
                       name="Number of datasets")+
   scale_y_reverse() +
   labs(title="Sigmoid samples")
-ggsave(file.path(path.data, "taxTree_sigmoid.jpg", width=12, height=8))
+ggsave(file.path(path.data, "taxTree_sigmoid.jpg"), width=12, height=8)
 
