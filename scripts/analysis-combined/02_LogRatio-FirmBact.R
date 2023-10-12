@@ -47,7 +47,7 @@ if(length(phyloseqobjects)>2){
     physeq.all <- merge_phyloseq(physeq.all, phyloseqobjects[[i]])
   }
 }
-print(physeq.all) # 2,576 samples
+print(physeq.all) # 2,584 samples
 
 
 # Agglomerate to phylum level and melt to long format
@@ -84,10 +84,10 @@ firmi <- phylumTable %>%
 table(bacter$Bacteroidota == 0) # 17
 table(firmi$Firmicutes == 0) # 3
 min(bacter[bacter$Bacteroidota > 0, "Bacteroidota"]) # 4
-min(firmi[firmi$Firmicutes > 0, "Firmicutes"]) # 105
+min(firmi[firmi$Firmicutes > 0, "Firmicutes"]) # 66
 
 
-# Sanity check (should have 2,576 samples)
+# Sanity check (should have 2,584 samples)
 # nrow(bacter)
 # nrow(firmi)
 
@@ -223,7 +223,7 @@ ggdraw() +
   draw_plot(d, x = 0.65, y = 0, width = 0.35, height = 1) +
   draw_plot_label(label = c("A", "B", "C", "D"), size = 15,
                   x = c(0, 0, 0.30, 0.65), y = c(1, 0.5, 0.5, 1))
-ggsave(file.path(path.data, "firm_bact_05.jpg"), width=15, height=10)
+ggsave(file.path(path.data, "firm_bact_fig3.jpg"), width=15, height=10)
 
 
 
