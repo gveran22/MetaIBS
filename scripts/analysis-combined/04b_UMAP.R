@@ -37,8 +37,8 @@ if(length(phyloseqobjects)>2){
     physeq.all <- merge_phyloseq(physeq.all, phyloseqobjects[[i]])
   }
 }
-cat("Nb of samples:", nsamples(physeq.all), "\n") # should be 2,651
-cat("Nb of taxa:", ntaxa(physeq.all), "\n") # should be 79,943
+cat("Nb of samples:", nsamples(physeq.all), "\n") # should be 2,659
+cat("Nb of taxa:", ntaxa(physeq.all), "\n") # should be 79,972
 
 covariates <- data.frame(disease         = sample_data(physeq.all)[,'host_disease'],
                          subtype         = sample_data(physeq.all)[,'host_subtype'],
@@ -62,7 +62,7 @@ path.logratios <- file.path(path.root, "data/analysis-combined/04a_LogRatios-Tax
 ratiosFamily   <- readRDS(file.path(path.logratios, "ratiosFamily.rds"))
 # Sanity checks
 ratiosFamily[1:10,1:10]
-dim(ratiosFamily) # should have 2,651 samples (rows) and 64,620 predictors (family log ratios)
+dim(ratiosFamily) # should have 2,659 samples (rows) and 69,378 predictors (family log ratios)
 
 
 
@@ -77,7 +77,7 @@ dim(ratiosFamily) # should have 2,651 samples (rows) and 64,620 predictors (fami
 # Subset samples to only stool samples
 stool.samples <- sample_names(subset_samples(physeq.all, sample_type=="stool"))
 # head(stool.samples)
-length(stool.samples) # 2220 stool samples
+length(stool.samples) # 2228 stool samples
 ratiosFamily.stool <- ratiosFamily[rownames(ratiosFamily) %in% stool.samples,]
 dim(ratiosFamily.stool)
 
@@ -87,6 +87,7 @@ cat("Nb of samples", nrow(ratiosFamily.stool), "and nb of predictors", ncol(rati
 set.seed(123)
 umap <- uwot::umap(ratiosFamily.stool, # umap on samples (rows) and taxa ratios (columns)
                    n_neighbors=20, n_components=3, scale=F, n_threads=8)
+# saveRDS(umap, file.path(path.root, "data/analysis-combined/04b_UMAP/umap_output_stool.rds")) # checkpoint save
 
 # Get the (x,y) coordinates from the UMAP
 dims.umap <- umap %>% as.data.frame()
@@ -114,8 +115,10 @@ a <- ggplot(dims.umap,
   # ylim(c(-2.5,3.5))+
   labs(x="UMAP 1", y="UMAP 2", title = "Dataset")+
   theme_cowplot()+
-  theme(line = element_blank(),
-        plot.title = element_text(hjust = 0.5))
+  theme(axis.text=element_blank(),
+        axis.ticks=element_blank(),
+        plot.title = element_text(hjust = 0.5))+
+  guides(color = guide_legend(override.aes = list(size=2)))
 
 # Per host_disease
 b <- ggplot(dims.umap,
@@ -126,8 +129,10 @@ b <- ggplot(dims.umap,
   # ylim(c(-2.5,3.5))+
   labs(x="UMAP 1", y="UMAP 2", title = "Disease phenotype")+
   theme_cowplot()+
-  theme(line = element_blank(),
-        plot.title = element_text(hjust = 0.5))
+  theme(axis.text=element_blank(),
+        axis.ticks=element_blank(),
+        plot.title = element_text(hjust = 0.5))+
+  guides(color = guide_legend(override.aes = list(size=2)))
 
 # Per seqtech
 c <- ggplot(dims.umap,
@@ -138,21 +143,27 @@ c <- ggplot(dims.umap,
   # ylim(c(-2.5,3.5))+
   labs(x="UMAP 1", y="UMAP 2", title = "Seq. technology")+
   theme_cowplot()+
-  theme(line = element_blank(),
-        plot.title = element_text(hjust = 0.5))
+  theme(axis.text=element_blank(),
+        axis.ticks=element_blank(),
+        plot.title = element_text(hjust = 0.5))+
+  guides(color = guide_legend(override.aes = list(size=2)))
 
 
 # Combine three plots
+legend.b <- get_legend(b)
+legend.c <- get_legend(c)
 ggdraw() +
-  draw_plot(a, x = .25,  y = .4, width = .6, height = .6) +
-  draw_plot(b, x = .1,   y = 0,  width = .4, height = .4) +
-  draw_plot(c, x = .5,   y = 0,  width = .4, height = .4)
-ggsave(file.path(path.plots, "umap_family_legends.jpeg"), width=10, height=10)
+  draw_plot(a, x = .2,  y = .4, width = .7, height = .6) +
+  draw_plot(b+theme(legend.position="none"), x = .1,   y = 0,  width = .4, height = .4) +
+  draw_plot(legend.b, x=.13, y=0, width=.2, height=.2)+
+  draw_plot(c+theme(legend.position="none"), x = .5,   y = 0,  width = .4, height = .4)+
+  draw_plot(legend.c, x=.53, y=0, width=.2, height=.2)
+ggsave(file.path(path.plots, "umap_family_stool.jpeg"), width=12, height=10)
 
 
 
 
-# ***********************
+ # ***********************
 # 3. SIGMOID SAMPLES ####
 # ***********************
 
@@ -195,9 +206,11 @@ d <- ggplot(dims.umap.sigm,
   scale_fill_manual(values=c("#1F78B4", "#FF7F00", "#dfc27d"), name="")+ # author
   labs(x="UMAP 1", y="UMAP 2", title = "Dataset")+
   theme_cowplot()+
-  theme(line = element_blank(),
+  theme(axis.text=element_blank(),
+        axis.ticks=element_blank(),
         # legend.position = "none",
-        plot.title = element_text(hjust = 0.5))
+        plot.title = element_text(hjust = 0.5))+
+  guides(color = guide_legend(override.aes = list(size=2)))
 
 # Per host_disease
 e <- ggplot(dims.umap.sigm,
@@ -206,9 +219,11 @@ e <- ggplot(dims.umap.sigm,
   scale_color_manual(values = c('blue', 'red'), name="")+ # disease
   labs(x="UMAP 1", y="UMAP 2", title = "Disease phenotype")+
   theme_cowplot()+
-  theme(line = element_blank(),
+  theme(axis.text=element_blank(),
+        axis.ticks=element_blank(),
         # legend.position = "none",
-        plot.title = element_text(hjust = 0.5))
+        plot.title = element_text(hjust = 0.5))+
+  guides(color = guide_legend(override.aes = list(size=2)))
 
 # Per seqtech
 f <- ggplot(dims.umap.sigm,
@@ -217,17 +232,25 @@ f <- ggplot(dims.umap.sigm,
   scale_color_manual(values=c("#6a51a3", "#238b45"), name="")+ # seqtech
   labs(x="UMAP 1", y="UMAP 2", title = "Seq. technology")+
   theme_cowplot()+
-  theme(line = element_blank(),
+  theme(axis.text=element_blank(),
+        axis.ticks=element_blank(),
         # legend.position = "none",
-        plot.title = element_text(hjust = 0.5))
+        plot.title = element_text(hjust = 0.5))+
+  guides(color = guide_legend(override.aes = list(size=2)))
 
 
 # Combine three plots
+legend.d <- get_legend(d)
+legend.e <- get_legend(e)
+legend.f <- get_legend(f)
 ggdraw() +
-  draw_plot(d, x = 0,     y = 0, width = .32, height = 1) +
-  draw_plot(e, x = .33,   y = 0, width = .32, height = 1) +
-  draw_plot(f, x = .66,   y = 0, width = .32, height = 1)
-ggsave(file.path(path.plots, "sigmoid_umap_family.jpeg"), width=15, height=5)
+  draw_plot(d+theme(legend.position="none"), x = 0,     y = 0, width = .32, height = 1) +
+  draw_plot(e+theme(legend.position="none"), x = .33,   y = 0, width = .32, height = 1) +
+  draw_plot(f+theme(legend.position="none"), x = .66,   y = 0, width = .32, height = 1)+
+  draw_plot(legend.d, x=.03, y=.8, width=.2, height=.2)+
+  draw_plot(legend.e, x=.36, y=.8, width=.2, height=.2)+
+  draw_plot(legend.f, x=.69, y=.8, width=.2, height=.2)
+ggsave(file.path(path.plots, "umap_family_sigmoid.jpeg"), width=15, height=5)
 
 
 
@@ -243,8 +266,9 @@ g <- ggplot(dims.umap %>% arrange(match(host_subtype, c("IBS-unspecified", "NA",
   scale_color_manual(values = c("#3182bd", "#a50f15", "#fcae91", "#fb6a4a", "#bdbdbd", "black"), name="")+ # disease
   labs(x="UMAP 1", y="UMAP 2", title = "Stool samples")+
   theme_cowplot()+
-  theme(line = element_blank(),
-        legend.position = "none",
+  theme(axis.text=element_blank(),
+        axis.ticks=element_blank(),
+        # legend.position = "none",
         plot.title = element_text(hjust = 0.5))
 
 # Sigmoid
@@ -254,14 +278,16 @@ h <- ggplot(dims.umap.sigm %>% arrange(match(host_subtype, c("IBS-unspecified", 
   scale_color_manual(values = c("#3182bd", "#a50f15", "#fcae91", "#fb6a4a", "#bdbdbd"), name="")+ # disease
   labs(x="UMAP 1", y="UMAP 2", title = "Sigmoid samples")+
   theme_cowplot()+
-  theme(line = element_blank(),
-        legend.position = "none",
+  theme(axis.text=element_blank(),
+        axis.ticks=element_blank(),
+        # legend.position = "none",
         plot.title = element_text(hjust = 0.5))
 
 # Combine two plots
+legend.subtype <- get_legend(g)
 ggdraw() +
-  draw_plot(g, x = 0,  y = 0, width = .5, height = 1) +
-  draw_plot(h, x = .5, y = 0, width = .5, height = 1)
-ggsave(file.path(path.plots, "host-subtype_umap_family.jpeg"), width=11, height=6)
-# ggsave(file.path(path.plots, "host-subtype_umap_legend.jpeg"), width=15, height=6)
+  draw_plot(g+theme(legend.position="none"), x = 0,  y = 0, width = .5, height = 1) +
+  draw_plot(h+theme(legend.position="none"), x = .5, y = 0, width = .5, height = 1) +
+  draw_plot(legend.subtype, x=.05, y=0.1, width=.2, height=.2)
+ggsave(file.path(path.plots, "umap_family_host-subtype.jpeg"), width=11, height=6)
 
