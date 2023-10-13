@@ -49,13 +49,13 @@ if(length(phyloseqobjects)>2){
 
 
 ## 2.2. Separate fecal & sigmoid samples ####
-physeq.fecal <- subset_samples(physeq, sample_type == 'stool') # 2,220 samples
+physeq.fecal <- subset_samples(physeq.all, sample_type == 'stool') # 2,228 samples
 physeq.fecal <- prune_taxa(taxa_sums(physeq.fecal)>0, physeq.fecal) # remove ASVs that are not present anymore
 cat("Nb of fecal samples:", nsamples(physeq.fecal))
 
-physeq.sigmoid <- subset_samples(physeq, sample_type == 'sigmoid') # 431 samples
+physeq.sigmoid <- subset_samples(physeq.all, sample_type == 'sigmoid') # 431 samples
 physeq.sigmoid <- prune_taxa(taxa_sums(physeq.sigmoid)>0, physeq.sigmoid) # remove ASVs that are not present anymore
-cat("\nNb of sigmoid samples:", nsamples(physeq.sigmoid))
+cat("Nb of sigmoid samples:", nsamples(physeq.sigmoid))
 
 
 ## 2.3. Covariates for heatmap labels ####
@@ -177,14 +177,7 @@ list.family <- family.agg %>%
   summarise(nb_datasets = n_distinct(author)) %>%
   filter(nb_datasets>2) %>%
   ungroup()
-list.family <- list.family$Family # 116 Families
-
-
-# Agglomerate again at family level, but keeping only families present in at least 3 datasets
-# family.agg <- subset_taxa(physeq.fecal, Family %in% list.family) %>%
-#   tax_glom(taxrank = "Family") %>%
-#   transform_sample_counts(function(x) {x/sum(x)} ) %>%
-#   psmelt()
+list.family <- list.family$Family # 120 Families
 
 # Get dataframe family x samples
 familyTable <- acast(family.agg %>% filter(Family %in% list.family),
@@ -199,7 +192,7 @@ table(rownames(familyTable))
 table(rowSums(familyTable) == 0)
 
 # For coloring, add "pseudocounts"
-# min(familyTable[familyTable>0]) # min is 6e-6
+min(familyTable[familyTable>0]) # min is 1e-5
 familyTable[familyTable == 0] <- 1e-7
 
 
@@ -208,7 +201,7 @@ familyTable[familyTable == 0] <- 1e-7
 # Reorder samples
 familyTable <- familyTable[,sample.order] # reorder samples
 
-jpeg(file.path(path.data, "family_heatmp_ordered.jpg"), height = 4000, width = 4000, res = 300)
+jpeg(file.path(path.data, "fecal_family_heatmp_ordered.jpg"), height = 4000, width = 4000, res = 300)
 pheatmap(log10(familyTable),
          color = colorRampPalette(rev(brewer.pal(n = 7, name = "RdYlBu")))(50),
          show_rownames = T,
@@ -278,7 +271,7 @@ annotationCol.sigmoid <- list(host_disease = c(Healthy='#08519c', IBS='#ef3b2c')
 familyTable.sigmoid <- familyTable.sigmoid[,sample.order.sigmoid] # reorder samples
 
 # Plot
-jpeg(file.path(path.data, "family_heatmp_ordered.jpg"), height = 4000, width = 4000, res = 400)
+jpeg(file.path(path.data, "sigmoid_family_heatmp_ordered.jpg"), height = 4000, width = 4000, res = 400)
 pheatmap(log10(familyTable.sigmoid),
          color = colorRampPalette(rev(brewer.pal(n = 7, name = "RdYlBu")))(50),
          show_rownames = T,
