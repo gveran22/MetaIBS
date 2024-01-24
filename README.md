@@ -1,6 +1,6 @@
 # Meta-analysis of microbiome composition measured by 16S rRNA seq in IBS case-control studies
 
-This is the repository for the study MetaIBS - large-scale amplicon-based meta analysis of irritable bowel syndrome (ADD PAPER LINK).
+This is the repository for the study MetaIBS - large-scale amplicon-based meta analysis of irritable bowel syndrome ([link to paper](https://doi.org/10.1101/2024.01.22.575775)).
 This repository contains all the data and code used for the meta-analysis, and can also be used as a template to extend this meta-analysis with your own data!
 
 <p align="center">
