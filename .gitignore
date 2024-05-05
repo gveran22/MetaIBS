@@ -15,3 +15,8 @@ scripts/analysis-individual/Pozuelo-2015/.ipynb_checkpoints/
 scripts/analysis-combined/additional_scripts/
 scripts/analysis-combined/scripts_cluster/
 Dockerfile
+EDA/Scripts/Individual/AGP/agp_files/
+*.jpg
+*.jpeg
+*.png
+*.gif
